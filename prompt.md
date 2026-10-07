@@ -1,3 +1,5 @@
+> **Let op:** dit is het oorspronkelijke plan van Lucas. Het is verwerkt in `docs/SPELGIDS.md` en `docs/FASE-TRACKER.md`, met als wijziging real-time gevecht en rondlopen van bovenaf. Bij verschillen gelden die bestanden.
+
 We bouwen samen een browsergame: een co-op progressie-RPG met een oud anime / middeleeuws tovenaar-thema (stijl van fantasy-anime uit de jaren 80-90). Werktitel: "Arcane Oath". De UI-teksten zijn in het Nederlands.
 
 Het volledige concept:
