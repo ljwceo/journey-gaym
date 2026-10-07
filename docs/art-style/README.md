@@ -102,15 +102,14 @@ Donkerder en koeler, maar dezelfde wereld. Warmgrijs steen, fakkels in amber, kr
 - **P3** Anime-proporties, niet chibi.
 - **P4** *(voorstel)* Elke klasse een eigen gedempte accentkleur (bv. wijnrood, mosgroen, zilverwit).
 
-## Gear & zeldzaamheid *(voorstel)*
+## Gear & zeldzaamheid
 
 Hoe zeldzamer, hoe meer gloed. Tokens staan in `tokens.json` onder `rarity`.
 
 | Tier | Kleur | Gloed |
 |---|---|---|
 | Gewoon | Steengrijs `#7C7468` | geen |
-| Verfijnd | Ornamentgoud `#C9A25B` | geen |
-| Betoverd | Magieblauw `#5F6DFF` | blauw, 14px |
+| Zeldzaam | Magieblauw `#5F6DFF` | blauw, 14px |
 | Episch | Spreukviolet `#A98BFF` | violet, 18px + runen |
 | Legendarisch | Zonlicht `#F6D27F` | goud/amber, 22px |
 

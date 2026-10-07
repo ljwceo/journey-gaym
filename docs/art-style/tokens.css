@@ -26,13 +26,12 @@
   --gh-actie: var(--gh-lantaarnamber);
   --gh-magie: var(--gh-magieblauw);
 
-  /* Gear-zeldzaamheid (voorstel) */
+  /* Gear-zeldzaamheid */
   --gh-rarity-gewoon: #7c7468;
-  --gh-rarity-verfijnd: #c9a25b;
-  --gh-rarity-betoverd: #5f6dff;
+  --gh-rarity-zeldzaam: #5f6dff;
   --gh-rarity-episch: #a98bff;
   --gh-rarity-legendarisch: #f6d27f;
-  --gh-glow-betoverd: 0 0 14px #5f6dff;
+  --gh-glow-zeldzaam: 0 0 14px #5f6dff;
   --gh-glow-episch: 0 0 18px #a98bff;
   --gh-glow-legendarisch: 0 0 22px #e39b3e;
   --gh-glow-knop: 0 0 14px rgba(232, 160, 74, 0.35);
