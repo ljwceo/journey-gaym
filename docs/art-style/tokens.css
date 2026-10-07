@@ -1,0 +1,45 @@
+/* Greyhaven design tokens — bron: docs/art-style/README.md
+   Gebruik in code altijd deze variabelen, nooit losse kleurcodes.
+   Fonts: https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&family=IM+Fell+English+SC&family=Alegreya+Sans:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap */
+
+:root {
+  /* Palet */
+  --gh-nachtinkt: #1b1a2b;
+  --gh-schemerviolet: #4a3f6b;
+  --gh-mistpaars: #6e6a8e;
+  --gh-steengrijs: #7c7468;
+  --gh-zonsondergang: #e5a06a;
+  --gh-zonlicht: #f6d27f;
+  --gh-lantaarnamber: #e39b3e;
+  --gh-ornamentgoud: #c9a25b;
+  --gh-magieblauw: #5f6dff;
+  --gh-spreukviolet: #a98bff;
+
+  /* Rollen (UI) */
+  --gh-bg: #14131d;
+  --gh-panel: #1d1b2b;
+  --gh-rand: #3b3656;
+  --gh-koper: #6b5631;
+  --gh-tekst: #ece4d4;
+  --gh-tekst-zacht: #b7aec4;
+  --gh-accent: var(--gh-ornamentgoud);
+  --gh-actie: var(--gh-lantaarnamber);
+  --gh-magie: var(--gh-magieblauw);
+
+  /* Gear-zeldzaamheid (voorstel) */
+  --gh-rarity-gewoon: #7c7468;
+  --gh-rarity-verfijnd: #c9a25b;
+  --gh-rarity-betoverd: #5f6dff;
+  --gh-rarity-episch: #a98bff;
+  --gh-rarity-legendarisch: #f6d27f;
+  --gh-glow-betoverd: 0 0 14px #5f6dff;
+  --gh-glow-episch: 0 0 18px #a98bff;
+  --gh-glow-legendarisch: 0 0 22px #e39b3e;
+  --gh-glow-knop: 0 0 14px rgba(232, 160, 74, 0.35);
+
+  /* Typografie */
+  --gh-font-titel: "IM Fell English SC", "IM Fell English", Georgia, serif;
+  --gh-font-verhaal: "IM Fell English", Georgia, serif;
+  --gh-font-tekst: "Alegreya Sans", system-ui, sans-serif;
+  --gh-font-stats: "IBM Plex Mono", ui-monospace, monospace;
+}
