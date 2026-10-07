@@ -1,3 +1,3 @@
 # journey-gaym
 hoi ik ben lucas
-en ik ben (insert bo naam_
+en ik ben Blokker, Bo Blokker
