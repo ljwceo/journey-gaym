@@ -49,10 +49,21 @@ Alleen gratis diensten. Wijk hier niet van af zonder het eerst te vragen en de k
 - Echte art nodig? Zet het in **Asset-verzoeken** in de tracker (wat, formaat, fase) en vraag het aan Bo of Lucas. Zij zetten het in `assets/`.
 - Past aangeleverde art niet bij de stijlgids, zeg het.
 
+## Werken met GitHub (verplicht)
+
+Bo en Lucas werken samen in deze repo en hebben soms verschillende ideeën. Daarom komt niets direct in `main`.
+
+- Maak per fase of taak een eigen branch, bijvoorbeeld `fase-0-opzet` of `fix-joystick`.
+- Werk en commit op die branch.
+- Klaar? Push de branch en open een pull request. Schrijf in gewone taal wat er veranderd is, waarom, en hoe je het test.
+- Bo of Lucas bekijkt de pull request en voegt hem samen (merge). Pas dan staat het in `main`.
+- Verandert iets aan de spelgids, stijlgids of een eerdere beslissing? Zet dat bovenaan in de pull request, zodat de ander het zeker ziet.
+- Leg bij de eerste keer kort uit wat een branch en pull request zijn.
+
 ## Einde van elke sessie (verplicht)
 
 1. Werk `docs/FASE-TRACKER.md` bij: tabel **Nu**, vinkjes, nieuwe regel in **Sessielog**, nieuwe **Beslissingen** en **Asset-verzoeken**.
-2. Commit met een duidelijke Nederlandse commit-message en push naar GitHub.
+2. Commit met een duidelijke Nederlandse commit-message, push de branch en open een pull request (zie hieronder).
 3. Vertel in 2–3 zinnen wat er gedaan is en wat de volgende keer gebeurt.
 
 ## Belangrijke regel
