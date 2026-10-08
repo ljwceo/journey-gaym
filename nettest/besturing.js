@@ -1,6 +1,7 @@
 // Besturing: lopen met WASD (of pijltjes) op de pc, virtuele joystick links op touch.
-// Besturing.richting() geeft { x, y } met een lengte van 0 tot 1. Los van Phaser.
-// Rechts tikken (richten en schieten) komt in stap 4.
+// Richten en schieten: muis (klik of vasthouden, of spatie) op de pc, rechts tikken op touch.
+// Besturing.richting() geeft { x, y } met een lengte van 0 tot 1.
+// Besturing.doel() geeft de schermplek waar je op richt, of null. Los van Phaser.
 window.Besturing = (function () {
   const STRAAL = 60;     // zo ver (px) kun je de joystick-knop trekken
   const DOODZONE = 0.15; // kleine beweging van je duim telt niet
@@ -14,6 +15,10 @@ window.Besturing = (function () {
   const ingedrukt = new Set();
   let actief = false;
   let stick = null; // { id, x0, y0, x, y }
+  const richters = new Map(); // vingers of muisknop die richten: pointerId -> { x, y }
+  let tik = null;    // korte tik die nog moet schieten: { x, y, tot }
+  let muis = null;   // waar de muis staat (voor spatie)
+  let spatie = false;
 
   // Joystick tekenen we met twee rondjes in HTML, over het spel heen
   const basis = document.createElement('div');
@@ -26,23 +31,39 @@ window.Besturing = (function () {
   // ---------- toetsenbord ----------
 
   window.addEventListener('keydown', (e) => {
+    if (actief && e.code === 'Space') {
+      spatie = true;
+      e.preventDefault();
+      return;
+    }
     if (!actief || !TOETSEN[e.code]) return;
     ingedrukt.add(TOETSEN[e.code]);
     e.preventDefault();
   });
   window.addEventListener('keyup', (e) => {
     if (TOETSEN[e.code]) ingedrukt.delete(TOETSEN[e.code]);
+    if (e.code === 'Space') spatie = false;
   });
-  // Ander venster gekozen: anders blijft een toets "hangen"
-  window.addEventListener('blur', () => ingedrukt.clear());
+  // Ander venster gekozen: anders blijft een toets of muisknop "hangen"
+  window.addEventListener('blur', () => {
+    ingedrukt.clear();
+    richters.clear();
+    spatie = false;
+  });
 
-  // ---------- joystick (alleen met een vinger, op de linkerhelft) ----------
+  // ---------- joystick (vinger links) en richten (muis, of vinger rechts) ----------
 
   const veld = document.getElementById('game');
 
   veld.addEventListener('pointerdown', (e) => {
-    if (!actief || e.pointerType === 'mouse' || stick) return;
-    if (e.clientX > window.innerWidth / 2) return;
+    if (!actief) return;
+    const muisKlik = e.pointerType === 'mouse';
+    if (muisKlik ? e.button === 0 : e.clientX > window.innerWidth / 2) {
+      richters.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      tik = { x: e.clientX, y: e.clientY, tot: performance.now() + 250 };
+      return;
+    }
+    if (muisKlik || stick) return;
     stick = { id: e.pointerId, x0: e.clientX, y0: e.clientY, x: e.clientX, y: e.clientY };
     basis.style.left = e.clientX + 'px';
     basis.style.top = e.clientY + 'px';
@@ -51,6 +72,8 @@ window.Besturing = (function () {
   });
 
   window.addEventListener('pointermove', (e) => {
+    if (e.pointerType === 'mouse') muis = { x: e.clientX, y: e.clientY };
+    if (richters.has(e.pointerId)) richters.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (!stick || e.pointerId !== stick.id) return;
     stick.x = e.clientX;
     stick.y = e.clientY;
@@ -59,6 +82,7 @@ window.Besturing = (function () {
   });
 
   function loslaten(e) {
+    if (e) richters.delete(e.pointerId);
     if (!stick || (e && e.pointerId !== stick.id)) return;
     stick = null;
     basis.classList.remove('zichtbaar');
@@ -91,15 +115,35 @@ window.Besturing = (function () {
     return { x, y };
   }
 
+  // Waar je op richt (schermplek), of null als je niet schiet
+  function doel() {
+    if (!actief) return null;
+    for (const p of richters.values()) return p;
+    if (spatie && muis) return muis;
+    if (tik && performance.now() < tik.tot) return tik;
+    return null;
+  }
+
+  function wisRichten() {
+    richters.clear();
+    tik = null;
+    spatie = false;
+  }
+
   return {
     richting,
+    doel,
+    // Na een schot: een korte tik is gebruikt
+    geschoten() { tik = null; },
     aan() {
       actief = true;
       ingedrukt.clear();
+      wisRichten();
     },
     uit() {
       actief = false;
       ingedrukt.clear();
+      wisRichten();
       loslaten();
     },
   };

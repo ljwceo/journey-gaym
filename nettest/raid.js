@@ -188,6 +188,16 @@ window.Raid = (function () {
     };
   }
 
+  // Host: waar een speler echt staat (de host beslist)
+  function positie(rol) {
+    return pos[rol];
+  }
+
+  // Gast: welke tijd van de host we nu laten zien (ballen van de host lopen daarmee gelijk op)
+  function hostKlok() {
+    return hostVolger.klok();
+  }
+
   return {
     WERELD,
     STRAAL,
@@ -195,6 +205,8 @@ window.Raid = (function () {
     stop,
     update,
     weergave,
+    positie,
+    hostKlok,
     get bezig() { return bezig; },
     get nr() { return nr; },
   };

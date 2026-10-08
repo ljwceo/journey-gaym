@@ -25,6 +25,12 @@ class Volger {
     if (this.punten.length > 60) this.punten.shift();
   }
 
+  // Welke tijd (op de klok van de zender) we nu laten zien, of null als we nog niets weten
+  klok() {
+    if (this.verschil === null) return null;
+    return performance.now() - this.verschil - this.vertraging;
+  }
+
   // Positie op dit moment, of null als we nog niets weten
   waarde() {
     const p = this.punten;

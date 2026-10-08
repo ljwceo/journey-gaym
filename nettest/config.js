@@ -3,7 +3,7 @@
 window.NET_CONFIG = {
   // Versie van de test. Bij elke nieuwe stap ophogen (en ook ?v= in index.html).
   // Hebben host en gast een andere versie, dan waarschuwt de lobby.
-  versie: 3,
+  versie: 4,
 
   // Standaard gratis PeerJS-server (leeg laten = PeerJS kiest zelf 0.peerjs.com)
   peer: {
