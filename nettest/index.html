@@ -22,7 +22,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IM+Fell+English+SC&family=Alegreya+Sans:wght@400;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=3">
 </head>
 <body>
   <!-- Hier tekent Phaser het spel -->
@@ -105,20 +105,22 @@
   <script src="https://cdn.jsdelivr.net/npm/phaser@3.80.1/dist/phaser.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
 
-  <!-- Onze code, in deze volgorde -->
-  <script src="config.js"></script>
-  <script src="device.js"></script>
-  <script src="touch.js"></script>
-  <script src="debugbar.js"></script>
-  <script src="stats.js"></script>
-  <script src="wakelock.js"></script>
-  <script src="net.js"></script>
-  <script src="lobby.js"></script>
-  <script src="volger.js"></script>
-  <script src="besturing.js"></script>
-  <script src="raid.js"></script>
-  <script src="ui.js"></script>
-  <script src="scenes/room.js"></script>
-  <script src="main.js"></script>
+  <!-- Onze code, in deze volgorde.
+       ?v=3 = versienummer: bij elke nieuwe stap ophogen (ook in debugbar.js),
+       anders kan de browser een oude bewaarde kopie gebruiken. -->
+  <script src="config.js?v=3"></script>
+  <script src="device.js?v=3"></script>
+  <script src="touch.js?v=3"></script>
+  <script src="debugbar.js?v=3"></script>
+  <script src="stats.js?v=3"></script>
+  <script src="wakelock.js?v=3"></script>
+  <script src="net.js?v=3"></script>
+  <script src="lobby.js?v=3"></script>
+  <script src="volger.js?v=3"></script>
+  <script src="besturing.js?v=3"></script>
+  <script src="raid.js?v=3"></script>
+  <script src="ui.js?v=3"></script>
+  <script src="scenes/room.js?v=3"></script>
+  <script src="main.js?v=3"></script>
 </body>
 </html>

@@ -4,6 +4,7 @@ window.DebugBar = (function () {
   const el = document.getElementById('debugbar');
 
   const waarden = {
+    versie: 'stap 3',  // zie je hier iets anders? Dan draait er een oude kopie
     fps: '–',
     scherm: '–',
     rol: '–',
