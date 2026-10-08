@@ -27,10 +27,23 @@ game.events.on('step', () => spelBeelden++);
 
 let browserBeelden = 0;
 let start = performance.now();
+
+// Stond de pagina op de achtergrond (ander tabblad, andere app)? Dan maakt niemand beelden
+// en zou de meting 0 fps geven. Zo'n meting tellen we niet mee.
+let wasWeg = false;
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) wasWeg = true;
+});
+
 function telBeeld(nu) {
   browserBeelden++;
   const duur = nu - start;
-  if (duur >= 1000) {
+  if (wasWeg) {
+    wasWeg = false;
+    spelBeelden = 0;
+    browserBeelden = 0;
+    start = nu;
+  } else if (duur >= 1000) {
     const fps = Math.round(spelBeelden * 1000 / duur);
     const hz = Math.round(browserBeelden * 1000 / duur);
     DebugBar.set('fps', fps);
