@@ -1,0 +1,19 @@
+// Verbindingsinstellingen voor de netwerktest.
+// Hier later makkelijk een TURN-server toevoegen (nodig als STUN alleen niet lukt).
+window.NET_CONFIG = {
+  // Standaard gratis PeerJS-server (leeg laten = PeerJS kiest zelf 0.peerjs.com)
+  peer: {
+    // host: '0.peerjs.com', port: 443, secure: true, path: '/',
+    debug: 1,
+  },
+
+  // Voorvoegsel voor de PeerJS-id: "morvath-" + kamercode
+  idPrefix: 'morvath-',
+
+  // ICE-servers: STUN zoekt je publieke adres, TURN stuurt verkeer door als het niet direct kan
+  iceServers: [
+    { urls: 'stun:stun.l.google.com:19302' },
+    { urls: 'stun:stun1.l.google.com:19302' },
+    // { urls: 'turn:jouw-turn-server:3478', username: '...', credential: '...' },
+  ],
+};

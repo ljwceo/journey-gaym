@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <!-- viewport-fit=cover: tot in de hoeken (notch); geen zoomen -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <title>Morvath Test</title>
+
+  <!-- Beginscherm-app (pc en iPhone) -->
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#1b1a2b">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Morvath Test">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="format-detection" content="telephone=no">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="icon" type="image/png" href="icons/icon-192.png">
+
+  <!-- Kleuren en fonts uit de stijlgids -->
+  <link rel="stylesheet" href="../docs/art-style/tokens.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alegreya+Sans:wght@400;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Hier tekent Phaser het spel -->
+  <div id="game"></div>
+
+  <!-- Debugbalk bovenin, altijd zichtbaar -->
+  <div id="debugbar" aria-live="off"></div>
+
+  <!-- Melding als de telefoon rechtop staat -->
+  <div id="draai">
+    <div class="draai-icoon"></div>
+    <p>Draai je telefoon</p>
+  </div>
+
+  <!-- Bibliotheken via CDN (geen bouwstap nodig) -->
+  <script src="https://cdn.jsdelivr.net/npm/phaser@3.80.1/dist/phaser.min.js"></script>
+
+  <!-- Onze code, in deze volgorde -->
+  <script src="config.js"></script>
+  <script src="device.js"></script>
+  <script src="touch.js"></script>
+  <script src="debugbar.js"></script>
+  <script src="scenes/room.js"></script>
+  <script src="main.js"></script>
+</body>
+</html>
