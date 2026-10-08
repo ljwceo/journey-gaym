@@ -1,6 +1,10 @@
 // Verbindingsinstellingen voor de netwerktest.
 // Hier later makkelijk een TURN-server toevoegen (nodig als STUN alleen niet lukt).
 window.NET_CONFIG = {
+  // Versie van de test. Bij elke nieuwe stap ophogen (en ook ?v= in index.html).
+  // Hebben host en gast een andere versie, dan waarschuwt de lobby.
+  versie: 3,
+
   // Standaard gratis PeerJS-server (leeg laten = PeerJS kiest zelf 0.peerjs.com)
   peer: {
     // host: '0.peerjs.com', port: 443, secure: true, path: '/',

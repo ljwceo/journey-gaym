@@ -73,6 +73,16 @@
       ? (staat.gast ? 'Allebei op "Klaar"? Dan kun jij de raid starten.' : 'Geef deze code aan je vriend.')
       : 'Druk op "Klaar". De host start de raid.';
 
+    // Oude bewaarde kopie bij de ander? Dan werkt de raid niet goed: duidelijk zeggen
+    const ander = ikBenHost ? staat.gast : staat.host;
+    if (ander && ander.info.versie !== NET_CONFIG.versie) {
+      $('lobby-hint').textContent = 'Let op: de ' + (ikBenHost ? 'gast' : 'host') +
+        ' heeft een oude versie. Laad daar de pagina opnieuw (pc: Ctrl+Shift+R).';
+      $('lobby-hint').classList.add('waarschuwing');
+    } else {
+      $('lobby-hint').classList.remove('waarschuwing');
+    }
+
     const lijst = $('spelers');
     lijst.replaceChildren(spelerRegel('Host', staat.host), spelerRegel('Gast', staat.gast));
 

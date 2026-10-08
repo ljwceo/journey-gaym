@@ -386,7 +386,7 @@ window.Net = (function () {
 
   // Wat de ander over ons te zien krijgt
   function apparaatInfo() {
-    return { apparaat: DEVICE.naam, browser: DEVICE.browser, modus: DEVICE.modus };
+    return { apparaat: DEVICE.naam, browser: DEVICE.browser, modus: DEVICE.modus, versie: CFG.versie };
   }
 
   // Zelf weggaan: de ander netjes laten weten, en de lijn pas daarna dichtdoen
