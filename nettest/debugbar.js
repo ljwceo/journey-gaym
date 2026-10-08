@@ -1,10 +1,11 @@
-// Debugbalk bovenin: fps, rol, ping, berichten per seconde, apparaat en modus.
+// Debugbalk bovenin: fps, scherm-Hz, rol, ping, berichten per seconde, apparaat en modus.
 // Andere code zet waarden met DebugBar.set('ping', 42).
 window.DebugBar = (function () {
   const el = document.getElementById('debugbar');
 
   const waarden = {
     fps: '–',
+    scherm: '–',
     rol: '–',
     ping: '–',
     'ber/s': '–',

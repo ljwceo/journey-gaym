@@ -18,7 +18,25 @@ const game = new Phaser.Game({
   scene: [RoomScene],
 });
 
-// Fps 4 keer per seconde in de debugbalk zetten
-setInterval(() => {
-  DebugBar.set('fps', Math.round(game.loop.actualFps));
-}, 250);
+// Twee meters, elke seconde bijgewerkt:
+// - fps: hoe vaak het spel per seconde een beeld maakt
+// - scherm: hoe vaak de browser zelf een nieuw beeld toestaat (los van Phaser)
+// Is "scherm" ook 60, dan houdt de browser of Windows het tegen, niet het spel.
+let spelBeelden = 0;
+game.events.on('step', () => spelBeelden++);
+
+let browserBeelden = 0;
+let start = performance.now();
+function telBeeld(nu) {
+  browserBeelden++;
+  const duur = nu - start;
+  if (duur >= 1000) {
+    DebugBar.set('fps', Math.round(spelBeelden * 1000 / duur));
+    DebugBar.set('scherm', Math.round(browserBeelden * 1000 / duur) + ' Hz');
+    spelBeelden = 0;
+    browserBeelden = 0;
+    start = nu;
+  }
+  requestAnimationFrame(telBeeld);
+}
+requestAnimationFrame(telBeeld);
