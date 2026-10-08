@@ -16,4 +16,11 @@ window.NET_CONFIG = {
     { urls: 'stun:stun1.l.google.com:19302' },
     // { urls: 'turn:jouw-turn-server:3478', username: '...', credential: '...' },
   ],
+
+  // Wachttijden in milliseconden
+  tijden: {
+    verbinden: 10000,    // zo lang mag verbinden duren
+    stilte: 4000,        // zo lang niets gehoord = de ander is even weg
+    wachtOpGast: 30000,  // zo lang wacht de host op een gast die even weg is
+  },
 };

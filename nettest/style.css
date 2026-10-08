@@ -82,3 +82,183 @@ html, body {
 @media (orientation: portrait) and (pointer: coarse) {
   #draai { display: flex; }
 }
+
+/* ---------- Menu en lobby ---------- */
+
+/* Laag over het spel heen, binnen de veilige zone (notch, balk onderin) */
+#menu {
+  position: fixed;
+  inset: 0;
+  z-index: 12;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: calc(max(8px, env(safe-area-inset-top)) + 44px)
+           max(16px, env(safe-area-inset-right))
+           max(12px, env(safe-area-inset-bottom))
+           max(16px, env(safe-area-inset-left));
+  box-sizing: border-box;
+  background: color-mix(in srgb, var(--gh-bg) 70%, transparent);
+}
+#menu.zichtbaar { display: flex; }
+
+.paneel {
+  display: none;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+  width: min(420px, 100%);
+  max-height: 100%;
+  box-sizing: border-box;
+  padding: 18px 20px;
+  background: var(--gh-panel);
+  border: 1px solid var(--gh-koper);
+  border-radius: 10px;
+  text-align: center;
+}
+.paneel.zichtbaar { display: flex; }
+
+/* Meedoen: bovenin, zodat het toetsenbord van de iPhone het veld niet bedekt */
+#menu:has(#scherm-meedoen.zichtbaar) { align-items: flex-start; }
+
+h1, h2 {
+  margin: 0 0 4px;
+  font-family: var(--gh-font-titel);
+  font-weight: 400;
+  color: var(--gh-accent);
+}
+h1 { font-size: 28px; }
+h2 { font-size: 22px; }
+.paneel p { margin: 0; }
+
+.rij { display: flex; gap: 10px; }
+.rij > * { flex: 1; }
+
+/* Knoppen: warm amber voor de hoofdactie (stijlgids U2) */
+.knop {
+  min-height: 44px;
+  padding: 8px 14px;
+  font: 700 17px var(--gh-font-tekst);
+  color: var(--gh-tekst);
+  background: var(--gh-bg);
+  border: 1px solid var(--gh-rand);
+  border-radius: 8px;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.knop.hoofd {
+  color: var(--gh-nachtinkt);
+  background: var(--gh-actie);
+  border-color: var(--gh-zonlicht);
+  box-shadow: var(--gh-glow-knop);
+}
+.knop.klein { min-height: 36px; font-size: 14px; font-weight: 400; color: var(--gh-tekst-zacht); }
+.knop.aan { border-color: var(--gh-accent); color: var(--gh-accent); }
+.knop:disabled { opacity: 0.4; box-shadow: none; cursor: default; }
+.knop[hidden] { display: none; }
+
+label { font-size: 15px; color: var(--gh-tekst-zacht); }
+
+/* 16px of groter, anders zoomt de iPhone in bij het typen */
+#code-invoer {
+  font: 500 32px var(--gh-font-stats);
+  letter-spacing: 0.3em;
+  text-align: center;
+  text-transform: uppercase;
+  padding: 6px;
+  color: var(--gh-tekst);
+  background: var(--gh-bg);
+  border: 1px solid var(--gh-rand);
+  border-radius: 8px;
+  -webkit-user-select: text;
+  user-select: text;
+}
+#code-invoer:focus { outline: 2px solid var(--gh-accent); }
+
+/* Lobby: in liggend scherm twee kolommen naast elkaar */
+#scherm-lobby { width: min(640px, 100%); }
+#scherm-lobby.zichtbaar { flex-direction: row; gap: 18px; align-items: center; }
+#scherm-lobby .kolom { flex: 1; display: flex; flex-direction: column; gap: 10px; }
+.code-regel { font-size: 15px; color: var(--gh-tekst-zacht); }
+#lobby-code {
+  display: block;
+  font: 500 40px var(--gh-font-stats);
+  letter-spacing: 0.2em;
+  color: var(--gh-zonlicht);
+  cursor: pointer;
+}
+#lobby-hint { font-size: 15px; color: var(--gh-tekst-zacht); }
+
+#spelers { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+#spelers li {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 10px;
+  font-size: 15px;
+  text-align: left;
+  background: var(--gh-bg);
+  border: 1px solid var(--gh-rand);
+  border-radius: 8px;
+}
+#spelers .status { color: var(--gh-tekst-zacht); white-space: nowrap; }
+#spelers .klaar .status { color: var(--gh-accent); font-weight: 700; }
+#spelers .weg .status { color: var(--gh-zonsondergang); }
+#spelers .leeg { color: var(--gh-tekst-zacht); font-style: italic; }
+
+/* Smal scherm (bijv. pc-venster klein gemaakt): lobby weer onder elkaar */
+@media (max-width: 560px) {
+  #scherm-lobby.zichtbaar { flex-direction: column; align-items: stretch; }
+}
+
+/* ---------- Tijdens de raid ---------- */
+
+#raid-hud {
+  position: fixed;
+  z-index: 11;
+  right: max(8px, env(safe-area-inset-right));
+  bottom: max(8px, env(safe-area-inset-bottom));
+  display: none;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  background: var(--gh-panel);
+  border: 1px solid var(--gh-rand);
+  border-radius: 8px;
+  font-size: 14px;
+}
+#raid-hud.zichtbaar { display: flex; }
+#hud-tekst { color: var(--gh-accent); padding: 0 4px; }
+
+/* ---------- Banner en melding ---------- */
+
+#banner {
+  position: fixed;
+  z-index: 13;
+  left: 50%;
+  transform: translateX(-50%);
+  top: calc(max(8px, env(safe-area-inset-top)) + 44px);
+  display: none;
+  padding: 8px 16px;
+  background: var(--gh-panel);
+  border: 1px solid var(--gh-zonsondergang);
+  border-radius: 8px;
+  color: var(--gh-zonsondergang);
+  font-weight: 700;
+  pointer-events: none;
+}
+#banner.zichtbaar { display: block; }
+
+#melding {
+  position: fixed;
+  inset: 0;
+  z-index: 15;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: color-mix(in srgb, var(--gh-bg) 80%, transparent);
+}
+#melding.zichtbaar { display: flex; }
+#melding .paneel { display: flex; border-color: var(--gh-zonsondergang); }
+#melding-tekst { font-size: 18px; line-height: 1.4; }

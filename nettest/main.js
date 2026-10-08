@@ -31,8 +31,11 @@ function telBeeld(nu) {
   browserBeelden++;
   const duur = nu - start;
   if (duur >= 1000) {
-    DebugBar.set('fps', Math.round(spelBeelden * 1000 / duur));
-    DebugBar.set('scherm', Math.round(browserBeelden * 1000 / duur) + ' Hz');
+    const fps = Math.round(spelBeelden * 1000 / duur);
+    const hz = Math.round(browserBeelden * 1000 / duur);
+    DebugBar.set('fps', fps);
+    DebugBar.set('scherm', hz + ' Hz');
+    Stats.fps(fps, hz);
     spelBeelden = 0;
     browserBeelden = 0;
     start = nu;
