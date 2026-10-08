@@ -1,0 +1,11 @@
+{
+  "naam": "Testzone B",
+  "kolommen": 60,
+  "rijen": 40,
+  "tegelGrootte": 32,
+  "seed": 4242,
+  "tegels": ["tegel-0", "tegel-1", "tegel-2", "tegel-3"],
+  "decorAantal": 900,
+  "decorFrames": ["vijand", "projectiel", "partikel"],
+  "ruisTextuur": 512
+}

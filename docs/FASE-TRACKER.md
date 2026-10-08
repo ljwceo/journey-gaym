@@ -9,7 +9,7 @@
 |---|---|
 | **Huidige fase** | Fase 0: Projectopzet |
 | **Volgende stap** | Mapstructuur en `index.html` met Phaser maken, en online zetten via GitHub Pages |
-| **Laatste sessie** | 2026-10-07: spelgids, stijlgids, master prompt en tracker gemaakt |
+| **Laatste sessie** | 2026-10-08: losse testscène PerfTest gebouwd (`perftest/`) |
 | **Blokkades** | Geen |
 
 ---
@@ -99,10 +99,19 @@ Art die Claude nodig heeft. Bo of Lucas levert het aan in `assets/`. Tot die tij
 | 2026-10-07 | Co-op in fase 5 via PeerJS | Gratis, geen eigen server nodig |
 | 2026-10-07 | Phaser 3 en gewoon JavaScript, geen build-stap | Makkelijkst voor beginners, werkt direct op GitHub Pages |
 | 2026-10-07 | 4 zeldzaamheden (Gewoon, Zeldzaam, Episch, Legendarisch) | Uit het plan van Lucas, stijlgids aangepast |
+| 2026-10-08 | Losse testscène `perftest/` (geen onderdeel van het spel) | Prestaties meten voordat het echte spel groot wordt |
+| 2026-10-08 | Voorstel: spellogica op vaste tick van 60 Hz, tekenen los daarvan | Spel loopt even snel op 60 en 120 Hz-schermen; getest in PerfTest |
+| 2026-10-08 | Voorstel: object pools voor projectielen, schadegetallen en partikels | Minder haperingen; getest in PerfTest |
+| 2026-10-08 | Phaser vast op versie 3.80.1 via jsDelivr | Vaste versie, zodat niets onverwacht verandert |
 
 ## Sessielog
 
 Nieuwste bovenaan. Per sessie 2–4 regels.
+
+### 2026-10-08
+- Losse testscène PerfTest gebouwd: debug-overlay (F3 / drie vingers), vaste 60 Hz-tick, object pool, schuifregelaars voor 300 vijanden en 500 projectielen, achtergrond-laadtest.
+- Getest: controlegetallen gelijk bij vrije framerate, 20 en 45 fps. Nog testen op een echte pc met 120 Hz-scherm en op de iPhone.
+- Volgende stap: nog steeds fase 0 (mapstructuur, Phaser, GitHub Pages).
 
 ### 2026-10-07
 - Stijlgids, spelgids, master prompt en tracker gemaakt. Plan van Lucas samengevoegd met de keuzes van Bo.

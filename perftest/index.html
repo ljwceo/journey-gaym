@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <title>PerfTest</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&display=swap">
+  <link rel="stylesheet" href="../docs/art-style/tokens.css">
+  <link rel="stylesheet" href="perftest.css">
+</head>
+<body>
+  <!-- Debug-overlay: aan/uit met F3 of tik met drie vingers -->
+  <pre id="overlay"></pre>
+
+  <!-- Schuifregelaars en knoppen voor de test -->
+  <div id="panel">
+    <label>Vijanden <output id="enemyOut">0</output>
+      <input id="enemySlider" type="range" min="0" max="300" step="10" value="50">
+    </label>
+    <label>Projectielen <output id="projOut">0</output>
+      <input id="projSlider" type="range" min="0" max="500" step="10" value="100">
+    </label>
+    <div class="knoppen">
+      <button id="loadBtn" type="button">Laad zone B (L)</button>
+      <button id="walkBtn" type="button">Auto-lopen: aan</button>
+    </div>
+  </div>
+
+  <div id="game"></div>
+
+  <!-- Phaser 3 vanaf een CDN, vaste versie -->
+  <script src="https://cdn.jsdelivr.net/npm/phaser@3.80.1/dist/phaser.min.js"></script>
+  <script src="src/tokens.js"></script>
+  <script src="src/rng.js"></script>
+  <script src="src/object-pool.js"></script>
+  <script src="src/fixed-tick.js"></script>
+  <script src="src/placeholder-atlas.js"></script>
+  <script src="src/draw-call-counter.js"></script>
+  <script src="src/debug-overlay.js"></script>
+  <script src="src/spatial-grid.js"></script>
+  <script src="src/zone-loader.js"></script>
+  <script src="src/perf-test-scene.js"></script>
+  <script src="src/main.js"></script>
+</body>
+</html>
