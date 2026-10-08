@@ -262,3 +262,31 @@ label { font-size: 15px; color: var(--gh-tekst-zacht); }
 #melding.zichtbaar { display: flex; }
 #melding .paneel { display: flex; border-color: var(--gh-zonsondergang); }
 #melding-tekst { font-size: 18px; line-height: 1.4; }
+
+/* ---------- Joystick (touch) ---------- */
+
+/* Verschijnt waar je duim de linkerhelft aanraakt */
+#joystick {
+  position: fixed;
+  z-index: 9;
+  display: none;
+  width: 120px;
+  height: 120px;
+  margin: -60px 0 0 -60px;
+  border-radius: 50%;
+  border: 2px solid var(--gh-rand);
+  background: color-mix(in srgb, var(--gh-panel) 55%, transparent);
+  pointer-events: none;
+}
+#joystick.zichtbaar { display: block; }
+#joystick-knop {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 52px;
+  height: 52px;
+  margin: -26px 0 0 -26px;
+  border-radius: 50%;
+  background: var(--gh-accent);
+  opacity: 0.85;
+}

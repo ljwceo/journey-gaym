@@ -23,6 +23,7 @@
     Lobby.reset();
     verbergBanner();
     SchermAan.uit();
+    Raid.stop();
     Stats.raidStopt();
     vorigeFase = null;
     DebugBar.set('rol', '–');
@@ -87,9 +88,12 @@
     if (staat.fase === 'raid') {
       toon(null);
       $('knop-stop').hidden = Net.rol !== 'host';
-      $('hud-tekst').textContent = 'Raid bezig · ' + Net.code;
+      $('hud-tekst').textContent = Net.code + ' · ' +
+        (DEVICE.isTouch ? 'Sleep links om te lopen' : 'Lopen met WASD');
+      if (!Raid.bezig || Raid.nr !== staat.raidNr) Raid.start(staat.raidNr);
       Stats.raidBegint();
     } else {
+      Raid.stop();
       if (vorigeFase === 'raid') Stats.raidStopt();
       tekenLobby(staat);
       toon('scherm-lobby');

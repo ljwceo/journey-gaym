@@ -5,7 +5,7 @@ window.Lobby = (function () {
   let bijVerandering = () => {};
 
   function leeg() {
-    return { fase: 'lobby', host: null, gast: null };
+    return { fase: 'lobby', raidNr: 0, host: null, gast: null };
   }
 
   function speler(info) {
@@ -80,6 +80,7 @@ window.Lobby = (function () {
   function start() {
     if (!isHost() || !kanStarten()) return;
     staat.fase = 'raid';
+    staat.raidNr++; // nieuw nummer, zodat berichten van een vorige raid niets meer doen
     stuur();
   }
 
