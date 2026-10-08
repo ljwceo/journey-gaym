@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <!-- viewport-fit=cover: tot in de hoeken (notch); geen zoomen -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <title>Morvath Test</title>
+
+  <!-- Beginscherm-app (pc en iPhone) -->
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#1b1a2b">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Morvath Test">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="format-detection" content="telephone=no">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="icon" type="image/png" href="icons/icon-192.png">
+
+  <!-- Kleuren en fonts uit de stijlgids -->
+  <link rel="stylesheet" href="../docs/art-style/tokens.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IM+Fell+English+SC&family=Alegreya+Sans:wght@400;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+  <link rel="stylesheet" href="style.css?v=4b">
+</head>
+<body>
+  <!-- Hier tekent Phaser het spel -->
+  <div id="game"></div>
+
+  <!-- Debugbalk bovenin, altijd zichtbaar -->
+  <div id="debugbar" aria-live="off"></div>
+
+  <!-- Menu: start, meedoen, verbinden en lobby -->
+  <div id="menu">
+    <section id="scherm-start" class="paneel">
+      <h1>Morvath raid-test</h1>
+      <button id="knop-maken" class="knop hoofd">Raid maken</button>
+      <button id="knop-meedoen" class="knop">Raid meedoen</button>
+      <button class="knop klein" data-kopieer>Kopieer testresultaat</button>
+    </section>
+
+    <section id="scherm-meedoen" class="paneel">
+      <h2>Raid meedoen</h2>
+      <label for="code-invoer">Code van de host (4 letters)</label>
+      <input id="code-invoer" type="text" maxlength="4" placeholder="ABCD"
+             autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" enterkeyhint="go">
+      <div class="rij">
+        <button id="knop-terug" class="knop">Terug</button>
+        <button id="knop-verbind" class="knop hoofd">Meedoen</button>
+      </div>
+    </section>
+
+    <section id="scherm-bezig" class="paneel">
+      <p id="bezig-tekst">Verbinden…</p>
+      <button id="knop-annuleer" class="knop">Annuleren</button>
+    </section>
+
+    <section id="scherm-lobby" class="paneel">
+      <div class="kolom">
+        <h2>Raid-lobby</h2>
+        <p class="code-regel">Code <span id="lobby-code" title="Tik om te kopiëren"></span></p>
+        <p id="lobby-hint"></p>
+      </div>
+      <div class="kolom">
+        <ul id="spelers"></ul>
+        <div class="rij">
+          <button id="knop-klaar" class="knop">Klaar</button>
+          <button id="knop-start" class="knop hoofd">Start raid</button>
+        </div>
+        <div class="rij">
+          <button id="knop-verlaat" class="knop klein">Verlaten</button>
+          <button class="knop klein" data-kopieer>Kopieer testresultaat</button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- Balkje tijdens de raid -->
+  <div id="raid-hud">
+    <span id="hud-tekst">Raid bezig</span>
+    <button id="knop-stop" class="knop klein">Stop raid</button>
+    <button id="knop-verlaat-raid" class="knop klein">Verlaten</button>
+    <button class="knop klein" data-kopieer>Kopieer testresultaat</button>
+  </div>
+
+  <!-- "Gast is even weg" en dergelijke -->
+  <div id="banner" aria-live="polite"></div>
+
+  <!-- Melding met OK-knop (fouten, verbinding verbroken) -->
+  <div id="melding" role="alertdialog">
+    <div class="paneel">
+      <p id="melding-tekst"></p>
+      <button id="melding-ok" class="knop hoofd">OK</button>
+    </div>
+  </div>
+
+  <!-- Melding als de telefoon rechtop staat -->
+  <div id="draai">
+    <div class="draai-icoon"></div>
+    <p>Draai je telefoon</p>
+  </div>
+
+  <!-- Bibliotheken via CDN (geen bouwstap nodig) -->
+  <script src="https://cdn.jsdelivr.net/npm/phaser@3.80.1/dist/phaser.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
+
+  <!-- Onze code, in deze volgorde.
+       ?v=4b = versienummer: bij elke nieuwe stap ophogen (ook versie in config.js),
+       anders kan de browser een oude bewaarde kopie gebruiken. -->
+  <script src="config.js?v=4b"></script>
+  <script src="device.js?v=4b"></script>
+  <script src="touch.js?v=4b"></script>
+  <script src="debugbar.js?v=4b"></script>
+  <script src="stats.js?v=4b"></script>
+  <script src="wakelock.js?v=4b"></script>
+  <script src="net.js?v=4b"></script>
+  <script src="lobby.js?v=4b"></script>
+  <script src="volger.js?v=4b"></script>
+  <script src="besturing.js?v=4b"></script>
+  <script src="raid.js?v=4b"></script>
+  <script src="gevecht.js?v=4b"></script>
+  <script src="ui.js?v=4b"></script>
+  <script src="scenes/room.js?v=4b"></script>
+  <script src="main.js?v=4b"></script>
+</body>
+</html>
