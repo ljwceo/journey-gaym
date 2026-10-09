@@ -455,6 +455,14 @@ class CrossChecker {
       if (!(rings.active <= rings.preload && rings.preload < rings.unload)) {
         this.issue(f, `${p}.chunkRings`, 'rings must grow: active ≤ preload < unload (hysteresis)');
       }
+      const collisionRing = this.data.zones.world.terrain.collisionRing;
+      if (rings.active < collisionRing) {
+        this.issue(
+          f,
+          `${p}.chunkRings.active`,
+          `must be at least the collision ring (${collisionRing}, zones.json), so collision is the same on every preset`,
+        );
+      }
       if ((preset.shadows === 'off') !== (preset.shadowMapSize === 0)) {
         this.issue(
           f,

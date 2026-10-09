@@ -114,6 +114,13 @@ describe('validateGameData catches broken data', () => {
     expect(found).toContainEqual(expect.stringContaining('unknown color token "neongroen"'));
   });
 
+  it('reports a graphics preset whose active ring is smaller than the collision ring', () => {
+    const raw = freshData();
+    raw.zones.world.terrain.collisionRing = 2;
+    raw.quality.presets[0].chunkRings = { active: 1, preload: 3, unload: 4 };
+    expect(messages(raw)).toContainEqual(expect.stringContaining('collision ring'));
+  });
+
   it('reports chunk rings without hysteresis', () => {
     const raw = freshData();
     raw.quality.presets[0].chunkRings = { active: 2, preload: 3, unload: 3 };
