@@ -1,15 +1,15 @@
 ## PerfTest openen (losse testscène)
 
-Een aparte testpagina om te meten hoe snel de game kan lopen. Hij staat los van het echte spel, in de map [`perftest/`](perftest/).
+Een aparte testpagina om te meten hoe snel de game kan lopen. Hij staat los van het echte spel, in de map [`experiments/perftest/`](experiments/perftest/).
 
 **Op de pc (lokaal):**
 1. Open een terminal in de map van deze repo.
 2. Typ `python3 -m http.server 8000` (of `npx serve .`) en druk op Enter.
-3. Ga in je browser naar <http://localhost:8000/perftest/>.
+3. Ga in je browser naar <http://localhost:8000/experiments/perftest/>.
 
 Dubbelklikken op `index.html` werkt níet: de browser mag dan de kleurenlijst niet inladen.
 
-**Online en op de iPhone:** als GitHub Pages aan staat, open je `https://ljwceo.github.io/journey-gaym/perftest/` (pas als de branch in `main` zit).
+**Online en op de iPhone:** als GitHub Pages aan staat, open je `https://ljwceo.github.io/journey-gaym/experiments/perftest/` (pas als de branch in `main` zit).
 
 **Bediening**
 | Wat | Pc | iPhone |
@@ -31,16 +31,18 @@ omeeeeega
 
 ---
 
-## Arcane Oath
+## Legend of Morvath
 
-Co-op 2D wizard-actie-RPG voor de browser, in handgeschilderde jaren-90-anime-stijl.
+Co-op progressie-RPG in 3D voor de browser, gemaakt door Bo en Lucas.
 
 | Bestand | Wat |
 |---|---|
-| [`CLAUDE.md`](CLAUDE.md) | Master prompt: instructies voor Claude |
-| [`docs/FASE-TRACKER.md`](docs/FASE-TRACKER.md) | Waar we zijn en wat de volgende stap is |
-| [`docs/SPELGIDS.md`](docs/SPELGIDS.md) | Hoe de game werkt |
+| [`CLAUDE.md`](CLAUDE.md) | Master prompt: instructies voor Claude (bron van waarheid) |
+| [`docs/PROGRESS.md`](docs/PROGRESS.md) | Waar we zijn, plan per fase, besluiten |
+| [`docs/START-PROMPT.md`](docs/START-PROMPT.md) | Prompt om in elke nieuwe chat te plakken |
 | [`docs/art-style/`](docs/art-style/README.md) | Stijlgids: kleuren, licht, UI, AI-prompts |
-| [`prompt.md`](prompt.md) | Oorspronkelijk plan van Lucas |
+| [`experiments/`](experiments/) | Oude test-code (PerfTest) |
+| [`docs/archive/`](docs/archive/) | Oude plannen van Arcane Oath (2D): master prompt, spelgids, fase-tracker, plan van Lucas |
+| [Spelconcept (Google Docs)](https://docs.google.com/document/d/10Yi8_lYVsLEa_WpR76Exs0ecsY9mXxTk5a6SC4sSKUk/edit) | Verhaal, gebieden, skills, gear, NPC's, stats en vijanden |
 
-**Sessie starten:** open de repo in Claude Code en typ: *"Lees CLAUDE.md en de fase-tracker, en vertel me waar we zijn."*
+**Sessie starten:** plak de prompt uit [`docs/START-PROMPT.md`](docs/START-PROMPT.md) in Claude Code en vul de fase en taak in.
