@@ -308,6 +308,9 @@
     "saveCopy": "Copy",
     "saveLoad": "Load",
     "savePaste": "Paste a save code here",
-    "saveInvalid": "This is not a valid save code."
+    "saveInvalid": "This is not a valid save code.",
+    "measure": "Measure fps",
+    "measureNote": "Walk around normally for {seconds} s. The result appears in the debug overlay (line \"measure\").",
+    "measureStart": "Measure {seconds} s"
   }
 }

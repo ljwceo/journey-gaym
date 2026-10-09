@@ -5,6 +5,7 @@ import { LazyState } from './core/LazyState';
 import { StateMachine } from './core/StateMachine';
 import { I18n } from './i18n/I18n';
 import { DebugOverlay } from './render/DebugOverlay';
+import { PerfProbe, type PerfResult } from './render/PerfProbe';
 import { QualityManager } from './render/QualityManager';
 import { Renderer } from './render/Renderer';
 import { AutoSave } from './save/AutoSave';
@@ -34,6 +35,8 @@ const states = new StateMachine<StateId>((from, to) => events.emit('stateChanged
 
 let debug: DebugOverlay | null = null;
 let quality: QualityManager | null = null;
+const perf = new PerfProbe();
+let perfLine = '';
 const loop = new GameLoop({
   update: (dt) => states.update(dt),
   render: (alpha, frameSeconds) => {
@@ -44,6 +47,8 @@ const loop = new GameLoop({
     const workMs = loop.updateMs + performance.now() - start;
     debug?.frame(frameSeconds, workMs);
     quality?.frame(frameSeconds, workMs);
+    const measured = perf.frame(frameSeconds);
+    if (measured) onMeasured(measured);
   },
 });
 debug = new DebugOverlay(container, renderer.three, loop.time, () => states.id);
@@ -86,6 +91,9 @@ const ctx: GameContext = {
   saves,
   debug: debugOverlay,
   quality: qualityManager,
+  perf,
+  perfText: () =>
+    perf.running ? `measuring… ${Math.ceil(perf.remaining)} s` : perfLine || 'not measured yet',
   ui,
   overlays: new Overlays(ui, events),
   params,
@@ -154,6 +162,17 @@ events.on('languageChanged', ({ language }) => {
 
 new AutoSave(saves, events, () => ctx.session);
 
+/** A finished fps measurement: one line to copy into the fps table (debug overlay + console). */
+function onMeasured(result: PerfResult): void {
+  const canvas = renderer.three.domElement;
+  perfLine =
+    `${qualityManager.preset?.id ?? '-'} · avg ${result.fps.toFixed(1)} fps · ` +
+    `1% low ${result.low1Fps.toFixed(1)} · worst ${result.worstMs.toFixed(1)} ms · ` +
+    `calls ${renderer.three.info.render.calls} · ${canvas.width}x${canvas.height}`;
+  console.info(`[measure] ${perfLine}`);
+  updateDebugLines();
+}
+
 // Debug lines: language, season, save. Text allocates, so refresh on a slow timer.
 function updateDebugLines(): void {
   const lines = debugOverlay.lines;
@@ -177,6 +196,7 @@ function updateDebugLines(): void {
       : 'none',
   );
   lines.set('quality', `${qualityManager.debugLine()} · cap ${loop.frameCap || 'none'}`);
+  lines.set('measure', ctx.perfText());
 }
 window.setInterval(updateDebugLines, 1000);
 

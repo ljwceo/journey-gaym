@@ -296,4 +296,4 @@ Definition of Done:
 ```
 
 ### Fase 1 – Basis + open wereld + character creator
-Status: nog niet gestart.
+Status: gebouwd (stap 1.1–1.11); wacht op fps-metingen op een echte pc en iPhone. Details in `docs/PROGRESS.md`.

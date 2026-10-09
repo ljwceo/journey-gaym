@@ -7,9 +7,9 @@
 | | |
 |---|---|
 | **Huidige fase** | Fase 1 – Basis + open wereld + character creator |
-| **Status** | Stap 1.10 klaar (grafische standen: benchmark, automatisch omlaag, schaduwen, anti-aliasing; debug compleet) |
-| **Volgende stap** | Stap 1.11: afronden (meten op pc en iPhone, geheugen na 10 min, ARCHITECTURE.md compleet, Definition of Done nalopen) |
-| **Laatste sessie** | 2026-10-09: stap 1.10 grafische standen |
+| **Status** | Stap 1.11 klaar aan de kant van Claude: alles gebouwd en getest in de testbrowser. **Wacht op metingen op een echte pc en iPhone** (zie Definition of Done) |
+| **Volgende stap** | Bo en Lucas: fps meten per stand op pc en iPhone (README → "Fps meten") en de open punten hieronder op de telefoon proberen. Daarna fase 1 afsluiten en fase 2 toevoegen aan `CLAUDE.md` |
+| **Laatste sessie** | 2026-10-09: stap 1.11 afronden |
 
 ---
 
@@ -49,7 +49,7 @@ Elke stap is één branch + pull request. Na elke stap start de game zonder fout
 ## Fase-log
 
 ### Fase 1 – Basis + open wereld + character creator
-**Status:** bezig, stap 1.1 t/m 1.10 klaar.
+**Status:** stap 1.1 t/m 1.11 gebouwd; wacht op metingen op echte apparaten.
 **Gebouwd:**
 - 1.1 Projectopzet: Vite 8 + TypeScript 6 (strict), Three.js r186, ESLint + Prettier, Vitest. Leeg 3D-scherm met een draaiende kubus in stijlgidskleuren (draait per seconde, niet per frame). GitHub Actions controleert elke pull request (lint, opmaak, typecheck, tests, build) en zet `main` op GitHub Pages.
 - 1.2 Kern: `FixedStep` + `GameLoop` (simulatie altijd 60 Hz met accumulator, tekenen interpoleert, max 8 inhaalstappen per frame, frames > 0,25 s worden afgekapt, `?fps=N` om de framerate te beperken), getypte `EventBus` (geen allocaties bij `emit`), `StateMachine` (wissel gebeurt pas vóór de volgende update), `Random` (sfc32 met vaste seed) + `hashSeed` voor per-chunk seeds, `Renderer`, `DebugOverlay` (F3 / drie vingers / `?debug=1`: fps, frametijd, cpu-tijd, draw calls, triangles, geometries/textures, heap, resolutie, simulatiestappen, huidige state). Demo-scène: kubus die rondjes draait op de simulatie en vloeiend getekend wordt. 29 tests.
@@ -153,6 +153,34 @@ Elke stap is één branch + pull request. Na elke stap start de game zonder fout
   - **Wat een stand verandert** (alleen uiterlijk): resolutie, anti-aliasing (Low uit, Mid FXAA, High MSAA 4×), **schaduwen** (Low geen, Mid 40 m scherp, High 70 m zacht), kijkafstand/mist, chunk-ringen, riet-dichtheid, en het fps-doel bij fps "Auto" (Low/Mid 60, High 120).
   - **Debug compleet:** regel `quality` in de overlay (stand, auto/handmatig, benchmark-uitslag, gemiddelde fps, fps-cap). Het cheatmenu (F6) heeft er bij: **seizoen forceren** (ook op de telefoon, F4 werkt nog), **benchmark opnieuw**, **save exporteren** (code + Kopiëren) en **importeren** (plakken + Laden → titelscherm, Continue = de geïmporteerde save). Teleport naar elke zone zat er al in. Draw calls tellen nu alle passes (schaduw + scène + anti-aliasing).
   - Gemeten in headless Chromium (software-rendering, dus traag): benchmark 292 ms → Low met melding; Low/Mid/High wisselen in Settings: schaduwen, mist en ringen passen meteen aan; 3× (4 wissels + wereld uit): geometrie/textures terug naar 1/2, groeit niet. Export → import → Continue werkt; ongeldige code geeft een melding. Geen fouten. 229 tests.
+- 1.11 Afronden:
+  - **Fps meten op echte apparaten:** in het cheatmenu (F6 / knop Cheats) staat **Meet 20 s**. Na 20 s rondlopen staat in de debug-overlay (regel `measure`) en in de console één regel met stand, gemiddelde fps, "1% low", langste frame, draw calls en resolutie. Uitleg in de README. Logica in `src/render/PerfProbe.ts` (getest).
+  - **Duurtest 10 minuten** (headless, Low, 10× snelheid heen en weer + elke minuut teleporteren tussen Greyhaven, Greenwood en Mournfen): geometrieën bleven tussen 39 en 63, textures 0, heap tussen 9,6 en 13,7 MB, steeds weer omlaag na ontladen. **Het geheugen groeit niet.** Geen fouten.
+  - **Automatisch omlaag** echt nagespeeld: save op High (Auto) in een trage browser → na ±15 s "Graphics verlaagd naar Mid", na ±25 s "… naar Low", opgeslagen als `auto` / `low`.
+  - **Naadloos lopen** van de Greenwood naar de Mournfen: zonenaam in beeld, save meteen op `mournfen`, geen laadscherm. Diep water hield de speler daarna tegen.
+  - **Save verwijderen** (2× Ja) → terug naar de taalkeuze, localStorage leeg.
+  - `docs/ARCHITECTURE.md` compleet: kern (vaste stap, events, scènes), data + validatie, taal, opslaan + migraties, zones/triggers/checkpoints/instances, HUD, seizoenen, streaming, grafische standen, NPC's.
+  - 232 tests, lint, opmaak, typecheck en build slagen.
+
+**Definition of Done fase 1** (✅ = gebouwd en getest in de testbrowser, 📱 = nog door Bo/Lucas te proberen op een echt apparaat)
+
+| | Punt | Stand |
+|---|---|---|
+| ✅ | Opent vanaf GitHub Pages, eerst taal, dan titelscherm | Werkt; elke merge in `main` wordt automatisch online gezet |
+| ✅ | Character creator: naam (16), lichaamstype, kapsel, 19 haar-, 6 huid-, 6 mantelkleuren, random, poppetje verandert live | Stap 1.5 |
+| ✅ | Intro-stub overslaanbaar, wakker worden bij het Monastery | Stap 1.4/1.8 |
+| ✅📱 | WASD/joystick 4 m/s, dash (energie, 1 s cooldown), camera over de schouder, vrij draaien, W = kijkrichting | Gebouwd en getest met nagebootste vingers; **gevoel op de iPhone graag proberen** |
+| ✅ | Uitleg bij eerste bezoek in Greyhaven | Stap 1.8 |
+| ✅📱 | Naadloos naar Greenwood (Old Tjikko, riviertjes, elfenstad, heiligdom) en Mournfen, zonenaam, geen hapering bij laden | Naadloos getest; laden kost < 1 ms per frame op de hoofdthread. **Haperingen alleen echt te zien op een echt apparaat** (Meet 20 s: kijk naar "worst") |
+| ✅ | Praten in NL en EN, Pringle volgt en is te aaien, Treewardens lopen rond | Stap 1.9 |
+| ✅ | Checkpoint, autosave (checkpoint, zone, afsluiten), Continue zet je terug | Stap 1.8/1.9 |
+| ✅ | Save verwijderen met 2× bevestigen → terug naar het begin | Opnieuw getest in 1.11 |
+| ✅📱 | Kiest zelf Low/Mid/High, te wijzigen in Settings, langdurig < 60 fps = één stand omlaag met bericht | Getest in de testbrowser; **welke stand een echte iPhone/pc kiest, graag doorgeven** |
+| ✅ | Debug: fps, draw calls, chunks, stand, seizoen, teleport naar elke zone | Stap 1.7/1.10 |
+| 📱 | Stabiel 60 fps op iPhone, 120 fps op een 120 Hz-scherm (High), even snel op 60 en 120 Hz | Even snel: getest (vaste tijdstap, `?fps=30`). **Fps zelf: meten met Meet 20 s** |
+| ✅ | Na 10 minuten heen en weer lopen groeit het geheugen niet | Duurtest 1.11 |
+| ✅ | DataValidator, taal-key-check en Vitest (incl. seizoen en save-migratie) slagen | 232 tests |
+| ✅ | `docs/ARCHITECTURE.md` legt streaming, zones, triggers, data, saves en grafische standen uit | Stap 1.11 |
 
 **Bekende problemen:**
 - ~~De game-bundel is ±666 kB~~ → opgelost in stap 1.7: opgesplitst in 7 bestanden, grootste 548 kB (Three.js zelf). Three.js kan niet verder opgesplitst worden; dat bestand groeit alleen bij een nieuwe Three.js-versie.
@@ -180,12 +208,15 @@ Elke stap is één branch + pull request. Na elke stap start de game zonder fout
 - Veel getallen die niet in het concept staan zijn een **voorstel** (zie besluiten): spell-, combo- en skillwaarden, Sultans waarschuwingstijden, dash-afstand, vijandsnelheden in m/s. Ze staan in data en zijn makkelijk aan te passen.
 - NPC's botsen niet met elkaar (een Treewarden kan door een andere heen lopen). Pringle en Treewardens kunnen niet op platforms of bruggen (zie hierboven).
 - Sta je recht vóór een NPC, dan staat je eigen poppetje er voor de camera vóór. Draai de camera of stap opzij.
-**Gemeten fps:**
+- Op een smalle telefoon valt het einde van lange regels in de debug-overlay buiten beeld; de uitslag van "Meet 20 s" staat ook in het cheatmenu (onder Fps meten).
+- Het testscript kon soms het cheatmenu niet openen vlak nadat de muis gevangen werd (pointer lock in de headless browser). Op een echte pc niet gezien; laat het weten als F6 een keer niets doet.
 
-| Apparaat | Low | Mid | High |
-|---|---|---|---|
-| Pc | – | – | – |
-| iPhone | – | – | – |
+**Gemeten fps** (met Cheats → Meet 20 s; vul "avg / 1% low" in per stand. De testbrowser zegt niets: die tekent zonder videokaart, 13–29 fps)
+
+| Apparaat | Low | Mid | High | Zelf gekozen stand |
+|---|---|---|---|---|
+| Pc | – | – | – | – |
+| iPhone | – | – | – | – |
 
 ---
 
@@ -268,6 +299,8 @@ Elke stap is één branch + pull request. Na elke stap start de game zonder fout
 | 2026-10-09 | Schaduwen: Mid 40 m (1024, scherp), High 70 m (2048, zacht), Low geen (`shadowDistance`, `shadowSoftness` nieuw in `quality.json`) | Voorstel; schaduw alleen dichtbij is goedkoop en ver weg zie je ze in de mist toch niet |
 | 2026-10-09 | Fps "Auto" volgt het fps-doel van de stand: Low/Mid max 60, High max 120 | Tabel in §4 ("Fps-doel"); spaart batterij op 120 Hz-schermen bij Low/Mid |
 | 2026-10-09 | Save importeren gaat terug naar het titelscherm (Continue = geïmporteerde save) | Zo wordt de hele wereld netjes opnieuw opgebouwd vanuit de nieuwe save |
+| 2026-10-09 | Knop **Meet 20 s** in het cheatmenu (gemiddelde fps, 1% low, langste frame) | Claude kan niet op een echte iPhone of pc meten; zo kunnen Bo en Lucas de fps-tabel in een paar minuten invullen |
+| 2026-10-09 | Fase 1 is pas "af" als de fps op een echte pc en iPhone gemeten is | Harde eis §2.1 kan alleen op echte apparaten gecontroleerd worden |
 | 2026-10-09 | PerfTest verplaatst naar `experiments/perftest/` | Oude test-code hoort in `/experiments` (§5). Er was geen PeerJS-netwerktest in de repo, dus `experiments/net-test/` bestaat (nog) niet |
 
 ## Sessielog
@@ -291,3 +324,4 @@ Elke stap is één branch + pull request. Na elke stap start de game zonder fout
 - Stap 1.9 gebouwd: NPC's uit data (9 in Greyhaven, Pringle, 3 Treewardens), dialoogvenster, praten in NL en EN, aaien, volgen, rondlopen, niet door NPC's heen lopen, quest-haak `dialogueWhen`, autosave bij eerste ontmoeting. Getest in headless Chromium (pc 1280×800 en 390×844): praten met Marco (2 zinnen, sluit na de laatste, gaat niet opnieuw open), Hilda in het Nederlands en sluiten met Escape (geen pauze), Pringle aaien met melding, Pringle volgt bij lopen, ontmoete NPC's staan na herladen nog in de save, Treewarden loopt rond en staat in de elfenstad als "safe", 3× wereld in/uit: geometrie terug naar 0. Gevonden en opgelost: Pringle nam steeds de E-toets over (nu kleiner aai-bereik) en zat tussen camera en speler (nu rechtsachter). Geen fouten. Tijdelijke namen: geen nieuwe. Volgende stap: 1.10 (grafische standen).
 - Fix na stap 1.9 (feedback: Treewardens niet te vinden): 10 in plaats van 3, verspreid over het bos (één 80 m van waar de teleport je neerzet), kroon nu violet (`spreukviolet`) zodat ze opvallen tussen de bomen. Getest in headless Chromium: na teleport naar de Greenwood staat er meteen een in beeld. Geen fouten.
 - Stap 1.10 gebouwd: QualityManager met Low/Mid/High (resolutie, anti-aliasing, schaduwen, kijkafstand, ringen, versiering, fps-doel), benchmark bij de eerste start (mediaan van werktijd incl. GPU), automatisch één stand omlaag bij < 58 fps over 5 s met melding, debug compleet (quality-regel, seizoen forceren, benchmark opnieuw, save export/import in het cheatmenu). Getest in headless Chromium (pc 1280×800 en 1000×640): hele flow, benchmark kiest Low op software-rendering met melding, alle drie de standen in Settings (schaduw alleen op Mid/High, mist korter op Low), export/import/Continue, ongeldige code, 3× wereld in/uit met wissels: geometrie terug naar 1/2. Geen fouten. Tijdelijke namen: geen nieuwe. Volgende stap: 1.11 (afronden en meten op echte apparaten).
+- Stap 1.11 gebouwd: knop "Meet 20 s" (fps, 1% low, langste frame) voor de echte apparaten, `ARCHITECTURE.md` compleet, README met meetinstructies, Definition of Done nagelopen. Getest in headless Chromium: duurtest van 10 minuten (geheugen groeit niet), automatisch High → Mid → Low, naadloos lopen Greenwood → Mournfen, save verwijderen, meten op pc- en telefoonformaat in EN en NL. Geen fouten. Open: fps meten op een echte pc en iPhone (Bo/Lucas). Tijdelijke namen: geen nieuwe.

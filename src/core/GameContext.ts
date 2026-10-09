@@ -1,6 +1,7 @@
 import type { GameData } from '../data/types';
 import type { I18n } from '../i18n/I18n';
 import type { DebugOverlay } from '../render/DebugOverlay';
+import type { PerfProbe } from '../render/PerfProbe';
 import type { QualityManager } from '../render/QualityManager';
 import type { Renderer } from '../render/Renderer';
 import type { SaveData } from '../save/SaveData';
@@ -24,6 +25,10 @@ export interface GameContext {
   readonly debug: DebugOverlay;
   /** Graphics preset (Low / Mid / High): benchmark, auto-downgrade, renderer settings. */
   readonly quality: QualityManager;
+  /** Debug fps measurement (cheat menu), for filling in the fps table per device. */
+  readonly perf: PerfProbe;
+  /** Text of the last fps measurement (or its progress), for the debug overlay and cheat menu. */
+  perfText(): string;
   /** Layer for HTML screens and panels, above the canvas. */
   readonly ui: HTMLElement;
   readonly overlays: Overlays;

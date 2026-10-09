@@ -1,6 +1,68 @@
 # Architectuur – Legend of Morvath
 
-> Hoe de game in elkaar zit. Dit document groeit per stap; in stap 1.11 komen data, saves, triggers en grafische standen er volledig bij.
+> Hoe de game in elkaar zit (stand: einde fase 1). Code en commentaar zijn Engels, deze uitleg Nederlands.
+
+## Overzicht
+
+```
+main.ts ── GameLoop (vaste stap 60 Hz) ── StateMachine ── Boot → LanguageSelect → Title → CharacterCreate → Intro → World
+   │                                                       (Pause en Settings zijn overlays boven de scène)
+   ├─ GameContext: renderer, events, loop, i18n, saves, debug, quality, perf, data, seasons, session
+   ├─ QualityManager (Low/Mid/High)      ├─ AutoSave (luistert naar events)
+   └─ DebugOverlay (F3)                  └─ I18n (en/nl)
+```
+
+- **Alles wat de scènes delen** zit in één `GameContext` (`src/core/GameContext.ts`), gemaakt in `main.ts`. Geen globale variabelen.
+- **Data buiten de code:** content en balansgetallen staan in `public/data/*.json`, teksten in `public/lang/*.json`, kleuren in de stijlgids (`docs/art-style/tokens.json`).
+
+## Kern: tijd, events, scènes (`src/core`)
+
+- **Vaste tijdstap** (`Time.ts`, `GameLoop.ts`): de simulatie loopt altijd in stappen van 1/60 s met een accumulator; tekenen gebeurt elke frame en interpoleert tussen de laatste twee stappen (`alpha`). Daardoor loopt het spel op 30, 60 en 120 fps precies even snel. Snelheden zijn altijd per seconde. Maximaal 8 inhaalstappen per frame; frames langer dan 0,25 s worden afgekapt. `?fps=N` beperkt de framerate om dat te testen.
+- **EventBus** (`EventBus.ts`, lijst in `events.ts`): getypte events zonder allocaties bij `emit`. Systemen kennen elkaar niet, ze luisteren: `zoneEntered`, `triggerEntered`, `placeFirstVisited`, `npcTalked`, `npcMet`, `checkpointSet`, `languageChanged`, `settingsChanged`, `qualityChanged`, `qualityAutoChosen`, `stateChanged`. Quests (fase 2–3) haken hier later op in zonder bestaande code te wijzigen.
+- **StateMachine** (`StateMachine.ts`): een scène heeft `enter`, `exit`, `update(dt)`, `render(alpha)`. Een wissel gebeurt pas vóór de volgende update; `exit()` ruimt alles op (DOM, listeners, GPU-geheugen). De creator en de wereld zijn aparte downloads (`LazyState.ts`).
+- **Random** (`Random.ts`): sfc32 met vaste seed; `hashSeed` geeft elke chunk zijn eigen seed, zodat de wereld voor iedereen gelijk is (ook later in raids).
+- **Input** (`Input.ts`): abstract (`getMoveVector`, `isPressed('dash')`), met toetsenbord, muis (pointer lock), touch-joystick en knoppen. Tekstvelden worden genegeerd. Een gamepad kan later als extra bron.
+
+## Data en validatie (`src/data`)
+
+1. `DataLoader` haalt alle 14 bestanden parallel op (laadbalk), met een build-nummer in de URL zodat een nieuwe versie nooit oude JSON uit de browsercache gebruikt.
+2. `schemas.ts` (zod/mini) beschrijft elk bestand: verplichte velden, types, grenzen; onbekende velden zijn een fout (typfouten vallen op). De TypeScript-types (`types.ts`) komen uit dezelfde schema's.
+3. `DataValidator` controleert wat een schema niet kan: unieke ids, verwijzingen tussen bestanden (NPC → zone, quest → item, trigger → voorwaarde), posities binnen hun zone, wederzijdse buren, stijlgidskleuren, tekst-keys die echt in `en.json` staan, ringen met hysterese, schaduwafstand binnen de mist, enz.
+4. Fouten: in debug een rode lijst in beeld, altijd in de console. Tests draaien de validator op de echte data (`DataValidator.test.ts`).
+
+**Iets nieuws toevoegen = alleen data:** een NPC in `npcs.json` (+ id in de zone), een item in `items.json`, een vijand in `monsters.json`, een plek in `triggers.json`, een zone of gebouw in `zones.json`, en de teksten in beide taalbestanden. De validator zegt wat er mist.
+
+## Taal (`src/i18n`)
+
+- `t('key', { params })` met `{placeholders}`; ontbreekt een key, dan valt hij terug op Engels en meldt hij het in debug.
+- Bij de allereerste start kies je de taal; die staat in de save en is te wisselen in Settings (scènes bouwen hun tekst opnieuw op `languageChanged`).
+- Namen (personages, plekken, items) blijven in beide talen Engels en staan in data, niet in de taalbestanden.
+- `I18n.test.ts` controleert dat `en.json` en `nl.json` dezelfde keys en dezelfde placeholders hebben.
+
+## Opslaan (`src/save`)
+
+- **Eén save** in localStorage (`SaveManager.ts`), vorm en uitleg in `SaveData.ts`: taal, instellingen (incl. grafische stand en of die automatisch is), personage (naam, uiterlijk, gold, startspullen, uitrusting), pad (`sword`/`light`/`dark`, nog leeg), zone + positie + kijkrichting + checkpoint, bezochte plekken, ontmoete NPC's, speeltijd.
+- **Versie + migraties:** `migrations[v]` zet een save van versie v om naar v+1 (nu versie 2). Bij laden worden migraties één voor één uitgevoerd en daarna wordt de save gevalideerd. Een kapotte save gaat naar een reservekopie; een save van een nieuwere versie wordt nooit aangeraakt (de game blokkeert met een melding). Getest in `SaveManager.test.ts`.
+- **Automatisch** (`AutoSave.ts`): bij een nieuwe zone, een nieuw checkpoint, een eerste bezoek aan een plek, een eerste ontmoeting met een NPC, bij pauze, en bij `visibilitychange`/`pagehide` (iPhone Safari vuurt `beforeunload` niet betrouwbaar).
+- **Verwijderen** alleen in Settings, twee keer bevestigen, daarna begin je bij de taalkeuze. **Export/import** als tekstcode alleen in het cheatmenu (debug).
+- Een veld toevoegen: `SAVE_VERSION` ophogen, het schema aanpassen, een migratie schrijven die het veld vult, en een test.
+
+## Zones, plekken en checkpoints (`src/world`)
+
+- **Zones** (`zones.json`): grenzen, level-bereik, terrein, mist, buren, spawnpunten, checkpoint, gebouwen (`structures`), gebieden (`areas`, bijv. de elfenstad), scatter-regels en NPC-ids. `ZoneLocator` bepaalt in welke zone je staat; een wissel geeft `zoneEntered` (naambalk, mistkleur, autosave). Buiten is alles naadloos.
+- **Gebouwen** (`StructurePlacement.ts`, `StructureLayer.ts`): placeholder-blokken uit data, op het terrein gezet, laden en ontladen met hun chunk (incl. colliders). De camera kijkt niet door muren.
+- **Triggers** (`Triggers.ts`, `triggers.json`): cirkels of rechthoeken op de grond. Binnenlopen geeft `triggerEntered`; de eerste keer ook `placeFirstVisited` (uitlegtekst, opgeslagen in `visitedPlaces`). Een trigger met een voorwaarde (`Conditions.ts`) kan een poort zijn: de stadspoort gebruikt `canLeaveCity` (Sultan verslagen en level 5), die in fase 1 altijd waar is.
+- **Checkpoints** (`Checkpoints.ts`): langslopen maakt het je checkpoint (`checkpointSet` → melding + autosave); bij het bed/heiligdom kun je rusten (nu alleen een melding).
+- **Instances** (`Instances.ts`): `enterInstance(id)` / `exitInstance()` bestaan als interface voor interieurs en dungeons met een laadscherm; in fase 1 weigert de wereld elke instance.
+
+## HUD (`src/ui/HUD.ts`, `HudVisibility.ts`)
+
+Elk element is zichtbaar zolang het minstens één **reden** heeft (`show(reason)`, eventueel met een tijd) en faadt dan rustig in en uit. De regels uit het concept (gold alleen bij een shop of verandering, balken alleen in gevecht, XP na een verslagen vijand, HP-balk blijft onder 30%) staan op één plek en zijn getest; in fase 1 gebruikt: zonenaam, meldingen, interactie-icoontje en de energiebalk bij een dash. De HUD staat bovenin, nooit op de plek van de joystick of de knoppen.
+
+## Seizoenen (`src/services/SeasonService.ts`)
+
+Uit de echte datum: ISO-week 1 = Summer, elke week het volgende seizoen (Summer → Autumn → Winter → Spring). Week 53 loopt gewoon door. Geeft ook de tijd tot het volgende seizoen. Te forceren met F4, het cheatmenu of `?season=winter`. In fase 1 alleen zichtbaar in debug.
+
 
 ## Open wereld en streaming (stap 1.7)
 
