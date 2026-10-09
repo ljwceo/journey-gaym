@@ -122,24 +122,27 @@ export const playerFileSchema = z.strictObject({
     distance: positive.max(30),
     durationSeconds: positive.max(2),
   }),
-  /** Third-person camera. Sharpness values are per second (higher = snappier). */
+  /**
+   * Third-person camera over the shoulder (like Genshin Impact). Sharpness values are per
+   * second (higher = snappier). Pitch is the angle below the horizon; negative looks up.
+   */
   camera: z.strictObject({
     fovDegrees: z.number().min(20).max(100),
-    /** Point on the character the camera looks at, in meters above the feet. */
+    /** Point on the character the camera orbits and looks at, in meters above the feet. */
     targetHeight: nonNegative.max(5),
-    /** Default angle below the horizon; free look moves between min and max. */
-    pitchDegrees: z.number().min(0).max(89),
-    minPitchDegrees: z.number().min(0).max(89),
-    maxPitchDegrees: z.number().min(0).max(89),
+    pitchDegrees: z.number().min(-89).max(89),
+    minPitchDegrees: z.number().min(-89).max(89),
+    maxPitchDegrees: z.number().min(-89).max(89),
     distance: positive.max(100),
     minDistance: positive.max(100),
     maxDistance: positive.max(100),
-    followSharpness: positive.max(100),
+    /** Looking up, the camera moves closer instead of going below this height. */
+    minHeightAboveGround: nonNegative.max(10),
+    followSharpness: positive.max(1000),
     zoomSharpness: positive.max(100),
-    /** After walking starts, wait this long before the camera turns back behind the character. */
-    returnDelaySeconds: nonNegative.max(10),
-    returnSharpness: positive.max(100),
-    /** Turning per dragged pixel at 100% sensitivity. */
+    /** Walking sideways turns the camera this fast towards the walking direction. */
+    strafeFollowDegreesPerSecond: nonNegative.max(720),
+    /** Turning per moved/dragged pixel at 100% sensitivity. */
     rotateRadiansPerPixelMouse: positive.max(1),
     rotateRadiansPerPixelTouch: positive.max(1),
     /** Zoom change per mouse wheel notch, as a fraction of the distance. */
@@ -152,11 +155,6 @@ export const playerFileSchema = z.strictObject({
     joystickRadiusPx: positive.max(300),
     /** Joystick input below this fraction counts as standing still. */
     joystickDeadZone: fraction,
-    /**
-     * Walking keeps its direction while the camera turns back behind the character; only a
-     * change of the stick/keys by more than this angle re-reads the camera direction.
-     */
-    moveRetargetDegrees: z.number().min(0).max(180),
   }),
   sword: z.strictObject({
     fastHit: z.strictObject({

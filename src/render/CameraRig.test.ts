@@ -31,28 +31,39 @@ function run(
   }
 }
 
-describe('CameraOrbit', () => {
-  it('starts behind the character at the default pitch', () => {
+describe('CameraOrbit (over the shoulder)', () => {
+  it('starts low behind the character', () => {
     const orbit = new CameraOrbit(cfg);
     orbit.snap(0, 0, 0, 1);
     expect(orbit.yaw).toBe(1);
     expect(orbit.pitch).toBeCloseTo(cfg.pitchDegrees * DEG);
+    expect(cfg.pitchDegrees).toBeLessThan(30);
   });
 
-  it('can look all the way round while standing still, and stays there', () => {
+  it('can be turned all the way round and stays there while standing', () => {
     const orbit = new CameraOrbit(cfg);
     orbit.snap(0, 0, 0, 0);
     run(orbit, 3, { look: { yaw: Math.PI, pitch: 0, zoom: 1 } });
     expect(Math.abs(orbit.yaw)).toBeCloseTo(Math.PI);
   });
 
-  it('turns back behind the character once it walks', () => {
+  it('stays where it is when walking straight ahead or back', () => {
     const orbit = new CameraOrbit(cfg);
     orbit.snap(0, 0, 0, 0);
-    run(orbit, 0.1, { look: { yaw: 2, pitch: -0.3, zoom: 1 } });
-    run(orbit, 4, { walking: true, heading: 0 });
-    expect(orbit.yaw).toBeCloseTo(0, 2);
-    expect(orbit.pitch).toBeCloseTo(cfg.pitchDegrees * DEG, 2);
+    orbit.yaw = 1;
+    run(orbit, 3, { walking: true, heading: 1 });
+    expect(orbit.yaw).toBeCloseTo(1);
+    run(orbit, 3, { walking: true, heading: 1 + Math.PI });
+    expect(orbit.yaw).toBeCloseTo(1);
+  });
+
+  it('turns slightly along when walking sideways', () => {
+    const orbit = new CameraOrbit(cfg);
+    orbit.snap(0, 0, 0, 0);
+    run(orbit, 1, { walking: true, heading: -Math.PI / 2 }); // walking to the right
+    const turned = -orbit.yaw / DEG;
+    expect(turned).toBeGreaterThan(cfg.strafeFollowDegreesPerSecond * 0.8);
+    expect(turned).toBeLessThan(cfg.strafeFollowDegreesPerSecond * 1.01);
   });
 
   it('scales turning with the sensitivity setting', () => {
@@ -70,18 +81,31 @@ describe('CameraOrbit', () => {
     expect(orbit.distance).toBeCloseTo(cfg.maxDistance, 3);
     run(orbit, 2, { look: { yaw: 0, pitch: -10, zoom: 0.001 } });
     expect(orbit.pitch).toBeCloseTo(cfg.minPitchDegrees * DEG);
-    expect(orbit.distance).toBeCloseTo(cfg.minDistance, 3);
   });
 
-  it('returns at the same speed at 60 and 120 fps', () => {
+  it('comes closer instead of going below the ground when looking up', () => {
+    const orbit = new CameraOrbit(cfg);
+    orbit.snap(0, 0, 0, 0);
+    run(orbit, 2, { look: { yaw: 0, pitch: -10, zoom: 100 } });
+    const cameraY = orbit.y + Math.sin(orbit.pitch) * orbit.distance;
+    expect(cameraY).toBeGreaterThanOrEqual(cfg.minHeightAboveGround - 1e-6);
+    expect(orbit.distance).toBeLessThan(cfg.maxDistance);
+  });
+
+  it('follows the character tightly at 60 and 120 fps alike', () => {
     const at60 = new CameraOrbit(cfg);
     const at120 = new CameraOrbit(cfg);
-    for (const orbit of [at60, at120]) {
-      orbit.snap(0, 0, 0, 0);
-      orbit.yaw = 1.5;
+    for (const [orbit, fps] of [
+      [at60, 60],
+      [at120, 120],
+    ] as const) {
+      for (let i = 0; i < fps; i++) {
+        orbit.update(1 / fps, (4 * (i + 1)) / fps, 0, 0, Math.PI / 2, true, still, true, 1);
+      }
     }
-    run(at60, 1, { fps: 60, walking: true });
-    run(at120, 1, { fps: 120, walking: true });
-    expect(at120.yaw).toBeCloseTo(at60.yaw, 2);
+    // After 1 s at 4 m/s the camera is within a few cm of the character.
+    expect(4 - at60.x).toBeLessThan(0.25);
+    // Within 5 cm: the goal itself jumps per frame, so a few cm difference is expected.
+    expect(at120.x).toBeCloseTo(at60.x, 1);
   });
 });

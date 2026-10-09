@@ -20,7 +20,6 @@ import { palette, resolveColorToken, terrainColors } from '../render/palette';
 import { CollisionWorld } from '../systems/Collision';
 import {
   type MoveCommand,
-  MoveReference,
   type MovementConfig,
   movementConfig,
   screenToWorld,
@@ -62,8 +61,9 @@ export class WorldState implements GameState {
   private touch: TouchControls | null = null;
   private surface: HTMLElement | null = null;
   private pauseButton: HTMLButtonElement | null = null;
+  private lookHint: HTMLElement | null = null;
+  private lookHintShown = false;
   private movement: MovementConfig | null = null;
-  private retargetRadians = 0;
   private paused = false;
   private debugTimer = 0;
   private readonly unsubscribe: (() => void)[] = [];
@@ -72,7 +72,6 @@ export class WorldState implements GameState {
   private readonly moveInput = { x: 0, y: 0 };
   private readonly moveWorld = { x: 0, z: 0 };
   private readonly command: MoveCommand = { x: 0, z: 0, dash: false };
-  private readonly moveReference = new MoveReference();
   private readonly look: LookDelta = { yaw: 0, pitch: 0, zoom: 1 };
 
   constructor(private readonly ctx: GameContext) {}
@@ -92,7 +91,6 @@ export class WorldState implements GameState {
 
     const t = ctx.i18n.t.bind(ctx.i18n);
     this.movement = movementConfig(data.player);
-    this.retargetRadians = data.player.controls.moveRetargetDegrees * DEG;
 
     // Input surface first, so the pause button and touch buttons lie on top of it.
     this.surface = el('div', { className: 'ui-world-input' });
@@ -107,6 +105,8 @@ export class WorldState implements GameState {
       zoomStepPerWheelNotch: camera.zoomStepPerWheelNotch,
     });
     this.input.attach();
+    // Escape releases the mouse (the browser does that itself); treat it like pausing.
+    this.input.onPointerLockLost = () => this.pause();
     this.touch = new TouchControls(this.input, t('controls.dash'), controls.joystickRadiusPx);
     ctx.ui.append(this.touch.root);
 
@@ -120,6 +120,10 @@ export class WorldState implements GameState {
       onClick: () => this.pause(),
     });
     ctx.ui.append(this.pauseButton);
+    // Mouse only: "click to look around" until the mouse is captured.
+    this.lookHint = el('div', { className: 'ui-look-hint', text: t('controls.clickToLook') });
+    this.lookHintShown = false;
+    ctx.ui.append(this.lookHint);
     window.addEventListener('keydown', this.onKeyDown);
     document.addEventListener('visibilitychange', this.onVisibilityChange);
     this.unsubscribe.push(
@@ -127,6 +131,7 @@ export class WorldState implements GameState {
         const label = ctx.i18n.t('controls.dash');
         this.touch?.setDashLabel(label);
         this.pauseButton?.setAttribute('aria-label', ctx.i18n.t('pause.title'));
+        if (this.lookHint) this.lookHint.textContent = ctx.i18n.t('controls.clickToLook');
       }),
     );
     this.debugTimer = window.setInterval(this.updateDebugLines, DEBUG_REFRESH_MS);
@@ -150,6 +155,8 @@ export class WorldState implements GameState {
     this.surface = null;
     this.pauseButton?.remove();
     this.pauseButton = null;
+    this.lookHint?.remove();
+    this.lookHint = null;
     this.ctx.renderer.setCamera(null);
     this.disposeScene();
   }
@@ -161,14 +168,8 @@ export class WorldState implements GameState {
     if (session) session.playTimeSeconds += dt;
 
     input.getMoveVector(this.moveInput);
-    const yaw = this.moveReference.update(
-      this.moveInput.x,
-      this.moveInput.y,
-      rig.orbit.yaw,
-      input.turningCamera,
-      this.retargetRadians,
-    );
-    screenToWorld(this.moveInput.x, this.moveInput.y, yaw, this.moveWorld);
+    // Walking is relative to where the camera looks (W = away from the camera).
+    screenToWorld(this.moveInput.x, this.moveInput.y, rig.orbit.yaw, this.moveWorld);
     this.command.x = this.moveWorld.x;
     this.command.z = this.moveWorld.z;
     this.command.dash = input.consumePressed('dash');
@@ -188,6 +189,8 @@ export class WorldState implements GameState {
     player.syncModel(a, flatGround);
 
     input.consumeLook(this.look);
+    const look = this.look;
+    const turning = input.turningCamera || look.yaw !== 0 || look.pitch !== 0;
     const root = player.model.root;
     rig.orbit.update(
       this.paused ? 0 : frameSeconds,
@@ -196,13 +199,22 @@ export class WorldState implements GameState {
       root.position.z,
       player.state.heading,
       player.state.moving,
-      this.look,
-      input.turningCamera,
+      look,
+      turning,
       this.ctx.session?.settings.cameraSensitivity ?? 1,
     );
     rig.apply();
     this.touch?.update();
+    this.updateLookHint(input);
     this.ctx.renderer.render(scene, rig.camera);
+  }
+
+  /** Shows "click to look around" on mouse devices while the mouse is not captured. */
+  private updateLookHint(input: Input): void {
+    const show = !this.paused && !input.usedTouch && !input.pointerLocked;
+    if (show === this.lookHintShown || !this.lookHint) return;
+    this.lookHintShown = show;
+    this.lookHint.classList.toggle('ui-look-hint-visible', show);
   }
 
   /** Copies the player's position into the save (numbers only; no allocation). */
@@ -223,8 +235,8 @@ export class WorldState implements GameState {
   private pause(): void {
     if (this.paused) return;
     this.paused = true;
+    this.input?.releasePointerLock();
     this.input?.releaseAll();
-    this.moveReference.reset();
     this.syncSave();
     this.ctx.persist();
     this.ctx.overlays.open(
@@ -232,6 +244,8 @@ export class WorldState implements GameState {
         // Keys pressed in the menus (Space, E) must not act once the game resumes.
         this.input?.releaseAll();
         this.paused = false;
+        // "Resume" is a click, so the mouse can be captured again straight away.
+        if (this.input && !this.input.usedTouch) this.input.requestPointerLock();
       }),
     );
   }
@@ -307,7 +321,6 @@ export class WorldState implements GameState {
     this.rig.orbit.snap(player.state.x, 0, player.state.z, player.state.heading);
     this.rig.apply();
     this.ctx.renderer.setCamera(this.rig.camera);
-    this.moveReference.reset();
     this.scene = scene;
   }
 

@@ -46,8 +46,8 @@ const WHEEL_NOTCH_PX = 100;
  * `JOYSTICK_ZONE_WIDTH` of the width and below `JOYSTICK_ZONE_TOP` of the height.
  * Touches elsewhere turn the camera. Keep in sync with --joystick-zone-* in ui.css.
  */
-const JOYSTICK_ZONE_WIDTH = 0.5;
-const JOYSTICK_ZONE_TOP = 0.35;
+const JOYSTICK_ZONE_WIDTH = 0.45;
+const JOYSTICK_ZONE_TOP = 0.5;
 
 /**
  * One input layer for keyboard, mouse and touch. The game asks for actions and a move vector
@@ -55,7 +55,9 @@ const JOYSTICK_ZONE_TOP = 0.35;
  * here later without touching game code.
  *
  * - Keyboard: WASD / arrows to walk, Space to dash, E to interact.
- * - Mouse: right button drag turns the camera, wheel zooms.
+ * - Mouse (like Genshin Impact): click once to capture the mouse (pointer lock); from then on
+ *   moving the mouse turns the camera without holding a button. Escape releases it (the browser
+ *   does that itself). Without the lock, dragging with the right button also turns. Wheel zooms.
  * - Touch: a joystick appears where the thumb goes down in the lower left; one finger elsewhere
  *   turns the camera; two fingers pinch to zoom. The dash button (TouchControls) calls `press`.
  */
@@ -63,6 +65,8 @@ export class Input {
   readonly joystick: JoystickState = { active: false, originX: 0, originY: 0, knobX: 0, knobY: 0 };
   /** True once any touch was seen (shows the touch buttons). */
   usedTouch = false;
+  /** Called when the mouse lock ends without the game asking (the player pressed Escape). */
+  onPointerLockLost: (() => void) | null = null;
 
   private readonly keys = new Set<string>();
   private readonly held = new Set<Action>();
@@ -79,6 +83,8 @@ export class Input {
   private pinchY = 0;
   private pinchDistance = 0;
   private attached = false;
+  /** True while the game itself releases the lock, so it is not reported as lost. */
+  private releasingLock = false;
 
   constructor(
     private readonly surface: HTMLElement,
@@ -99,6 +105,7 @@ export class Input {
     s.addEventListener('lostpointercapture', this.onPointerUp);
     s.addEventListener('wheel', this.onWheel, { passive: false });
     s.addEventListener('contextmenu', this.onContextMenu);
+    document.addEventListener('pointerlockchange', this.onPointerLockChange);
   }
 
   detach(): void {
@@ -115,7 +122,33 @@ export class Input {
     s.removeEventListener('lostpointercapture', this.onPointerUp);
     s.removeEventListener('wheel', this.onWheel);
     s.removeEventListener('contextmenu', this.onContextMenu);
+    document.removeEventListener('pointerlockchange', this.onPointerLockChange);
+    this.releasePointerLock();
     this.releaseAll();
+  }
+
+  /** True while the mouse is captured and moving it turns the camera. */
+  get pointerLocked(): boolean {
+    return document.pointerLockElement === this.surface;
+  }
+
+  /** Captures the mouse (must run inside a click or key handler). Fails quietly. */
+  requestPointerLock(): void {
+    if (this.pointerLocked || !this.surface.requestPointerLock) return;
+    try {
+      // Newer browsers return a promise that rejects e.g. right after the player pressed Escape.
+      const result = this.surface.requestPointerLock() as unknown;
+      if (result instanceof Promise) result.catch(() => undefined);
+    } catch {
+      // Not allowed right now; the player can click again.
+    }
+  }
+
+  /** Gives the mouse back (pause, leaving the world). */
+  releasePointerLock(): void {
+    if (!this.pointerLocked) return;
+    this.releasingLock = true;
+    document.exitPointerLock();
   }
 
   /**
@@ -180,7 +213,7 @@ export class Input {
     this.held.delete(action);
   }
 
-  /** True while a finger or the right mouse button is turning the camera. */
+  /** True while a finger or the right mouse button is held to turn the camera. */
   get turningCamera(): boolean {
     return this.lookPointer !== null;
   }
@@ -238,8 +271,11 @@ export class Input {
   private readonly onPointerDown = (event: PointerEvent): void => {
     const id = event.pointerId;
     if (event.pointerType === 'mouse') {
-      if (event.button !== 2 || this.lookPointer !== null) return;
-      this.startLook(event, this.cfg.rotateRadiansPerPixelMouse);
+      if (this.pointerLocked) return;
+      if (event.button === 0) this.requestPointerLock();
+      else if (event.button === 2 && this.lookPointer === null) {
+        this.startLook(event, this.cfg.rotateRadiansPerPixelMouse);
+      }
       return;
     }
 
@@ -276,6 +312,12 @@ export class Input {
   }
 
   private readonly onPointerMove = (event: PointerEvent): void => {
+    if (event.pointerType === 'mouse' && this.pointerLocked) {
+      const rate = this.cfg.rotateRadiansPerPixelMouse;
+      this.look.yaw += event.movementX * rate;
+      this.look.pitch += event.movementY * rate;
+      return;
+    }
     const id = event.pointerId;
     if (id === this.joystickPointer) {
       const j = this.joystick;
@@ -347,6 +389,15 @@ export class Input {
     const px = event.deltaMode === 1 ? event.deltaY * WHEEL_LINE_PX : event.deltaY;
     const notches = px / WHEEL_NOTCH_PX;
     this.look.zoom *= Math.exp(notches * this.cfg.zoomStepPerWheelNotch);
+  };
+
+  private readonly onPointerLockChange = (): void => {
+    if (this.pointerLocked) return;
+    const askedByGame = this.releasingLock;
+    this.releasingLock = false;
+    // Keys held while Escape was pressed would otherwise keep walking.
+    this.releaseAll();
+    if (!askedByGame) this.onPointerLockLost?.();
   };
 
   private readonly onContextMenu = (event: Event): void => {

@@ -266,6 +266,7 @@
     "nextIn": "Next season in {days} d {hours} h"
   },
   "controls": {
-    "dash": "Dash"
+    "dash": "Dash",
+    "clickToLook": "Click to look around · Esc for the menu"
   }
 }

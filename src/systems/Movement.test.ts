@@ -8,7 +8,6 @@ import { CollisionWorld } from './Collision';
 import {
   angleDelta,
   type MoveCommand,
-  MoveReference,
   movementConfig,
   MoverState,
   screenToWorld,
@@ -159,21 +158,6 @@ describe('camera-relative input', () => {
     screenToWorld(0, 1, Math.PI / 2, out); // camera looking along +x
     expect(out.x).toBeCloseTo(1);
     expect(out.z).toBeCloseTo(0);
-  });
-
-  it('keeps the walking direction while the camera turns, until the input changes', () => {
-    const ref = new MoveReference();
-    const retarget = (30 * Math.PI) / 180;
-    expect(ref.update(-1, 0, 0, false, retarget)).toBe(0);
-    // Camera swings round; holding the same key keeps the old reference.
-    expect(ref.update(-1, 0, 1.2, false, retarget)).toBe(0);
-    // A clearly different direction reads the camera again.
-    expect(ref.update(0, 1, 1.2, false, retarget)).toBe(1.2);
-    // Dragging the camera always follows it.
-    expect(ref.update(0, 1, 2, true, retarget)).toBe(2);
-    // Letting go and walking again starts from the current camera.
-    ref.update(0, 0, 2.5, false, retarget);
-    expect(ref.update(0, 1, 2.5, false, retarget)).toBe(2.5);
   });
 
   it('finds the shortest way round', () => {

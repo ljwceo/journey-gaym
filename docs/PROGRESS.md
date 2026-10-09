@@ -7,9 +7,9 @@
 | | |
 |---|---|
 | **Huidige fase** | Fase 1 – Basis + open wereld + character creator |
-| **Status** | Stap 1.6 klaar (speler en camera) |
+| **Status** | Stap 1.6 klaar (speler en camera), camera omgebouwd naar over de schouder (zoals Genshin) |
 | **Volgende stap** | Stap 1.7: open wereld (zones uit data, chunks met ringen, terrein in een Web Worker, gebudgetteerd laden, floating origin, mist, InstancedMesh, debug-kleuren voor chunks) |
-| **Laatste sessie** | 2026-10-09: stap 1.6 speler en camera |
+| **Laatste sessie** | 2026-10-09: camera over de schouder (Genshin-stijl) |
 
 ---
 
@@ -80,10 +80,11 @@ Elke stap is één branch + pull request. Na elke stap start de game zonder fout
   - **Lopen** (`src/systems/Movement.ts`): 4 m/s, met de joystick half ingedrukt langzamer, schuin nooit sneller. Het poppetje draait vloeiend naar de looprichting (720°/s). Alles op de vaste tijdstap: op 60 en 120 fps leg je exact dezelfde afstand af (test).
   - **Dash:** 4 m in 0,18 s in je looprichting (stilstaand: waar je naar kijkt), kost 25 energie, 1 s cooldown, niet zonder genoeg energie. Energie vult 20/s bij, pas 1 s nadat je energie gebruikte. De dash gaat in stapjes van max 20 cm, zodat je nooit door een dunne muur schiet.
   - **Collision** (`src/world/SpatialHash.ts`, `Colliders.ts`, `src/systems/Collision.ts`): cirkels en rechthoeken in een spatial hash; de speler is een cirkel die langs muren en in hoeken schuift. De wereldrand uit `zones.json` houdt je tegen. Klaar om per chunk colliders toe te voegen en te verwijderen (stap 1.7).
-  - **Camera** (`src/render/CameraRig.ts`): schuin van boven (55°), volgt soepel, zoomen tussen 4 en 20 m. **Stilstaand kun je helemaal rondkijken** (360°, en tussen 10° en 80° omhoog/omlaag) zonder dat je poppetje meedraait. **Zodra je loopt** draait de camera na 0,15 s vloeiend terug achter je en naar de normale hoek. Zolang je de camera zelf vasthoudt, draait hij niet terug. Alle getallen in het nieuwe blok `camera` in `player.json`.
-  - **Looprichting blijft recht:** terwijl de camera terugdraait, blijf je dezelfde kant op lopen zolang je dezelfde toets/richting vasthoudt; pas bij een duidelijk andere richting (> 30°) telt de nieuwe camerastand. Anders loop je in een cirkel als je A of D vasthoudt.
+  - **Camera** (`src/render/CameraRig.ts`), eerste versie: schuin van boven (55°), draaide terug als je ging lopen. **Omgebouwd na feedback, zie hieronder.**
+  - **Camera over de schouder, zoals Genshin Impact** (feedback van Bo/Lucas, zelfde dag): laag achter je (12° naar beneden, 5 m, kijkt naar je hoofd), blijft strak bij je karakter, zoomen 2,5–9 m, omhoog kijken tot 35° en omlaag tot 70°. Kijk je omhoog, dan komt de camera dichterbij in plaats van door de grond te gaan. **Vrij rondkijken**, je poppetje draait niet mee. **Lopen draait de camera niet terug:** W loopt de kant op waar de camera kijkt, en bij opzij lopen draait de camera licht mee (45°/s). Alle getallen in het blok `camera` in `player.json`.
+  - **Muis zoals Genshin:** klik één keer in het spel, dan wordt de muis gevangen (pointer lock) en draait bewegen de camera zonder knop. Een hint "Klik om rond te kijken · Esc voor het menu" staat onderin zolang de muis vrij is. **Escape** geeft de muis vrij en opent de pauze; **Verder** vangt de muis meteen weer. Rechtermuisknop slepen werkt ook nog zonder vangen.
   - **Camerasnelheid** (op verzoek): nieuwe schuif in Settings van 30% tot 100% (standaard 70%), werkt meteen. Bereik in `player.json`; de save is daarvoor naar **versie 2** gegaan, met een migratie (test) zodat oude saves blijven werken.
-  - **Invoer** (`src/core/Input.ts`): WASD/pijltjes, spatie = dash, E = interactie (doet nog niets tot stap 1.9). Rechtermuisknop slepen = camera draaien, scrollwiel = zoomen. Touch: joystick verschijnt waar je duim neerkomt in de linker helft onderaan, één vinger ergens anders = camera draaien, twee vingers knijpen = zoomen, **Dash**-knop rechtsonder (`src/ui/TouchControls.ts`). Vaste veilige zones voor joystick en knoppen staan in `ui.css` (`--joystick-zone-*`, `--button-zone-*`).
+  - **Invoer** (`src/core/Input.ts`): WASD/pijltjes, spatie = dash, E = interactie (doet nog niets tot stap 1.9). Muis: zie hierboven, scrollwiel = zoomen. Touch: joystick verschijnt waar je duim neerkomt linksonder (linker 45%, onderste helft), één vinger ergens anders = camera draaien, twee vingers knijpen = zoomen, **Dash**-knop rechtsonder (`src/ui/TouchControls.ts`). Vaste veilige zones voor joystick en knoppen staan in `ui.css` (`--joystick-zone-*`, `--button-zone-*`).
   - **Wereld** (`src/scenes/WorldState.ts`): je poppetje uit de creator (eigen kleuren) staat op een vlakke testvloer in Greyhaven met een raster van 4 m (1 hokje = 1 seconde lopen) en een **tijdelijke testbaan** (`src/world/TestCourse.ts`: muur met opening, hoek, dunne muur voor de dash, pilaren, een "gebouw"). Mist- en grondkleur uit de zone, kijkafstand uit de grafische stand. Positie en kijkrichting gaan mee in de save, dus Continue zet je terug waar je was. Pauze laat alle toetsen los.
   - Debug-overlay: positie, kijkrichting, lopen/dash, energie, dash-cooldown, camerahoek, zoom en gevoeligheid. 142 tests.
 
@@ -93,7 +94,8 @@ Elke stap is één branch + pull request. Na elke stap start de game zonder fout
 - De pauzeknop is nu het teken "II"; volgens de stijlgids (U3) wordt dat later een geschilderd icoontje.
 - Kapsels en lichaamstypes zijn ruwe vormen (het vrouwelijke lijf is alleen iets smaller).
 - De testvloer en testbaan zijn tijdelijk; stap 1.7/1.8 vervangen ze door terrein, zones en gebouwen uit data. De grond is nog vlak, dus de helling-limiet (40°) doet nog niets.
-- De camera gaat nog door muren heen als je hem erachter draait; camera-botsing komt als er echte gebouwen en heuvels zijn (stap 1.7/1.8).
+- De camera gaat nog door muren heen als je hem erachter draait. Over de schouder valt dat meer op dan van boven; camera-botsing komt met de echte gebouwen en heuvels (stap 1.7/1.8).
+- Het spelconcept in Google Docs zegt nog "camera schuin van bovenaf" en "draait terug achter je". `CLAUDE.md` is aangepast; het concept moet nog worden bijgewerkt.
 - Het poppetje kost ±16 draw calls (losse onderdelen). Prima nu; later samenvoegen of vervangen door één model.
 - Touch: twee vingers knijpen in het joystick-gebied (linksonder) maakt de eerste vinger een joystick. Knijp boven of rechts in beeld. Tikken met drie vingers zet nog steeds de debug-overlay aan of uit.
 - Op een iPhone-scherm bedekt de debug-overlay een groot deel van het beeld (alleen in debug).
@@ -148,12 +150,12 @@ Elke stap is één branch + pull request. Na elke stap start de game zonder fout
 | 2026-10-09 | Willekeurig kiest geen naam | De naam is iets persoonlijks; zeg het als je ook willekeurige namen wilt |
 | 2026-10-09 | "Travel Mantle" is een voorlopige naam (niet uit het concept) | Concept zegt "eenvoudige reismantel" |
 | 2026-10-09 | **Camerasnelheid** 30–100% in Settings, standaard 70% | Verzoek van Bo/Lucas bij stap 1.6. Save naar versie 2 met migratie |
-| 2026-10-09 | Stilstaand vrij rondkijken (360°), het poppetje draait niet mee; lopen = camera draait na 0,15 s terug achter je | Verzoek van Bo/Lucas bij stap 1.6 |
-| 2026-10-09 | Zolang je dezelfde kant op stuurt, blijft je looprichting gelijk terwijl de camera terugdraait (pas > 30° andere richting telt opnieuw) | Anders loop je in rondjes als je A of D vasthoudt en de camera achter je aan draait |
-| 2026-10-09 | Draaien: slepen naar rechts = naar rechts kijken; slepen omlaag = meer van bovenaf kijken (muis en touch hetzelfde) | Zelfde gevoel als de meeste 3D-games. Zeg het als het andersom moet |
+| 2026-10-09 | ~~Camera schuin van boven, draait terug als je loopt~~ → **camera over de schouder zoals Genshin Impact**: vrij draaien, blijft waar je hem zet, W = kijkrichting, licht meedraaien bij opzij lopen. `CLAUDE.md` §1, §7 en §9 aangepast | Feedback van Bo/Lucas na stap 1.6 ("het moet hetzelfde achtig zijn als Genshin Impact") |
+| 2026-10-09 | Pc: klik vangt de muis (pointer lock), daarna draait de muis de camera zonder knop; Escape = muis vrij + pauze | Zoals Genshin op pc (keuze van Bo/Lucas) |
+| 2026-10-09 | Draaien: muis/vinger naar rechts = naar rechts kijken; omlaag = meer naar beneden kijken | Zelfde gevoel als de meeste 3D-games. Zeg het als het andersom moet |
 | 2026-10-09 | Camera-, joystick- en draaigetallen in `player.json` (blokken `camera` en `controls`), niet in een apart `camera.json` | Minder bestanden; het hoort bij hoe de speler zich bestuurt |
 | 2026-10-09 | Energie in stap 1.6 alleen in de debug-overlay; de energiebalk in beeld komt met het HUD-systeem (stap 1.8) | HUD met faden is één systeem; niet twee keer bouwen |
-| 2026-10-09 | Joystick-gebied: linker helft van het scherm, onder de bovenste 35% | Ruim voor duimen van elke grootte; rechts blijft vrij voor draaien en knoppen |
+| 2026-10-09 | Joystick-gebied: linker 45% van het scherm, onderste helft | Kleiner dan eerst (was linker helft, onder 35%), zodat je op de telefoon makkelijker de camera kunt draaien |
 | 2026-10-09 | Tijdelijke testbaan staat in code (`TestCourse.ts`), niet in data | Het is ontwikkel-gereedschap voor deze stap, geen spelinhoud; verdwijnt in 1.7/1.8 |
 | 2026-10-09 | PerfTest verplaatst naar `experiments/perftest/` | Oude test-code hoort in `/experiments` (§5). Er was geen PeerJS-netwerktest in de repo, dus `experiments/net-test/` bestaat (nog) niet |
 
@@ -170,3 +172,4 @@ Elke stap is één branch + pull request. Na elke stap start de game zonder fout
 - Stap 1.5 gebouwd: character creator met draaiend placeholder-poppetje, alle keuzes uit `appearance.json`, Willekeurig, naamcontrole, toetsenbord-afhandeling voor de iPhone. Getest in headless Chromium (pc 1280×800, 900×500 en iPhone 13): verkeerde tekens worden weggefilterd, lege naam geeft een melding, tikken op een kleur sluit het toetsenbord, Enter sluit het toetsenbord en de pagina blijft op zijn plek, Terug laat de save heel, Begin maakt de save met naam, uiterlijk en startspullen, intro en wereld starten. 5× heen en weer tussen titel en creator: geometrie gaat elke keer terug naar 0. Geen fouten. Tijdelijke namen: Travel Mantle (nieuw, voorlopig). Volgende stap: 1.6 (speler en camera).
 - Op verzoek: `docs/art-style/models.md` beschrijft wat Bo en Lucas moeten aanleveren voor het echte personage (15 .glb-bestanden of tekeningen, maten, materiaalnamen, animaties, eerst een proef). PR #9 samengevoegd.
 - Stap 1.6 gebouwd: lopen, dash met energie, collision met spatial hash, camera die volgt, zoomt, vrij rondkijkt bij stilstaan en terugdraait bij lopen, toetsenbord/muis/touch-invoer, joystick en dashknop, testvloer met testbaan. Op verzoek: camerasnelheid 30–100% in Settings (save v2 + migratie). Getest in headless Chromium (pc 1280×800 en iPhone 13 met nagebootste vingers): 2 s lopen = 8 m, dash = 4 m en stopt tegen de muur, rondkijken laat het poppetje stil, lopen draait de camera terug, knijpen zoomt, dashknop werkt, oude v1-save wordt v2 met 70%, 4× wereld in en uit: geometrie terug naar 0. Geen fouten. Tijdelijke namen: geen nieuwe. Volgende stap: 1.7 (open wereld).
+- PR #10 (stap 1.6) samengevoegd. Feedback van Bo/Lucas: de camera moet zoals Genshin Impact zijn (over de schouder), en vrij draaien lukte niet goed. Camera omgebouwd: over de schouder, vrij draaien, geen terugdraaien bij lopen, muis vangen op pc, kleiner joystick-gebied. `CLAUDE.md` aangepast. Getest in headless Chromium (pc + iPhone 13): klik vangt de muis, muis bewegen draait de camera, W loopt waar de camera kijkt, Escape = pauze en muis vrij, Verder = muis weer gevangen, joystick/draaien/knijpen/dash op touch. Geen fouten. Volgende stap: 1.7 (open wereld).
