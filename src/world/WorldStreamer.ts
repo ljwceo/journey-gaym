@@ -184,6 +184,14 @@ export class WorldStreamer implements Ground {
     this.centerX = Number.NaN;
   }
 
+  /**
+   * Decoration density of a new graphics preset. Only props without a collider change, and only
+   * in chunks built from now on (loaded chunks keep theirs until they reload).
+   */
+  setDecorDensity(density: number): void {
+    this.send({ type: 'density', density });
+  }
+
   get chunkSize(): number {
     return this.size;
   }
@@ -325,6 +333,7 @@ export class WorldStreamer implements Ground {
     mesh.matrixAutoUpdate = false;
     mesh.updateMatrix();
     mesh.name = 'chunk';
+    mesh.receiveShadow = true;
     this.options.root.add(mesh);
     if (old) {
       old.removeFromParent();
@@ -385,6 +394,7 @@ export class WorldStreamer implements Ground {
       mesh.updateMatrix();
       mesh.computeBoundingSphere();
       mesh.name = 'props';
+      mesh.castShadow = true;
       this.options.root.add(mesh);
       chunk.props.push(mesh);
     }

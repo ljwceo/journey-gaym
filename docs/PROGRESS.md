@@ -7,9 +7,9 @@
 | | |
 |---|---|
 | **Huidige fase** | Fase 1 – Basis + open wereld + character creator |
-| **Status** | Stap 1.9 klaar (NPC's: praten, dialoogvenster, Pringle volgt en is te aaien, Treewardens lopen rond) |
-| **Volgende stap** | Stap 1.10: grafische standen (QualityManager, benchmark, automatisch omlaag) en debug compleet |
-| **Laatste sessie** | 2026-10-09: stap 1.9 NPC's |
+| **Status** | Stap 1.10 klaar (grafische standen: benchmark, automatisch omlaag, schaduwen, anti-aliasing; debug compleet) |
+| **Volgende stap** | Stap 1.11: afronden (meten op pc en iPhone, geheugen na 10 min, ARCHITECTURE.md compleet, Definition of Done nalopen) |
+| **Laatste sessie** | 2026-10-09: stap 1.10 grafische standen |
 
 ---
 
@@ -49,7 +49,7 @@ Elke stap is één branch + pull request. Na elke stap start de game zonder fout
 ## Fase-log
 
 ### Fase 1 – Basis + open wereld + character creator
-**Status:** bezig, stap 1.1 t/m 1.9 klaar.
+**Status:** bezig, stap 1.1 t/m 1.10 klaar.
 **Gebouwd:**
 - 1.1 Projectopzet: Vite 8 + TypeScript 6 (strict), Three.js r186, ESLint + Prettier, Vitest. Leeg 3D-scherm met een draaiende kubus in stijlgidskleuren (draait per seconde, niet per frame). GitHub Actions controleert elke pull request (lint, opmaak, typecheck, tests, build) en zet `main` op GitHub Pages.
 - 1.2 Kern: `FixedStep` + `GameLoop` (simulatie altijd 60 Hz met accumulator, tekenen interpoleert, max 8 inhaalstappen per frame, frames > 0,25 s worden afgekapt, `?fps=N` om de framerate te beperken), getypte `EventBus` (geen allocaties bij `emit`), `StateMachine` (wissel gebeurt pas vóór de volgende update), `Random` (sfc32 met vaste seed) + `hashSeed` voor per-chunk seeds, `Renderer`, `DebugOverlay` (F3 / drie vingers / `?debug=1`: fps, frametijd, cpu-tijd, draw calls, triangles, geometries/textures, heap, resolutie, simulatiestappen, huidige state). Demo-scène: kubus die rondjes draait op de simulatie en vloeiend getekend wordt. 29 tests.
@@ -145,10 +145,21 @@ Elke stap is één branch + pull request. Na elke stap start de game zonder fout
   - **Invoer:** nieuwe actie `confirm` (Enter, of klikken als de muis gevangen is).
   - **Validator:** onbekende voorwaarde of tekst-key in `dialogueWhen`, aai-afstand groter dan de volgafstand, en pauzetijden min > max geven een fout. Test: elk model in de rollen bestaat.
   - **Debug:** regel `npcs` met hoeveel er in beeld zijn, met wie je praat of wie je doelwit is, hoeveel je er ontmoet hebt, Pringle's afstand en Treewardens in de buurt. 215 tests.
+- 1.10 Grafische standen en debug compleet:
+  - **QualityManager** (`src/render/QualityManager.ts`, logica in `src/render/quality.ts`): één plek die Low/Mid/High kiest en toepast. Wisselen werkt meteen, zonder herladen.
+  - **Benchmark bij de eerste start:** de eerste ±3,5 s in de wereld meet de game per frame hoe lang simuleren + tekenen duurt (inclusief de GPU) en kiest met de mediaan Low, Mid of High (≤ 6 ms High, ≤ 12 ms Mid, anders Low; in `quality.json`). Opgeslagen in de save, met een melding: "Graphics ingesteld op Mid voor dit apparaat. Je kunt het wijzigen in Instellingen."
+  - **Automatisch omlaag:** bij Auto wordt elke 5 s de gemiddelde fps gemeten; onder 58 → één stand omlaag met de melding "Graphics verlaagd naar …". Na elke wissel, pauze of binnenkomen eerst 5 s niets; nooit vanzelf omhoog; pauze, menu's en de app op de achtergrond tellen niet mee.
+  - **Zelf kiezen** in Settings zet dit uit; **Auto** zet het weer aan.
+  - **Wat een stand verandert** (alleen uiterlijk): resolutie, anti-aliasing (Low uit, Mid FXAA, High MSAA 4×), **schaduwen** (Low geen, Mid 40 m scherp, High 70 m zacht), kijkafstand/mist, chunk-ringen, riet-dichtheid, en het fps-doel bij fps "Auto" (Low/Mid 60, High 120).
+  - **Debug compleet:** regel `quality` in de overlay (stand, auto/handmatig, benchmark-uitslag, gemiddelde fps, fps-cap). Het cheatmenu (F6) heeft er bij: **seizoen forceren** (ook op de telefoon, F4 werkt nog), **benchmark opnieuw**, **save exporteren** (code + Kopiëren) en **importeren** (plakken + Laden → titelscherm, Continue = de geïmporteerde save). Teleport naar elke zone zat er al in. Draw calls tellen nu alle passes (schaduw + scène + anti-aliasing).
+  - Gemeten in headless Chromium (software-rendering, dus traag): benchmark 292 ms → Low met melding; Low/Mid/High wisselen in Settings: schaduwen, mist en ringen passen meteen aan; 3× (4 wissels + wereld uit): geometrie/textures terug naar 1/2, groeit niet. Export → import → Continue werkt; ongeldige code geeft een melding. Geen fouten. 229 tests.
 
 **Bekende problemen:**
 - ~~De game-bundel is ±666 kB~~ → opgelost in stap 1.7: opgesplitst in 7 bestanden, grootste 548 kB (Three.js zelf). Three.js kan niet verder opgesplitst worden; dat bestand groeit alleen bij een nieuwe Three.js-versie.
-- De grafische stand wordt al opgeslagen maar doet nog niets; de QualityManager komt in stap 1.10.
+- Tijdens de benchmark (±3,5 s) meldt Chrome in de console "GPU stall due to ReadPixels". Dat is bewust: zo meten we ook de GPU-tijd. Daarna niet meer.
+- Een nieuwe riet-dichtheid geldt alleen voor chunks die daarna laden; chunks die al geladen zijn houden de oude tot ze opnieuw laden.
+- Seizoen forceren verandert alleen wat de debug-overlay toont; NPC's met een seizoen worden pas bij opnieuw de wereld in gaan bijgewerkt (seizoenseffecten komen later).
+- Gras en effecten bestaan nog niet, dus `density.grass`, `density.effects` en `lodBias` in `quality.json` doen nog niets.
 - De pauzeknop is nu het teken "II"; volgens de stijlgids (U3) wordt dat later een geschilderd icoontje.
 - Kapsels en lichaamstypes zijn ruwe vormen (het vrouwelijke lijf is alleen iets smaller).
 - Gebouwen staan op het golvende terrein (ingegraven). De Academy staat daardoor niet "hoog in het midden" en het Monastery niet echt op kliffen; daarvoor moet het terrein later op die plekken gevormd worden (heuvel, klif). Graag laten weten of dat nu al moet.
@@ -251,6 +262,12 @@ Elke stap is één branch + pull request. Na elke stap start de game zonder fout
 | 2026-10-09 | Tijdens een gesprek sta je stil; E/spatie/Enter/klik = verder, Escape = stoppen | Simpel en hetzelfde op pc en telefoon |
 | 2026-10-09 | 10 Treewardens verspreid over de Greenwood (ook vlak bij de ingang en het heiligdom), met een violette kroon | Feedback: "ik zie nergens Treewardens". Er waren er 3, ver van de ingang, en hun kroon had dezelfde kleur als de bomen |
 | 2026-10-09 | Eerste ontmoeting met een NPC = autosave | Net als bij eerste bezoek aan een plek; ontmoete NPC's horen in de save (§8) |
+| 2026-10-09 | Benchmark meet de **werktijd per frame inclusief GPU** (één pixel teruglezen) en neemt de mediaan, in de eerste seconden in de wereld op de standaardstand (Mid) | Fps zelf zegt niets op een 60 Hz-scherm (altijd 60); een gemiddelde wordt verpest door één trage frame bij het laden |
+| 2026-10-09 | Melding ook bij de **eerste automatische keuze**, niet alleen bij omlaag | Dan weet de speler dat het in Settings kan. Zeg het als dat weg mag |
+| 2026-10-09 | Anti-aliasing als nabewerking (FXAA / MSAA in een render target) in plaats van de ingebouwde van de browser | De ingebouwde kan niet wisselen zonder de hele 3D-weergave opnieuw te maken; zo kan de stand meteen wisselen |
+| 2026-10-09 | Schaduwen: Mid 40 m (1024, scherp), High 70 m (2048, zacht), Low geen (`shadowDistance`, `shadowSoftness` nieuw in `quality.json`) | Voorstel; schaduw alleen dichtbij is goedkoop en ver weg zie je ze in de mist toch niet |
+| 2026-10-09 | Fps "Auto" volgt het fps-doel van de stand: Low/Mid max 60, High max 120 | Tabel in §4 ("Fps-doel"); spaart batterij op 120 Hz-schermen bij Low/Mid |
+| 2026-10-09 | Save importeren gaat terug naar het titelscherm (Continue = geïmporteerde save) | Zo wordt de hele wereld netjes opnieuw opgebouwd vanuit de nieuwe save |
 | 2026-10-09 | PerfTest verplaatst naar `experiments/perftest/` | Oude test-code hoort in `/experiments` (§5). Er was geen PeerJS-netwerktest in de repo, dus `experiments/net-test/` bestaat (nog) niet |
 
 ## Sessielog
@@ -273,3 +290,4 @@ Elke stap is één branch + pull request. Na elke stap start de game zonder fout
 - Fix na stap 1.8: laadfout na de deploy (nieuwe code + oude JSON uit de browsercache). Data- en taalbestanden hebben nu een build-nummer in de URL en worden altijd bij de server nagevraagd. Getest met de productie-build: New Game → Terug → herladen werkt.
 - Stap 1.9 gebouwd: NPC's uit data (9 in Greyhaven, Pringle, 3 Treewardens), dialoogvenster, praten in NL en EN, aaien, volgen, rondlopen, niet door NPC's heen lopen, quest-haak `dialogueWhen`, autosave bij eerste ontmoeting. Getest in headless Chromium (pc 1280×800 en 390×844): praten met Marco (2 zinnen, sluit na de laatste, gaat niet opnieuw open), Hilda in het Nederlands en sluiten met Escape (geen pauze), Pringle aaien met melding, Pringle volgt bij lopen, ontmoete NPC's staan na herladen nog in de save, Treewarden loopt rond en staat in de elfenstad als "safe", 3× wereld in/uit: geometrie terug naar 0. Gevonden en opgelost: Pringle nam steeds de E-toets over (nu kleiner aai-bereik) en zat tussen camera en speler (nu rechtsachter). Geen fouten. Tijdelijke namen: geen nieuwe. Volgende stap: 1.10 (grafische standen).
 - Fix na stap 1.9 (feedback: Treewardens niet te vinden): 10 in plaats van 3, verspreid over het bos (één 80 m van waar de teleport je neerzet), kroon nu violet (`spreukviolet`) zodat ze opvallen tussen de bomen. Getest in headless Chromium: na teleport naar de Greenwood staat er meteen een in beeld. Geen fouten.
+- Stap 1.10 gebouwd: QualityManager met Low/Mid/High (resolutie, anti-aliasing, schaduwen, kijkafstand, ringen, versiering, fps-doel), benchmark bij de eerste start (mediaan van werktijd incl. GPU), automatisch één stand omlaag bij < 58 fps over 5 s met melding, debug compleet (quality-regel, seizoen forceren, benchmark opnieuw, save export/import in het cheatmenu). Getest in headless Chromium (pc 1280×800 en 1000×640): hele flow, benchmark kiest Low op software-rendering met melding, alle drie de standen in Settings (schaduw alleen op Mid/High, mist korter op Low), export/import/Continue, ongeldige code, 3× wereld in/uit met wissels: geometrie terug naar 1/2. Geen fouten. Tijdelijke namen: geen nieuwe. Volgende stap: 1.11 (afronden en meten op echte apparaten).

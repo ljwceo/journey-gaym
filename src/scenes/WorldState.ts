@@ -16,6 +16,7 @@ import type { GameContext } from '../core/GameContext';
 import { Input, type LookDelta } from '../core/Input';
 import type { GameState } from '../core/StateMachine';
 import type { GameData, QualityPreset } from '../data/types';
+import { chosenLevel, presetFor } from '../render/quality';
 import { dialogueLines, isAttackable, type Npc } from '../entities/Npc';
 import { Player } from '../entities/Player';
 import { PropLibrary } from '../entities/PropFactory';
@@ -73,6 +74,10 @@ const DEBUG_KEYS = [
   'camera',
   'cheats',
 ] as const;
+/** Direction the sun shines from (normalized below); low and warm (style guide L1). */
+const SUN_DIRECTION = new Vector3(-2, 3, 1.5).normalize();
+/** The shadow camera sits this far (m) from the player towards the sun. */
+const SUN_DISTANCE = 150;
 /** Seconds over which fog and sky change color after entering another zone. */
 const FOG_SHARPNESS = 1.5;
 /** The interaction icon stays this far (CSS px) from the screen edges. */
@@ -136,6 +141,7 @@ export class WorldState implements GameState, InstanceHost {
   private readonly placesInside: string[] = [];
   private readonly labelPoint = new Vector3();
   private water: Mesh | null = null;
+  private sun: DirectionalLight | null = null;
   private origin: FloatingOrigin | null = null;
   private zones: ZoneLocator | null = null;
   private worldBounds: Bounds | null = null;
@@ -153,6 +159,8 @@ export class WorldState implements GameState, InstanceHost {
   private baseWalkSpeed = 0;
   private preset: QualityPreset | null = null;
   private paused = false;
+  /** Set after importing a save: leaving the world must not write the old state over it. */
+  private keepSessionOnExit = false;
   private debugTimer = 0;
   private readonly unsubscribe: (() => void)[] = [];
 
@@ -230,7 +238,13 @@ export class WorldState implements GameState, InstanceHost {
       this.cheats,
       data.zones.zones.map((zone) => ({ id: zone.id, name: zone.name })),
       this.input,
-      { teleport: (zoneId) => this.teleport(zoneId), changed: () => this.applyCheats() },
+      {
+        teleport: (zoneId) => this.teleport(zoneId),
+        changed: () => this.applyCheats(),
+        exportSave: () => this.exportSave(),
+        importSave: (code) => this.importSave(code),
+        rerunBenchmark: () => this.rerunBenchmark(),
+      },
     );
     // Next to the UI layer (not inside it), so it can sit above the debug overlay.
     (ctx.ui.parentElement ?? ctx.ui).append(this.cheatPanel.root);
@@ -260,8 +274,13 @@ export class WorldState implements GameState, InstanceHost {
         this.dialog?.updateTexts();
         this.iconLabelFor = null;
       }),
-      // A new graphics preset changes the view distance and the chunk rings right away.
-      ctx.events.on('settingsChanged', () => this.applyPreset()),
+      // A new graphics preset changes view distance, chunk rings and shadows right away.
+      ctx.events.on('qualityChanged', () => this.applyPreset()),
+      ctx.events.on('qualityAutoChosen', ({ level, reason }) => {
+        const quality = ctx.i18n.t(`settings.quality${level[0]?.toUpperCase()}${level.slice(1)}`);
+        const key = reason === 'lowered' ? 'hud.qualityLowered' : 'hud.qualityChosen';
+        this.hud?.showMessage(ctx.i18n.t(key, { quality }));
+      }),
       // Hooks for later: music per zone listens to the same event.
       ctx.events.on('zoneEntered', ({ zoneId }) => this.showZoneName(zoneId)),
       ctx.events.on('placeFirstVisited', ({ triggerId }) => {
@@ -271,9 +290,12 @@ export class WorldState implements GameState, InstanceHost {
       ctx.events.on('checkpointSet', () => this.hud?.showMessage(ctx.i18n.t('hud.checkpointSet'))),
     );
     this.debugTimer = window.setInterval(this.updateDebug, DEBUG_REFRESH_MS);
+    // From now on frames count for the benchmark / auto-downgrade.
+    ctx.quality.setMeasuring(true);
   }
 
   exit(): void {
+    this.ctx.quality.setMeasuring(false);
     window.removeEventListener('keydown', this.onKeyDown);
     document.removeEventListener('visibilitychange', this.onVisibilityChange);
     window.clearInterval(this.debugTimer);
@@ -281,8 +303,11 @@ export class WorldState implements GameState, InstanceHost {
     this.unsubscribe.length = 0;
     for (const key of DEBUG_KEYS) this.ctx.debug.lines.delete(key);
     this.ctx.overlays.closeAll();
-    this.syncSave();
-    this.ctx.persist();
+    if (!this.keepSessionOnExit) {
+      this.syncSave();
+      this.ctx.persist();
+    }
+    this.keepSessionOnExit = false;
     this.cheatPanel?.dispose();
     this.cheatPanel = null;
     this.cheats.reset();
@@ -496,6 +521,7 @@ export class WorldState implements GameState, InstanceHost {
       this.ctx.session?.settings.cameraSensitivity ?? 1,
     );
     rig.apply(origin.x, origin.z, streamer, this.structures ?? undefined);
+    this.updateSun(root.position.x - origin.x, root.position.y, root.position.z - origin.z);
     // The sea follows the player (one plane, always under the view).
     this.water?.position.set(root.position.x, this.water.position.y, root.position.z);
     this.touch?.update();
@@ -627,6 +653,7 @@ export class WorldState implements GameState, InstanceHost {
   private pause(): void {
     if (this.paused) return;
     this.paused = true;
+    this.ctx.quality.setMeasuring(false);
     this.input?.releasePointerLock();
     this.input?.releaseAll();
     this.hud?.setInteraction(null, 0, 0, false);
@@ -637,6 +664,7 @@ export class WorldState implements GameState, InstanceHost {
         // Keys pressed in the menus (Space, E) must not act once the game resumes.
         this.input?.releaseAll();
         this.paused = false;
+        this.ctx.quality.setMeasuring(true);
         // "Resume" is a click, so the mouse can be captured again straight away.
         if (this.input && !this.input.usedTouch) this.input.requestPointerLock();
       }),
@@ -683,6 +711,44 @@ export class WorldState implements GameState, InstanceHost {
     this.checkZone();
   }
 
+  /** Debug: the save (with the current position) as a text code. */
+  private exportSave(): string {
+    const session = this.ctx.session;
+    if (!session) return '';
+    this.syncSave();
+    this.ctx.persist();
+    return this.ctx.saves.exportCode(session);
+  }
+
+  /**
+   * Debug: replaces the save with an exported code and goes back to the title screen, where
+   * Continue starts from the imported state.
+   */
+  private importSave(code: string): boolean {
+    const { ctx } = this;
+    const save = ctx.saves.importCode(code);
+    if (!save) return false;
+    ctx.session = save;
+    ctx.persist();
+    this.keepSessionOnExit = true;
+    void ctx.i18n.setLanguage(save.language).then(() => {
+      ctx.events.emit('languageChanged', { language: save.language });
+    });
+    ctx.events.emit('settingsChanged', {});
+    ctx.goto('title');
+    return true;
+  }
+
+  /** Debug: back to "Auto" without a chosen preset, so the benchmark runs again right away. */
+  private rerunBenchmark(): void {
+    const settings = this.ctx.session?.settings;
+    if (!settings) return;
+    settings.quality = 'auto';
+    settings.autoQuality = null;
+    this.ctx.persist();
+    this.ctx.events.emit('settingsChanged', {});
+  }
+
   // ------------------------------------------------------------ scene
 
   private buildScene(data: GameData): void {
@@ -699,8 +765,9 @@ export class WorldState implements GameState, InstanceHost {
     // Warm low sun, cool twilight sky (style guide L1–L3).
     scene.add(new HemisphereLight(palette.mistpaars, palette.schemerviolet, 1.8));
     const sun = new DirectionalLight(palette.zonsondergang, 2);
-    sun.position.set(-2, 3, 1.5);
-    scene.add(sun);
+    sun.position.copy(SUN_DIRECTION);
+    scene.add(sun, sun.target);
+    this.sun = sun;
     // Everything with world coordinates hangs under this group (shifted by the floating origin).
     const worldRoot = new Group();
     worldRoot.name = 'world';
@@ -789,6 +856,9 @@ export class WorldState implements GameState, InstanceHost {
     );
     player.state.energy = data.player.base.energy;
     player.state.sinceEnergySpent = data.player.regen.energyDelaySeconds;
+    player.model.root.traverse((object) => {
+      object.castShadow = true;
+    });
     worldRoot.add(player.model.root);
     this.player = player;
 
@@ -810,21 +880,69 @@ export class WorldState implements GameState, InstanceHost {
     this.ctx.renderer.setCamera(this.rig.camera);
     this.worldRoot = worldRoot;
     this.scene = scene;
+    this.applyShadows(preset);
   }
 
-  /** The graphics preset in use (the QualityManager takes this over in step 1.10). */
+  /** The graphics preset in use (chosen by the QualityManager). */
   private activePreset(data: GameData): QualityPreset {
-    const settings = this.ctx.session?.settings;
-    const id =
-      settings && settings.quality !== 'auto'
-        ? settings.quality
-        : (settings?.autoQuality ?? data.quality.default);
-    const preset = data.quality.presets.find((entry) => entry.id === id) ?? data.quality.presets[0];
-    if (!preset) throw new Error('quality.json has no presets');
-    return preset;
+    return (
+      this.ctx.quality.preset ??
+      presetFor(data.quality, chosenLevel(this.ctx.session?.settings ?? null, data.quality))
+    );
   }
 
-  /** Applies a changed graphics preset: fog, view distance, chunk rings. */
+  /**
+   * Shadows of the preset: none, small and crisp, or larger and softer. Only how it looks;
+   * nothing in the gameplay depends on them (§2.3).
+   */
+  private applyShadows(preset: QualityPreset): void {
+    const sun = this.sun;
+    if (!sun) return;
+    const on = preset.shadows !== 'off' && preset.shadowDistance > 0;
+    sun.castShadow = on;
+    const shadow = sun.shadow;
+    if (shadow.mapSize.x !== preset.shadowMapSize) {
+      // A new size needs a new shadow map texture.
+      shadow.map?.dispose();
+      shadow.map = null;
+      shadow.mapSize.set(preset.shadowMapSize, preset.shadowMapSize);
+    }
+    if (!on) return;
+    const d = preset.shadowDistance;
+    const cam = shadow.camera;
+    cam.left = -d;
+    cam.right = d;
+    cam.top = d;
+    cam.bottom = -d;
+    cam.near = 1;
+    cam.far = SUN_DISTANCE * 2;
+    cam.updateProjectionMatrix();
+    shadow.radius = preset.shadowSoftness;
+    // Against "shadow acne" on the terrain; scaled to the size of one shadow texel.
+    shadow.normalBias = (2 * d) / preset.shadowMapSize;
+    shadow.bias = -0.0005;
+  }
+
+  /**
+   * Keeps the shadow area centred on the player (in drawing coordinates, after the floating
+   * origin). The centre moves in whole shadow texels, so shadow edges do not crawl.
+   */
+  private updateSun(x: number, y: number, z: number): void {
+    const sun = this.sun;
+    const preset = this.preset;
+    if (!sun || !preset || !sun.castShadow) return;
+    const texel = (2 * preset.shadowDistance) / preset.shadowMapSize;
+    const cx = Math.round(x / texel) * texel;
+    const cz = Math.round(z / texel) * texel;
+    sun.target.position.set(cx, y, cz);
+    sun.position.set(
+      cx + SUN_DIRECTION.x * SUN_DISTANCE,
+      y + SUN_DIRECTION.y * SUN_DISTANCE,
+      cz + SUN_DIRECTION.z * SUN_DISTANCE,
+    );
+  }
+
+  /** Applies a changed graphics preset: fog, view distance, chunk rings, shadows, decoration. */
   private applyPreset(): void {
     const data = this.ctx.data;
     if (!data || !this.scene || !this.rig || !this.streamer) return;
@@ -838,6 +956,8 @@ export class WorldState implements GameState, InstanceHost {
     this.rig.camera.updateProjectionMatrix();
     this.water?.scale.set(preset.fogFar * WATER_SCALE, preset.fogFar * WATER_SCALE, 1);
     this.streamer.setRings(preset.chunkRings);
+    this.streamer.setDecorDensity(preset.density.props);
+    this.applyShadows(preset);
   }
 
   private disposeScene(): void {
@@ -868,6 +988,8 @@ export class WorldState implements GameState, InstanceHost {
       if (object instanceof InstancedMesh) object.dispose();
     });
     this.scene?.clear();
+    this.sun?.shadow.dispose();
+    this.sun = null;
     this.scene = null;
     this.worldRoot = null;
     this.water = null;

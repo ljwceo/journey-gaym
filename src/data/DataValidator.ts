@@ -510,6 +510,16 @@ class CrossChecker {
           `must be at least the collision ring (${collisionRing}, zones.json), so collision is the same on every preset`,
         );
       }
+      if ((preset.shadows === 'off') !== (preset.shadowDistance === 0)) {
+        this.issue(
+          f,
+          `${p}.shadowDistance`,
+          'shadow distance must be 0 exactly when shadows are off',
+        );
+      }
+      if (preset.shadowDistance > preset.fogFar) {
+        this.issue(f, `${p}.shadowDistance`, 'shadows reach further than the fog (fogFar)');
+      }
       if ((preset.shadows === 'off') !== (preset.shadowMapSize === 0)) {
         this.issue(
           f,

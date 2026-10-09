@@ -5,6 +5,7 @@ import { LazyState } from './core/LazyState';
 import { StateMachine } from './core/StateMachine';
 import { I18n } from './i18n/I18n';
 import { DebugOverlay } from './render/DebugOverlay';
+import { QualityManager } from './render/QualityManager';
 import { Renderer } from './render/Renderer';
 import { AutoSave } from './save/AutoSave';
 import { browserStorage, SaveManager } from './save/SaveManager';
@@ -32,12 +33,17 @@ container.append(ui);
 const states = new StateMachine<StateId>((from, to) => events.emit('stateChanged', { from, to }));
 
 let debug: DebugOverlay | null = null;
+let quality: QualityManager | null = null;
 const loop = new GameLoop({
   update: (dt) => states.update(dt),
   render: (alpha, frameSeconds) => {
     const start = performance.now();
     states.render(alpha, frameSeconds);
-    debug?.frame(frameSeconds, loop.updateMs + performance.now() - start);
+    // During the benchmark the frame waits for the GPU, so its time is the real cost.
+    if (quality?.benchmarking) renderer.waitForGpu();
+    const workMs = loop.updateMs + performance.now() - start;
+    debug?.frame(frameSeconds, workMs);
+    quality?.frame(frameSeconds, workMs);
   },
 });
 debug = new DebugOverlay(container, renderer.three, loop.time, () => states.id);
@@ -58,6 +64,20 @@ i18n.onMissing = (key, language) => {
 };
 const saves = new SaveManager(browserStorage());
 
+// `?fps=30` caps the frame rate, to check that the game runs equally fast at any fps.
+const fpsParam = Number(params.get('fps'));
+const debugParam = params.get('debug') === '1';
+
+quality = new QualityManager({
+  renderer,
+  events,
+  getFile: () => ctx.data?.quality ?? null,
+  getSettings: () => ctx.session?.settings ?? null,
+  persist: () => ctx.persist(),
+  getFrameCap: () => loop.frameCap,
+});
+const qualityManager = quality;
+
 const ctx: GameContext = {
   renderer,
   events,
@@ -65,6 +85,7 @@ const ctx: GameContext = {
   i18n,
   saves,
   debug: debugOverlay,
+  quality: qualityManager,
   ui,
   overlays: new Overlays(ui, events),
   params,
@@ -90,6 +111,8 @@ const worldState = new LazyState(
   ctx.reportProblem,
 );
 events.on('stateChanged', ({ to }) => {
+  // The data is there after Boot, the save after the language choice: (re)apply the preset.
+  applySettings();
   if (to === 'title') {
     void worldState.preload();
     void createState.preload();
@@ -104,15 +127,25 @@ states
   .register('intro', new IntroState(ctx))
   .register('world', worldState);
 
-// `?fps=30` caps the frame rate, to check that the game runs equally fast at any fps.
-const fpsParam = Number(params.get('fps'));
-const debugParam = params.get('debug') === '1';
-
-// Saved settings that take effect right away. Graphics presets follow in step 1.10.
-events.on('settingsChanged', () => {
+// Saved settings that take effect right away.
+function applySettings(): void {
   const settings = ctx.session?.settings;
-  loop.frameCap = frameCapFor(settings?.fpsCap ?? 'auto', fpsParam);
+  qualityManager.apply();
+  // "Auto" fps follows the preset's target (Low/Mid 60, High 120).
+  const target = qualityManager.preset?.fpsTarget ?? 0;
+  loop.frameCap = frameCapFor(settings?.fpsCap ?? 'auto', fpsParam, target);
+}
+events.on('settingsChanged', () => {
+  applySettings();
+  const settings = ctx.session?.settings;
   if (settings && !debugParam) debugOverlay.setVisible(settings.debug);
+});
+events.on('qualityChanged', () => {
+  loop.frameCap = frameCapFor(
+    ctx.session?.settings.fpsCap ?? 'auto',
+    fpsParam,
+    qualityManager.preset?.fpsTarget ?? 0,
+  );
 });
 
 events.on('languageChanged', ({ language }) => {
@@ -140,9 +173,10 @@ function updateDebugLines(): void {
   lines.set(
     'save',
     save
-      ? `v${save.version}, ${save.world.zone ?? 'no zone'}, ${Math.floor(save.playTimeSeconds)} s, quality ${save.settings.quality}`
+      ? `v${save.version}, ${save.world.zone ?? 'no zone'}, ${Math.floor(save.playTimeSeconds)} s`
       : 'none',
   );
+  lines.set('quality', `${qualityManager.debugLine()} · cap ${loop.frameCap || 'none'}`);
 }
 window.setInterval(updateDebugLines, 1000);
 

@@ -8,6 +8,8 @@
       },
       "shadows": "off",
       "shadowMapSize": 0,
+      "shadowDistance": 0,
+      "shadowSoftness": 0,
       "antialias": "off",
       "chunkRings": {
         "active": 1,
@@ -31,6 +33,8 @@
       },
       "shadows": "simple",
       "shadowMapSize": 1024,
+      "shadowDistance": 40,
+      "shadowSoftness": 1,
       "antialias": "fxaa",
       "chunkRings": {
         "active": 2,
@@ -54,6 +58,8 @@
       },
       "shadows": "soft",
       "shadowMapSize": 2048,
+      "shadowDistance": 70,
+      "shadowSoftness": 3,
       "antialias": "msaa",
       "chunkRings": {
         "active": 3,

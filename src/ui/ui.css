@@ -921,6 +921,26 @@
   font-size: 15px;
 }
 
+.ui-cheats-tool {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* Save code (export / import). 16px or more, or iPhone Safari zooms in when focused. */
+.ui-code {
+  width: 100%;
+  box-sizing: border-box;
+  resize: vertical;
+  padding: 6px 8px;
+  font: 16px var(--gh-font-stats);
+  word-break: break-all;
+  color: var(--gh-tekst);
+  background: color-mix(in srgb, var(--gh-panel) 60%, black);
+  border: 1px solid var(--gh-koper);
+  border-radius: 6px;
+}
+
 /* Fly up / down: left of the dash button, inside the button safe zone. */
 .ui-fly-button {
   width: 52px;

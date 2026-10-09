@@ -161,6 +161,10 @@ class FakeWorker {
     }
     const { field, config } = this;
     if (!field || !config) return;
+    if (message.type === 'density') {
+      config.scatter.density = message.density;
+      return;
+    }
     const mesh = buildChunkMesh(field, message.cx, message.cz, config.chunkSize, 4, 2);
     const props = message.props
       ? scatterChunk(field, config.scatter, message.cx, message.cz, config.chunkSize)

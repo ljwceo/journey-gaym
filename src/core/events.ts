@@ -17,6 +17,10 @@ export interface GameEvents {
   languageChanged: { language: string };
   /** A setting in the save changed (applied by main.ts). */
   settingsChanged: Record<string, never>;
+  /** The graphics preset in use changed (Settings, benchmark or auto-downgrade). */
+  qualityChanged: { level: 'low' | 'mid' | 'high' };
+  /** The game picked (benchmark) or lowered (too slow) the preset itself, with "Auto" on. */
+  qualityAutoChosen: { level: 'low' | 'mid' | 'high'; reason: 'benchmark' | 'lowered' };
 }
 
 export type GameEventBus = EventBus<GameEvents>;

@@ -7,7 +7,15 @@ export interface CheatPanelHandlers {
   teleport(zoneId: string): void;
   /** A cheat setting changed (speed, fly or chunk borders). */
   changed(): void;
+  /** The current save as a text code (the world writes its latest state first). */
+  exportSave(): string;
+  /** Replaces the save with an exported code; false when the code is not valid. */
+  importSave(code: string): boolean;
+  /** Forgets the automatic preset, so the benchmark runs again (Settings back to "Auto"). */
+  rerunBenchmark(): void;
 }
+
+type SaveTool = 'none' | 'export' | 'import';
 
 /**
  * Debug-only cheat menu for quick testing: walk faster, fly through walls, teleport to a zone,
@@ -21,6 +29,9 @@ export class CheatPanel {
   private readonly flyButtons: HTMLElement;
   private panel: HTMLElement | null = null;
   private debugVisible = false;
+  private saveTool: SaveTool = 'none';
+  private saveCode = '';
+  private importFailed = false;
 
   constructor(
     private readonly ctx: GameContext,
@@ -88,6 +99,9 @@ export class CheatPanel {
   private close(): void {
     this.panel?.remove();
     this.panel = null;
+    this.saveTool = 'none';
+    this.saveCode = '';
+    this.importFailed = false;
   }
 
   private rebuild(): void {
@@ -175,6 +189,20 @@ export class CheatPanel {
           this.changed();
         }),
       ),
+      this.seasonSection(chip, section),
+      section(
+        t('cheats.quality'),
+        el('p', { className: 'ui-note', text: this.ctx.quality.debugLine() }),
+        el(
+          'div',
+          { className: 'ui-chips' },
+          chip(t('cheats.rerunBenchmark'), false, () => {
+            this.handlers.rerunBenchmark();
+            this.rebuild();
+          }),
+        ),
+      ),
+      this.saveSection(chip, section),
       section(
         t('cheats.teleport'),
         el(
@@ -192,6 +220,96 @@ export class CheatPanel {
         attrs: { type: 'button' },
         onClick: () => this.close(),
       }),
+    );
+  }
+
+  /** Force a season (or follow the calendar again). Same as F4, but also on a phone. */
+  private seasonSection(
+    chip: (label: string, active: boolean, onClick: () => void) => HTMLButtonElement,
+    section: (label: string, ...content: (HTMLElement | null)[]) => HTMLElement,
+  ): HTMLElement | null {
+    const seasons = this.ctx.seasons;
+    const data = this.ctx.data;
+    if (!seasons || !data) return null;
+    const t = this.ctx.i18n.t.bind(this.ctx.i18n);
+    const set = (id: string | null): void => {
+      seasons.override = id;
+      this.rebuild();
+    };
+    return section(
+      t('cheats.season'),
+      el(
+        'div',
+        { className: 'ui-chips' },
+        chip(t('cheats.seasonCalendar'), seasons.override === null, () => set(null)),
+        ...data.seasons.order.map((id) => {
+          const def = data.seasons.seasons.find((season) => season.id === id);
+          return chip(def ? t(def.label) : id, seasons.override === id, () => set(id));
+        }),
+      ),
+    );
+  }
+
+  /** Save as a text code: export (to copy) and import (paste a code), for testing. */
+  private saveSection(
+    chip: (label: string, active: boolean, onClick: () => void) => HTMLButtonElement,
+    section: (label: string, ...content: (HTMLElement | null)[]) => HTMLElement,
+  ): HTMLElement {
+    const t = this.ctx.i18n.t.bind(this.ctx.i18n);
+    const choose = (tool: SaveTool): void => {
+      this.saveTool = this.saveTool === tool ? 'none' : tool;
+      this.saveCode = this.saveTool === 'export' ? this.handlers.exportSave() : '';
+      this.importFailed = false;
+      this.rebuild();
+    };
+    let tool: HTMLElement | null = null;
+    if (this.saveTool !== 'none') {
+      const exporting = this.saveTool === 'export';
+      const area = el('textarea', {
+        className: 'ui-code',
+        attrs: {
+          rows: '4',
+          spellcheck: 'false',
+          autocomplete: 'off',
+          'aria-label': t(exporting ? 'cheats.saveExport' : 'cheats.saveImport'),
+          ...(exporting ? { readonly: '' } : { placeholder: t('cheats.savePaste') }),
+        },
+      });
+      area.value = this.saveCode;
+      if (exporting) area.addEventListener('focus', () => area.select());
+      const action = exporting
+        ? chip(t('cheats.saveCopy'), false, () => {
+            area.select();
+            void navigator.clipboard?.writeText(this.saveCode).catch(() => undefined);
+          })
+        : chip(t('cheats.saveLoad'), false, () => {
+            if (this.handlers.importSave(area.value)) {
+              this.close();
+              return;
+            }
+            this.saveCode = area.value;
+            this.importFailed = true;
+            this.rebuild();
+          });
+      tool = el(
+        'div',
+        { className: 'ui-cheats-tool' },
+        area,
+        el('div', { className: 'ui-chips' }, action),
+        this.importFailed
+          ? el('p', { className: 'ui-note ui-error', text: t('cheats.saveInvalid') })
+          : null,
+      );
+    }
+    return section(
+      t('cheats.save'),
+      el(
+        'div',
+        { className: 'ui-chips' },
+        chip(t('cheats.saveExport'), this.saveTool === 'export', () => choose('export')),
+        chip(t('cheats.saveImport'), this.saveTool === 'import', () => choose('import')),
+      ),
+      tool,
     );
   }
 
