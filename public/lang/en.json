@@ -1,4 +1,7 @@
 {
+  "game": {
+    "title": "Legend of Morvath"
+  },
   "language": {
     "choose": "Choose your language",
     "en": "English",
@@ -136,7 +139,8 @@
     "lucael": "Is this all humanity has left?",
     "baelor": "You're not even worth killing, little insect. Come back when you're stronger.",
     "panel_5": "Few have faced the Lords of Morvath and lived.",
-    "panel_6": "You wake in the Monastery of Greyhaven. Your journey begins here."
+    "panel_6": "You wake in the Monastery of Greyhaven. Your journey begins here.",
+    "tapToContinue": "Tap or press Space to continue"
   },
   "cutscene": {
     "skip": "Skip",
@@ -212,18 +216,38 @@
     }
   },
   "item": {
-    "gold": { "desc": "Shiny coins. Used to buy, sell and upgrade." },
-    "old_sword": { "desc": "An old but trusty sword." },
-    "travel_mantle": { "desc": "A simple travel mantle with golden embroidery." },
-    "mage_staff": { "desc": "A neutral staff. It only works with a crystal." },
-    "wizard_crystal": { "desc": "A crystal with a random element: Water, Fire, Nature or Wind." },
-    "dark_crystal": { "desc": "A crystal of dark magic." },
-    "slime_gel": { "desc": "Sticky gel left behind by a slime." }
+    "gold": {
+      "desc": "Shiny coins. Used to buy, sell and upgrade."
+    },
+    "old_sword": {
+      "desc": "An old but trusty sword."
+    },
+    "travel_mantle": {
+      "desc": "A simple travel mantle with golden embroidery."
+    },
+    "mage_staff": {
+      "desc": "A neutral staff. It only works with a crystal."
+    },
+    "wizard_crystal": {
+      "desc": "A crystal with a random element: Water, Fire, Nature or Wind."
+    },
+    "dark_crystal": {
+      "desc": "A crystal of dark magic."
+    },
+    "slime_gel": {
+      "desc": "Sticky gel left behind by a slime."
+    }
   },
   "quest": {
-    "defeat_sultan": { "desc": "Defeat Sultan at the city gate." },
-    "your_resolve": { "desc": "Go to the Academy and choose your path." },
-    "first_harvest": { "desc": "Bring Rose 5 Blossom from the Garden." }
+    "defeat_sultan": {
+      "desc": "Defeat Sultan at the city gate."
+    },
+    "your_resolve": {
+      "desc": "Go to the Academy and choose your path."
+    },
+    "first_harvest": {
+      "desc": "Bring Rose 5 Blossom from the Garden."
+    }
   },
   "season": {
     "summer": "Summer",

@@ -1,4 +1,7 @@
 {
+  "game": {
+    "title": "Legend of Morvath"
+  },
   "language": {
     "choose": "Kies je taal",
     "en": "English",
@@ -136,7 +139,8 @@
     "lucael": "Is dit alles wat de mensheid nog heeft?",
     "baelor": "Je bent het niet eens waard om te doden, klein insect. Kom terug als je sterker bent.",
     "panel_5": "Weinigen stonden tegenover de Lords of Morvath en leefden nog.",
-    "panel_6": "Je wordt wakker in het Monastery van Greyhaven. Hier begint je reis."
+    "panel_6": "Je wordt wakker in het Monastery van Greyhaven. Hier begint je reis.",
+    "tapToContinue": "Tik of druk op spatie om verder te gaan"
   },
   "cutscene": {
     "skip": "Overslaan",
@@ -212,20 +216,38 @@
     }
   },
   "item": {
-    "gold": { "desc": "Glimmende munten. Om te kopen, verkopen en upgraden." },
-    "old_sword": { "desc": "Een oud maar trouw zwaard." },
-    "travel_mantle": { "desc": "Een eenvoudige reismantel met gouden borduursel." },
-    "mage_staff": { "desc": "Een neutrale staf. Werkt alleen met een kristal." },
+    "gold": {
+      "desc": "Glimmende munten. Om te kopen, verkopen en upgraden."
+    },
+    "old_sword": {
+      "desc": "Een oud maar trouw zwaard."
+    },
+    "travel_mantle": {
+      "desc": "Een eenvoudige reismantel met gouden borduursel."
+    },
+    "mage_staff": {
+      "desc": "Een neutrale staf. Werkt alleen met een kristal."
+    },
     "wizard_crystal": {
       "desc": "Een kristal met een willekeurig element: Water, Fire, Nature of Wind."
     },
-    "dark_crystal": { "desc": "Een kristal van duistere magie." },
-    "slime_gel": { "desc": "Kleverige gel die een slime achterlaat." }
+    "dark_crystal": {
+      "desc": "Een kristal van duistere magie."
+    },
+    "slime_gel": {
+      "desc": "Kleverige gel die een slime achterlaat."
+    }
   },
   "quest": {
-    "defeat_sultan": { "desc": "Versla Sultan bij de stadspoort." },
-    "your_resolve": { "desc": "Ga naar de Academy en kies je pad." },
-    "first_harvest": { "desc": "Breng Rose 5 Blossom uit de Garden." }
+    "defeat_sultan": {
+      "desc": "Versla Sultan bij de stadspoort."
+    },
+    "your_resolve": {
+      "desc": "Ga naar de Academy en kies je pad."
+    },
+    "first_harvest": {
+      "desc": "Breng Rose 5 Blossom uit de Garden."
+    }
   },
   "season": {
     "summer": "Zomer",
