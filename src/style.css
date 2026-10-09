@@ -26,3 +26,22 @@ body {
   width: 100%;
   height: 100%;
 }
+
+.debug-overlay {
+  position: fixed;
+  top: max(8px, env(safe-area-inset-top));
+  left: max(8px, env(safe-area-inset-left));
+  margin: 0;
+  padding: 6px 8px;
+  font:
+    12px/1.35 'IBM Plex Mono',
+    ui-monospace,
+    monospace;
+  color: var(--gh-tekst);
+  background: color-mix(in srgb, var(--gh-nachtinkt) 80%, transparent);
+  border: 1px solid var(--gh-koper);
+  border-radius: 4px;
+  pointer-events: none;
+  white-space: pre;
+  z-index: 100;
+}

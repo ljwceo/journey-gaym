@@ -10,6 +10,12 @@ Elke keer dat er iets in `main` komt, bouwt GitHub de game opnieuw en zet hem on
 
 **Lokaal op de iPhone:** zorg dat iPhone en pc op hetzelfde wifi-netwerk zitten. Na `npm run dev` staat in de terminal een regel `Network: http://192.168.x.x:5173/journey-gaym/`. Typ dat adres in Safari op je iPhone.
 
+**Debug en testen**
+| Wat | Hoe |
+|---|---|
+| Debug-overlay (fps, draw calls, …) | F3, tik met drie vingers op de iPhone, of zet `?debug=1` achter het adres |
+| Framerate beperken (test of 30/60/120 fps even snel loopt) | zet `?fps=30` achter het adres (combineren: `?debug=1&fps=30`) |
+
 **Handige commando's**
 | Commando | Wat |
 |---|---|
