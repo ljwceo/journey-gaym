@@ -45,3 +45,24 @@ body {
   white-space: pre;
   z-index: 100;
 }
+
+.debug-errors {
+  position: fixed;
+  bottom: max(8px, env(safe-area-inset-bottom));
+  left: max(8px, env(safe-area-inset-left));
+  right: max(8px, env(safe-area-inset-right));
+  max-height: 40vh;
+  margin: 0;
+  padding: 6px 8px;
+  overflow: auto;
+  font:
+    12px/1.35 'IBM Plex Mono',
+    ui-monospace,
+    monospace;
+  color: var(--gh-zonlicht);
+  background: color-mix(in srgb, var(--gh-nachtinkt) 90%, transparent);
+  border: 1px solid var(--gh-lantaarnamber);
+  border-radius: 4px;
+  white-space: pre-wrap;
+  z-index: 101;
+}
