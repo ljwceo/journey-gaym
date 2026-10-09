@@ -74,7 +74,7 @@
     },
     {
       "id": "creature",
-      "color": "bosgroen",
+      "color": "spreukviolet",
       "model": "placeholder:treewarden",
       "radius": 1.1
     }
@@ -272,6 +272,139 @@
       "behavior": "wander",
       "wander": {
         "radius": 60,
+        "speed": 0.8
+      },
+      "monster": "treewarden",
+      "safeAreas": ["elven_city"],
+      "dialogue": []
+    },
+    {
+      "id": "treewarden_4",
+      "name": "Treewarden",
+      "role": "creature",
+      "zone": "greenwood",
+      "position": {
+        "x": -1420,
+        "z": -110
+      },
+      "interaction": "none",
+      "behavior": "wander",
+      "wander": {
+        "radius": 30,
+        "speed": 0.8
+      },
+      "monster": "treewarden",
+      "safeAreas": ["elven_city"],
+      "dialogue": []
+    },
+    {
+      "id": "treewarden_5",
+      "name": "Treewarden",
+      "role": "creature",
+      "zone": "greenwood",
+      "position": {
+        "x": -1300,
+        "z": -200
+      },
+      "interaction": "none",
+      "behavior": "wander",
+      "wander": {
+        "radius": 40,
+        "speed": 0.8
+      },
+      "monster": "treewarden",
+      "safeAreas": ["elven_city"],
+      "dialogue": []
+    },
+    {
+      "id": "treewarden_6",
+      "name": "Treewarden",
+      "role": "creature",
+      "zone": "greenwood",
+      "position": {
+        "x": -1230,
+        "z": -440
+      },
+      "interaction": "none",
+      "behavior": "wander",
+      "wander": {
+        "radius": 35,
+        "speed": 0.8
+      },
+      "monster": "treewarden",
+      "safeAreas": ["elven_city"],
+      "dialogue": []
+    },
+    {
+      "id": "treewarden_7",
+      "name": "Treewarden",
+      "role": "creature",
+      "zone": "greenwood",
+      "position": {
+        "x": -1400,
+        "z": -560
+      },
+      "interaction": "none",
+      "behavior": "wander",
+      "wander": {
+        "radius": 50,
+        "speed": 0.8
+      },
+      "monster": "treewarden",
+      "safeAreas": ["elven_city"],
+      "dialogue": []
+    },
+    {
+      "id": "treewarden_8",
+      "name": "Treewarden",
+      "role": "creature",
+      "zone": "greenwood",
+      "position": {
+        "x": -980,
+        "z": -820
+      },
+      "interaction": "none",
+      "behavior": "wander",
+      "wander": {
+        "radius": 50,
+        "speed": 0.8
+      },
+      "monster": "treewarden",
+      "safeAreas": ["elven_city"],
+      "dialogue": []
+    },
+    {
+      "id": "treewarden_9",
+      "name": "Treewarden",
+      "role": "creature",
+      "zone": "greenwood",
+      "position": {
+        "x": -930,
+        "z": -950
+      },
+      "interaction": "none",
+      "behavior": "wander",
+      "wander": {
+        "radius": 30,
+        "speed": 0.8
+      },
+      "monster": "treewarden",
+      "safeAreas": ["elven_city"],
+      "dialogue": []
+    },
+    {
+      "id": "treewarden_10",
+      "name": "Treewarden",
+      "role": "creature",
+      "zone": "greenwood",
+      "position": {
+        "x": -780,
+        "z": -200
+      },
+      "interaction": "none",
+      "behavior": "wander",
+      "wander": {
+        "radius": 50,
         "speed": 0.8
       },
       "monster": "treewarden",

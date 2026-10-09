@@ -818,7 +818,18 @@
         "z": -394,
         "radius": 8
       },
-      "npcs": ["treewarden_1", "treewarden_2", "treewarden_3"],
+      "npcs": [
+        "treewarden_1",
+        "treewarden_2",
+        "treewarden_3",
+        "treewarden_4",
+        "treewarden_5",
+        "treewarden_6",
+        "treewarden_7",
+        "treewarden_8",
+        "treewarden_9",
+        "treewarden_10"
+      ],
       "areas": [
         {
           "id": "elven_city",
