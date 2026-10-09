@@ -268,5 +268,21 @@
   "controls": {
     "dash": "Dash",
     "clickToLook": "Klik om rond te kijken · Esc voor het menu"
+  },
+  "cheats": {
+    "title": "Cheats (debug)",
+    "note": "Alleen in debugmodus, wordt nooit opgeslagen.",
+    "speed": "Snelheid",
+    "fly": "Vliegen",
+    "on": "Aan",
+    "off": "Uit",
+    "flyHintKeys": "Spatie = omhoog · Shift = omlaag · door muren heen",
+    "flyHintTouch": "▲ / ▼ knoppen = omhoog en omlaag · door muren heen",
+    "teleport": "Teleporteren",
+    "chunkLines": "Chunkranden",
+    "close": "Sluiten",
+    "open": "Cheats",
+    "flyUp": "Omhoog vliegen",
+    "flyDown": "Omlaag vliegen"
   }
 }

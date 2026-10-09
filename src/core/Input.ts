@@ -1,5 +1,6 @@
 /** Game actions, independent of key, button or (later) gamepad. */
-export type Action = 'dash' | 'interact';
+/** `down` only matters while flying (debug cheat): Shift or C. */
+export type Action = 'dash' | 'interact' | 'down';
 
 /** Turning and zoom gathered since the camera last read them. */
 export interface LookDelta {
@@ -34,7 +35,13 @@ const KEY_UP = ['KeyW', 'ArrowUp'] as const;
 const KEY_DOWN = ['KeyS', 'ArrowDown'] as const;
 const KEY_LEFT = ['KeyA', 'ArrowLeft'] as const;
 const KEY_RIGHT = ['KeyD', 'ArrowRight'] as const;
-const ACTION_KEYS: Readonly<Record<string, Action>> = { Space: 'dash', KeyE: 'interact' };
+const ACTION_KEYS: Readonly<Record<string, Action>> = {
+  Space: 'dash',
+  KeyE: 'interact',
+  ShiftLeft: 'down',
+  ShiftRight: 'down',
+  KeyC: 'down',
+};
 /** Keys whose browser default (scrolling) must not happen during play. */
 const BLOCK_DEFAULT = new Set(['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']);
 /** Pixels per wheel "line" when the browser reports lines instead of pixels. */

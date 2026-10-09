@@ -7,9 +7,9 @@
 | | |
 |---|---|
 | **Huidige fase** | Fase 1 – Basis + open wereld + character creator |
-| **Status** | Stap 1.6 klaar (speler en camera), camera omgebouwd naar over de schouder (zoals Genshin) |
-| **Volgende stap** | Stap 1.7: open wereld (zones uit data, chunks met ringen, terrein in een Web Worker, gebudgetteerd laden, floating origin, mist, InstancedMesh, debug-kleuren voor chunks) |
-| **Laatste sessie** | 2026-10-09: camera over de schouder (Genshin-stijl) |
+| **Status** | Stap 1.7 klaar (open wereld), plus kleinere bundel en een cheatmenu voor testen |
+| **Volgende stap** | Stap 1.8: inhoud (placeholder-gebouwen in Greyhaven, Greenwood met Old Tjikko, riviertjes, elfenstad en heiligdom, Mournfen; triggers, eerste-bezoek-teksten, stadspoort, checkpoints, zonenaam in beeld, HUD-systeem met fade) |
+| **Laatste sessie** | 2026-10-09: stap 1.7 open wereld, bundel kleiner, cheatmenu |
 
 ---
 
@@ -49,7 +49,7 @@ Elke stap is één branch + pull request. Na elke stap start de game zonder fout
 ## Fase-log
 
 ### Fase 1 – Basis + open wereld + character creator
-**Status:** bezig, stap 1.1 t/m 1.6 klaar.
+**Status:** bezig, stap 1.1 t/m 1.7 klaar.
 **Gebouwd:**
 - 1.1 Projectopzet: Vite 8 + TypeScript 6 (strict), Three.js r186, ESLint + Prettier, Vitest. Leeg 3D-scherm met een draaiende kubus in stijlgidskleuren (draait per seconde, niet per frame). GitHub Actions controleert elke pull request (lint, opmaak, typecheck, tests, build) en zet `main` op GitHub Pages.
 - 1.2 Kern: `FixedStep` + `GameLoop` (simulatie altijd 60 Hz met accumulator, tekenen interpoleert, max 8 inhaalstappen per frame, frames > 0,25 s worden afgekapt, `?fps=N` om de framerate te beperken), getypte `EventBus` (geen allocaties bij `emit`), `StateMachine` (wissel gebeurt pas vóór de volgende update), `Random` (sfc32 met vaste seed) + `hashSeed` voor per-chunk seeds, `Renderer`, `DebugOverlay` (F3 / drie vingers / `?debug=1`: fps, frametijd, cpu-tijd, draw calls, triangles, geometries/textures, heap, resolutie, simulatiestappen, huidige state). Demo-scène: kubus die rondjes draait op de simulatie en vloeiend getekend wordt. 29 tests.
@@ -87,21 +87,47 @@ Elke stap is één branch + pull request. Na elke stap start de game zonder fout
   - **Invoer** (`src/core/Input.ts`): WASD/pijltjes, spatie = dash, E = interactie (doet nog niets tot stap 1.9). Muis: zie hierboven, scrollwiel = zoomen. Touch: joystick verschijnt waar je duim neerkomt linksonder (linker 45%, onderste helft), één vinger ergens anders = camera draaien, twee vingers knijpen = zoomen, **Dash**-knop rechtsonder (`src/ui/TouchControls.ts`). Vaste veilige zones voor joystick en knoppen staan in `ui.css` (`--joystick-zone-*`, `--button-zone-*`).
   - **Wereld** (`src/scenes/WorldState.ts`): je poppetje uit de creator (eigen kleuren) staat op een vlakke testvloer in Greyhaven met een raster van 4 m (1 hokje = 1 seconde lopen) en een **tijdelijke testbaan** (`src/world/TestCourse.ts`: muur met opening, hoek, dunne muur voor de dash, pilaren, een "gebouw"). Mist- en grondkleur uit de zone, kijkafstand uit de grafische stand. Positie en kijkrichting gaan mee in de save, dus Continue zet je terug waar je was. Pauze laat alle toetsen los.
   - Debug-overlay: positie, kijkrichting, lopen/dash, energie, dash-cooldown, camerahoek, zoom en gevoeligheid. 142 tests.
+- Bundel kleiner (op verzoek, tegelijk met 1.7):
+  - **zod → zod/mini** (zelfde controles, ander schrijfwijze): bibliotheekcode van 95 kB naar 34 kB. Foutmeldingen blijven Engels en duidelijk.
+  - **Three.js in een eigen bestand** (`three-….js`) en de andere bibliotheken ook (`vendor-….js`). Het grootste bestand ging van 731 kB naar 548 kB, en bij een nieuwe versie van de game hoeft de browser Three.js niet opnieuw te downloaden.
+  - **Character creator en wereld laden pas als ze nodig zijn** (`src/core/LazyState.ts`); vanaf het titelscherm worden ze al op de achtergrond opgehaald, dus je merkt geen wachttijd.
+  - **Grootte-check**: `npm run build` (en dus GitHub Actions) faalt als één bestand boven 800 kB komt en waarschuwt boven 680 kB (`scripts/check-bundle.mjs`). Totaal nu ±706 kB verdeeld over 7 bestanden; het grootste is 548 kB.
+- 1.7 Open wereld:
+  - **Terrein** (`src/world/TerrainField.ts`, `Noise.ts`): hoogte en kleur overal in de wereld uit `zones.json` + een vaste seed (dus voor iedereen gelijk, ook later in raids). Elke zone heeft een basishoogte, heuvelhoogte en kleur; op zonegrenzen lopen ze over 120 m vloeiend in elkaar over, geen trappetjes. Aan de wereldrand zakt het land in zee (kust van Greyhaven). Zee op hoogte 0; in water dieper dan 1 m kun je niet lopen. The Mournfen ligt deels net onder water (plassen).
+  - **Chunks van 64 m** (`WorldStreamer.ts`, `ChunkPlanner.ts`): actieve ring = volle detail (32 × 32 vakjes), bomen/rotsen en botsing; preload-ring = lage detail (8 × 8); pas buiten de unload-ring wordt een chunk opgeruimd (hysterese, geen geflikker). Ringen per stand in `quality.json`: Low 1/3/4, Mid 2/4/5, High 3/6/7.
+  - **Laden in een Web Worker** (`src/workers/terrain.worker.ts`): terrein, normalen, kleuren en de plek van bomen/rotsen worden buiten de hoofdthread berekend en als transferable buffers teruggestuurd (±1 ms per chunk). De hoofdthread bouwt maximaal 2 ms per frame meshes (gemeten: < 0,2 ms). Dichtbij en in je looprichting eerst.
+  - **Nooit een gat**: onder alles ligt een grove kaart van de hele wereld (32 m-raster) in de zonekleuren, die je ziet zolang chunks nog laden. Randen van chunks hebben een "rokje" naar beneden, zodat er tussen hoge en lage detail geen kier zit.
+  - **Bomen en rotsen** (`Scatter.ts`, `src/entities/PropFactory.ts`): per zone in data (`scatter` in `zones.json`: soort, aantal per hectare, grootte), vermenigvuldigd met de dichtheid van de grafische stand. Altijd op dezelfde plek (vaste seed per chunk), niet in water, niet op steile hellingen, en vrij rond spawnpunten, checkpoints en dungeon-ingangen. Eén InstancedMesh per soort per chunk. Bomen en rotsen hebben botsing (stam/steen), riet niet. Soorten: tree, pine, dead_tree, rock, reed.
+  - **Lopen over terrein** (`GroundedMover.ts`): je volgt de grond precies (dezelfde driehoeken als getekend); hellingen steiler dan 40° (`slopeLimitDegrees`) houden je tegen, je glijdt er langs. Diep water houdt je tegen, uit het water lopen kan altijd.
+  - **Camera** blijft boven de grond, ook als je hem achter een heuvel draait.
+  - **Floating origin** (`FloatingOrigin.ts`): verder dan 1000 m van het tekenmidden schuift de wereld terug. De save bewaart altijd echte wereldcoördinaten.
+  - **Zonewissel naadloos**: loop je een andere zone in, dan wordt die je zone (`zoneEntered` → autosave). De naambalk in beeld komt met het HUD-systeem (stap 1.8).
+  - **Mist en kijkafstand** per stand (Low 180 m, Mid 260 m, High 400 m); wissel je de stand in Settings, dan passen mist en ringen zich meteen aan.
+  - **Debug**: positie met hoogte, zone, origin, aantal chunks (dichtbij/ver/laden), worker-tijd, langste bouwtijd per frame, aantal colliders. Chunkranden met kleuren (geel = laden, blauw = dichtbij, violet = ver, oranje = wacht op opruimen) aan/uit in het cheatmenu.
+  - De vlakke testvloer en het 4 m-raster zijn weg. De **testbaan** staat nu op het terrein bij het Monastery en verdwijnt in stap 1.8.
+- Cheatmenu (op verzoek, alleen in debugmodus, `src/ui/CheatPanel.ts`, `src/systems/Cheats.ts`):
+  - Openen met **F6** of de knop **Cheats** rechtsboven (alleen zichtbaar in debugmodus). Het spel loopt door achter het paneel.
+  - **Snelheid** 1×, 2×, 5×, 10×, 25× (25× = 100 m/s). **Vliegen**: door muren heen, Spatie = omhoog, Shift (of C) = omlaag; op de telefoon ▲/▼-knoppen naast de dashknop. Niet onder de grond, maximaal 400 m hoog. Vliegen uit = landen op de grond.
+  - **Teleport** naar het eerste spawnpunt van elke zone. **Chunkranden** aan/uit.
+  - Wordt **nooit opgeslagen**; debugmodus uit = alle cheats uit. Op de telefoon staat het paneel boven de debug-overlay. 174 tests.
 
 **Bekende problemen:**
-- De game-bundel is ±666 kB (Three.js ±530 kB, zod ±130 kB). Waarschuwingsgrens op 800 kB gezet; opsplitsen als de game groeit. Wordt zod te zwaar, dan kan het naar `zod/mini` (veel kleiner, zelfde werking).
+- ~~De game-bundel is ±666 kB~~ → opgelost in stap 1.7: opgesplitst in 7 bestanden, grootste 548 kB (Three.js zelf). Three.js kan niet verder opgesplitst worden; dat bestand groeit alleen bij een nieuwe Three.js-versie.
 - De grafische stand wordt al opgeslagen maar doet nog niets; de QualityManager komt in stap 1.10.
 - De pauzeknop is nu het teken "II"; volgens de stijlgids (U3) wordt dat later een geschilderd icoontje.
 - Kapsels en lichaamstypes zijn ruwe vormen (het vrouwelijke lijf is alleen iets smaller).
-- De testvloer en testbaan zijn tijdelijk; stap 1.7/1.8 vervangen ze door terrein, zones en gebouwen uit data. De grond is nog vlak, dus de helling-limiet (40°) doet nog niets.
-- De camera gaat nog door muren heen als je hem erachter draait. Over de schouder valt dat meer op dan van boven; camera-botsing komt met de echte gebouwen en heuvels (stap 1.7/1.8).
+- De testbaan is tijdelijk; stap 1.8 vervangt hem door gebouwen uit data.
+- De camera gaat nog door muren heen als je hem erachter draait (door heuvels niet meer). Camera-botsing met gebouwen komt in stap 1.8.
+- Zones zijn voor het terrein rechthoeken; een zone met een cirkel of veelhoek gebruikt voor de hoogte zijn omringende rechthoek (voor "in welke zone ben ik" wordt wel de echte vorm gebruikt).
+- Bij de overgang van lage naar volle detail kan de speler een paar cm "verspringen" in hoogte als hij heel snel (cheat) op een chunk komt die nog laag detail heeft.
+- Vanaf 150 m hoog vliegen zie je vooral mist: de mist hoort bij de kijkafstand van de stand.
+- Fps in de headless testbrowser zegt niets (software-rendering, 3–20 fps); het echte meten op pc en iPhone volgt in stap 1.11. Draw calls in het bos: Low 49, Mid 69, High 109.
 - Het spelconcept in Google Docs zegt nog "camera schuin van bovenaf" en "draait terug achter je". `CLAUDE.md` is aangepast; het concept moet nog worden bijgewerkt.
 - Het poppetje kost ±16 draw calls (losse onderdelen). Prima nu; later samenvoegen of vervangen door één model.
 - Touch: twee vingers knijpen in het joystick-gebied (linksonder) maakt de eerste vinger een joystick. Knijp boven of rechts in beeld. Tikken met drie vingers zet nog steeds de debug-overlay aan of uit.
 - Op een iPhone-scherm bedekt de debug-overlay een groot deel van het beeld (alleen in debug).
 - Joystick, rondkijken en knijpen zijn getest met nagebootste vingers in de headless browser; graag op een echte iPhone testen of het lekker voelt.
 - Of het toetsenbord op een echte iPhone netjes dichtgaat, kan ik in de headless browser niet zien. Graag testen op de telefoon.
-- Bundel nu ±730 kB (grens 800 kB).
 - Veel getallen die niet in het concept staan zijn een **voorstel** (zie besluiten): spell-, combo- en skillwaarden, Sultans waarschuwingstijden, dash-afstand, vijandsnelheden in m/s. Ze staan in data en zijn makkelijk aan te passen.
 **Gemeten fps:**
 
@@ -157,6 +183,18 @@ Elke stap is één branch + pull request. Na elke stap start de game zonder fout
 | 2026-10-09 | Energie in stap 1.6 alleen in de debug-overlay; de energiebalk in beeld komt met het HUD-systeem (stap 1.8) | HUD met faden is één systeem; niet twee keer bouwen |
 | 2026-10-09 | Joystick-gebied: linker 45% van het scherm, onderste helft | Kleiner dan eerst (was linker helft, onder 35%), zodat je op de telefoon makkelijker de camera kunt draaien |
 | 2026-10-09 | Tijdelijke testbaan staat in code (`TestCourse.ts`), niet in data | Het is ontwikkel-gereedschap voor deze stap, geen spelinhoud; verdwijnt in 1.7/1.8 |
+| 2026-10-09 | **zod/mini** in plaats van zod | Bundel te groot (verzoek). Zelfde controles, 60 kB kleiner. Foutmeldingen via de Engelse taalset van zod |
+| 2026-10-09 | Three.js en andere bibliotheken in eigen bestanden; creator en wereld laden pas als ze nodig zijn | Geen enkel bestand groeit naar de 800 kB-grens; bibliotheken blijven in de browsercache tussen versies |
+| 2026-10-09 | Grens van 800 kB geldt **per bestand** en wordt bij elke build gecontroleerd (waarschuwing boven 680 kB) | Zo zien we het in de pull request, niet pas als het te laat is |
+| 2026-10-09 | Cheatmenu alleen in debugmodus (F6 / knop), nooit opgeslagen, debug uit = cheats uit | Testgereedschap mag nooit in het echte spel of in raids lekken (§2.3) |
+| 2026-10-09 | Vliegen gaat door muren, maar niet onder de grond (max. 400 m hoog) | Onder het terrein zie je niets; door muren is waar het om gaat. Zeg het als je ook onder de grond wilt |
+| 2026-10-09 | Teleporteren zit nu al in het cheatmenu (naar het eerste spawnpunt van een zone) | Handig bij vliegen; het teleport-menu in de debug-overlay uit stap 1.10 hoeft dan niet apart |
+| 2026-10-09 | "Tijdelijk vlak terrein" = een grove kaart van de hele wereld (32 m) in de zonekleuren onder de chunks | Geen gaten, ook niet ver weg, en je ziet de vorm van het land al voordat de chunks er zijn |
+| 2026-10-09 | Ringen en kijkafstand aangepast: Low 1/3/4 (180 m), Mid 2/4/5 (260 m), High 3/6/7 (400 m) | Zo ligt de mist ongeveer op de rand van de geladen chunks |
+| 2026-10-09 | Bomen en rotsen alleen in chunks met volle detail (de actieve ring + 1) | Minder draw calls; verder weg verdwijnen ze in de mist |
+| 2026-10-09 | Zeeniveau 0, water dieper dan 1 m houdt je tegen; The Mournfen basishoogte −0,4 (plassen) | "Diep water blokkeert" (§7) en "vlak, nat terrein" uit het concept |
+| 2026-10-09 | Terrein- en propgetallen (blend 120 m, heuvels 260 m golflengte, aantallen per hectare) zijn een **voorstel** in `zones.json` | Concept noemt ze niet; makkelijk aan te passen |
+| 2026-10-09 | Kleuren op vertices worden omgerekend van sRGB naar lineair | Anders zien de stijlgidskleuren er in Three.js te licht en te roze uit |
 | 2026-10-09 | PerfTest verplaatst naar `experiments/perftest/` | Oude test-code hoort in `/experiments` (§5). Er was geen PeerJS-netwerktest in de repo, dus `experiments/net-test/` bestaat (nog) niet |
 
 ## Sessielog
@@ -173,3 +211,4 @@ Elke stap is één branch + pull request. Na elke stap start de game zonder fout
 - Op verzoek: `docs/art-style/models.md` beschrijft wat Bo en Lucas moeten aanleveren voor het echte personage (15 .glb-bestanden of tekeningen, maten, materiaalnamen, animaties, eerst een proef). PR #9 samengevoegd.
 - Stap 1.6 gebouwd: lopen, dash met energie, collision met spatial hash, camera die volgt, zoomt, vrij rondkijkt bij stilstaan en terugdraait bij lopen, toetsenbord/muis/touch-invoer, joystick en dashknop, testvloer met testbaan. Op verzoek: camerasnelheid 30–100% in Settings (save v2 + migratie). Getest in headless Chromium (pc 1280×800 en iPhone 13 met nagebootste vingers): 2 s lopen = 8 m, dash = 4 m en stopt tegen de muur, rondkijken laat het poppetje stil, lopen draait de camera terug, knijpen zoomt, dashknop werkt, oude v1-save wordt v2 met 70%, 4× wereld in en uit: geometrie terug naar 0. Geen fouten. Tijdelijke namen: geen nieuwe. Volgende stap: 1.7 (open wereld).
 - PR #10 (stap 1.6) samengevoegd. Feedback van Bo/Lucas: de camera moet zoals Genshin Impact zijn (over de schouder), en vrij draaien lukte niet goed. Camera omgebouwd: over de schouder, vrij draaien, geen terugdraaien bij lopen, muis vangen op pc, kleiner joystick-gebied. `CLAUDE.md` aangepast. Getest in headless Chromium (pc + iPhone 13): klik vangt de muis, muis bewegen draait de camera, W loopt waar de camera kijkt, Escape = pauze en muis vrij, Verder = muis weer gevangen, joystick/draaien/knijpen/dash op touch. Geen fouten. Volgende stap: 1.7 (open wereld).
+- Stap 1.7 gebouwd (één pull request, op verzoek met twee extra's): bundel opgesplitst en zod/mini (grootste bestand 731 → 548 kB, check in de build), open wereld met terrein uit een Web Worker, chunks met ringen en hysterese, grove wereldkaart eronder, bomen/rotsen per zone, lopen over terrein met helling-limiet en diep water, floating origin, naadloze zonewissel met autosave, en een cheatmenu (snelheid, vliegen, teleport, chunkranden). Getest in headless Chromium (pc 1280×800 en iPhone 13): hele flow, teleport naar Greenwood en Mournfen (zone + autosave kloppen), vliegen 25× (100 m/s, 150 m hoog), herladen + Continue zet je terug, 3× wereld in/uit: geometrie terug naar 0, op de telefoon ▲/▼ en het paneel boven de debug-overlay. Unittest: 10 rondes heen en weer lopen laat het aantal chunks en colliders niet groeien. Geen fouten. Tijdelijke namen: geen nieuwe. Volgende stap: 1.8 (inhoud).

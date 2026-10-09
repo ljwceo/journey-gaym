@@ -83,6 +83,25 @@ const zoneSchema = z.strictObject({
   npcs: z.array(id),
   areas: z.array(z.strictObject({ id, shape: shapeSchema })),
   instances: z.array(z.strictObject({ id, name, entrance: pointSchema, enabled: z.boolean() })),
+  /** Props (trees, rocks) scattered over the zone; `perHectare` before the quality density. */
+  scatter: optional(
+    z.array(
+      z.strictObject({
+        prop: id,
+        perHectare: max(nonNegative, 2000),
+        minScale: max(positive, 20),
+        maxScale: max(positive, 20),
+      }),
+    ),
+  ),
+});
+
+/** A kind of scattered prop; `model` is a placeholder model name (later a glTF file). */
+const propSchema = z.strictObject({
+  id,
+  model: name,
+  /** Trunk/stone collider radius at scale 1 (0 = walk through, e.g. reeds). */
+  colliderRadius: max(nonNegative, 20),
 });
 
 export const zonesFileSchema = z.strictObject({
@@ -93,6 +112,28 @@ export const zonesFileSchema = z.strictObject({
     originShiftDistance: range(100, 100_000),
     outsideZoneColor: colorToken,
     outsideZoneFog: colorToken,
+    terrain: z.strictObject({
+      /** Water surface height; deeper than `deepWater` below it cannot be walked. */
+      seaLevel: range(-100, 100),
+      deepWater: range(0, 50),
+      seaFloor: range(-200, 100),
+      /** Meters over which the land sinks into the sea at the world edge. */
+      coastWidth: range(1, 2000),
+      /** Meters over which two neighboring zones blend. */
+      blendWidth: range(1, 1000),
+      /** Largest hills (m) and the number of finer detail layers. */
+      wavelength: range(10, 5000),
+      octaves: intRange(1, 8),
+      /** Grid cells per chunk side: [near (active ring), far (preload ring)]. */
+      lodSegments: z.tuple([intRange(2, 128), intRange(1, 128)]),
+      /** Edges hang down this far, so LOD seams never show a gap. */
+      skirtDepth: range(0, 100),
+      /** Grid spacing (m) of the low-detail map under the whole world (shown before chunks load). */
+      farGridSpacing: range(4, 512),
+      /** No props within this distance of spawn points, checkpoints and instance entrances. */
+      clearingRadius: range(0, 500),
+    }),
+    props: z.array(propSchema),
   }),
   startZone: id,
   zones: atLeast(z.array(zoneSchema)),

@@ -52,6 +52,8 @@ export interface MoveCommand {
  */
 export class MoverState implements PointXZ {
   x = 0;
+  /** Height of the feet; set from the ground after each step (or by flying, in debug). */
+  y = 0;
   z = 0;
   heading = 0;
   energy = 0;
