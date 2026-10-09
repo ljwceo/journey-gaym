@@ -9,6 +9,11 @@ export function hexToNumber(hex: string): number {
   return parseInt(match[1], 16);
 }
 
+/** Converts a color number (0x1b1a2b) back to CSS hex ("#1b1a2b"), e.g. for HTML swatches. */
+export function numberToHex(color: number): string {
+  return `#${color.toString(16).padStart(6, '0')}`;
+}
+
 type PaletteKey = keyof typeof tokens.palet;
 type UiKey = keyof typeof tokens.ui;
 
