@@ -245,6 +245,16 @@ Fase 1 is af als ik dit allemaal kan doen, op pc én iPhone:
 6. Houd `docs/PROGRESS.md` bij (zie §12).
 7. Testinstructies voor iPhone: hoe ik de dev-server op mijn telefoon open (lokaal netwerk, `vite --host`) of via de Pages-deploy.
 
+### Werken met GitHub (verplicht)
+Bo en Lucas werken samen in deze repo en hebben soms verschillende ideeën. Daarom komt niets direct in `main`.
+- Per stap of taak een eigen branch (bijv. `fase-1-opzet`, `fix-joystick`). Daar werken en committen.
+- Klaar? Branch pushen en een pull request openen. In gewone taal (Nederlands): wat er veranderd is, waarom, en hoe je het test op pc en iPhone.
+- Bo of Lucas bekijkt de pull request en voegt hem samen (merge). Pas dan staat het in `main`.
+- Verandert er iets aan het concept, de stijlgids of een eerdere beslissing? Zet dat bovenaan in de pull request.
+
+### Spelconcept lezen
+Het spelconcept staat in Google Docs: "Legend of Morvath – spelconcept" (id `10Yi8_lYVsLEa_WpR76Exs0ecsY9mXxTk5a6SC4sSKUk`). Lees het via de Google Drive-connector als die beschikbaar is. Zo niet, vraag Bo of Lucas om de relevante tekst.
+
 ---
 
 ## 11. Vooruitblik (niet bouwen, wel rekening mee houden)

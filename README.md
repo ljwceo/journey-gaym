@@ -41,7 +41,7 @@ Co-op progressie-RPG in 3D voor de browser, gemaakt door Bo en Lucas.
 | [`docs/PROGRESS.md`](docs/PROGRESS.md) | Waar we zijn, plan per fase, besluiten |
 | [`docs/art-style/`](docs/art-style/README.md) | Stijlgids: kleuren, licht, UI, AI-prompts |
 | [`experiments/`](experiments/) | Oude test-code (PerfTest) |
-| [`docs/archive/`](docs/archive/) | Oude master prompt van Arcane Oath (2D) |
-| [`docs/SPELGIDS.md`](docs/SPELGIDS.md), [`docs/FASE-TRACKER.md`](docs/FASE-TRACKER.md), [`prompt.md`](prompt.md) | Plannen van Arcane Oath (2D), nog niet opgeruimd |
+| [`docs/archive/`](docs/archive/) | Oude plannen van Arcane Oath (2D): master prompt, spelgids, fase-tracker, plan van Lucas |
+| [Spelconcept (Google Docs)](https://docs.google.com/document/d/10Yi8_lYVsLEa_WpR76Exs0ecsY9mXxTk5a6SC4sSKUk/edit) | Verhaal, gebieden, skills, gear, NPC's, stats en vijanden |
 
 **Sessie starten:** open de repo in Claude Code en typ: *"Lees CLAUDE.md en docs/PROGRESS.md, en vertel me waar we zijn."*

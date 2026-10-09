@@ -7,13 +7,13 @@
 | | |
 |---|---|
 | **Huidige fase** | Fase 1 – Basis + open wereld + character creator |
-| **Status** | Plan geschreven, **wacht op akkoord** |
+| **Status** | Plan goedgekeurd (2026-10-09) |
 | **Volgende stap** | Stap 1.1: projectopzet (Vite + TypeScript + Three.js, deploy naar GitHub Pages) |
 | **Laatste sessie** | 2026-10-09: eerste opdracht (§0) uitgevoerd |
 
 ---
 
-## Fase 1 – Plan (wacht op akkoord)
+## Fase 1 – Plan (goedgekeurd)
 
 Elke stap is één branch + pull request. Na elke stap start de game zonder fouten en staat erbij hoe je test op pc en iPhone.
 
@@ -38,18 +38,18 @@ Elke stap is één branch + pull request. Na elke stap start de game zonder fout
 - **GitHub Pages:** in de repo-instellingen moet bij *Pages → Source* "GitHub Actions" gekozen worden. Dat moeten Bo of Lucas zelf doen (instructies volgen in stap 1.1).
 - **Spelconcept in Google Docs:** dat staat niet in de repo. Ik heb het nodig voor posities op de kaart en details; zonder het document maak ik redelijke keuzes en zet ze hieronder bij *Besluiten*.
 
-### Open vragen voor Bo en Lucas
+### Beantwoorde vragen (2026-10-09)
 
-1. De oude 2D-plannen (`docs/SPELGIDS.md`, `docs/FASE-TRACKER.md`, `prompt.md`) passen niet meer bij Legend of Morvath (3D, Three.js). Verplaatsen naar `docs/archive/`?
-2. De oude master prompt had regels over werken met branches en pull requests. De nieuwe `CLAUDE.md` heeft die niet. Een kort blokje "Werken met GitHub" toevoegen?
-3. Mag ik het spelconcept uit Google Docs lezen (link of documentnaam)?
+1. Oude 2D-plannen verplaatst naar `docs/archive/`.
+2. Blokje "Werken met GitHub" toegevoegd aan `CLAUDE.md` (§10).
+3. Spelconcept mag gelezen worden via de Google Drive-connector (staat in `CLAUDE.md` §10).
 
 ---
 
 ## Fase-log
 
 ### Fase 1 – Basis + open wereld + character creator
-**Status:** plan geschreven, wacht op akkoord.
+**Status:** plan goedgekeurd, bouwen begint met stap 1.1.
 **Gebouwd:** nog niets.
 **Bekende problemen:** –
 **Gemeten fps:**
@@ -67,10 +67,13 @@ Elke stap is één branch + pull request. Na elke stap start de game zonder fout
 |---|---|---|
 | 2026-10-09 | Overstap van Arcane Oath (2D, Phaser, gewoon JS) naar **Legend of Morvath** (3D, Three.js, Vite + TypeScript) | Nieuwe master prompt van Bo en Lucas |
 | 2026-10-09 | Oude `CLAUDE.md` bewaard als `docs/archive/CLAUDE-arcane-oath.md` | Niets weggooien |
+| 2026-10-09 | Oude spelgids, fase-tracker en `prompt.md` naar `docs/archive/` | Horen bij Arcane Oath (2D) |
+| 2026-10-09 | Spelconcept lezen via de Google Drive-connector | Concept staat in Google Docs, niet in de repo |
 | 2026-10-09 | PerfTest verplaatst naar `experiments/perftest/` | Oude test-code hoort in `/experiments` (§5). Er was geen PeerJS-netwerktest in de repo, dus `experiments/net-test/` bestaat (nog) niet |
 
 ## Sessielog
 
 ### 2026-10-09
 - Eerste opdracht (§0): nieuwe master prompt opgeslagen als `CLAUDE.md`, oude bewaard in `docs/archive/`, PerfTest naar `experiments/perftest/`, deze PROGRESS.md met het plan voor fase 1 gemaakt.
-- Volgende stap: na akkoord begint stap 1.1 (projectopzet).
+- Plan goedgekeurd. Oude 2D-plannen gearchiveerd, GitHub-werkwijze en spelconcept-link in `CLAUDE.md`.
+- Volgende stap: stap 1.1 (projectopzet).
