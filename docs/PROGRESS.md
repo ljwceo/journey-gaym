@@ -8,7 +8,7 @@
 |---|---|
 | **Huidige fase** | Fase 1 – Basis + open wereld + character creator |
 | **Status** | Stap 1.11 klaar aan de kant van Claude: alles gebouwd en getest in de testbrowser. **Wacht op metingen op een echte pc en iPhone** (zie Definition of Done) |
-| **Volgende stap** | Bo en Lucas: fps meten per stand op pc en iPhone (README → "Fps meten") en de open punten hieronder op de telefoon proberen. Daarna fase 1 afsluiten en fase 2 toevoegen aan `CLAUDE.md` |
+| **Volgende stap** | Bo en Lucas: pc Mid/High is gemeten en perfect. Nog: **iPhone** (alle standen) en **Low** op pc meten (README → "Fps meten"), en de open punten hieronder op de telefoon proberen. Daarna fase 1 afsluiten en fase 2 toevoegen aan `CLAUDE.md` |
 | **Laatste sessie** | 2026-10-09: stap 1.11 afronden |
 
 ---
@@ -177,7 +177,7 @@ Elke stap is één branch + pull request. Na elke stap start de game zonder fout
 | ✅ | Save verwijderen met 2× bevestigen → terug naar het begin | Opnieuw getest in 1.11 |
 | ✅📱 | Kiest zelf Low/Mid/High, te wijzigen in Settings, langdurig < 60 fps = één stand omlaag met bericht | Getest in de testbrowser; **welke stand een echte iPhone/pc kiest, graag doorgeven** |
 | ✅ | Debug: fps, draw calls, chunks, stand, seizoen, teleport naar elke zone | Stap 1.7/1.10 |
-| 📱 | Stabiel 60 fps op iPhone, 120 fps op een 120 Hz-scherm (High), even snel op 60 en 120 Hz | Even snel: getest (vaste tijdstap, `?fps=30`). **Fps zelf: meten met Meet 20 s** |
+| ✅📱 | Stabiel 60 fps op iPhone, 120 fps op een 120 Hz-scherm (High), even snel op 60 en 120 Hz | **Pc gehaald** (2026-10-09): Mid 60 fps, High 120 fps, zonder haperingen. Even snel: getest (vaste tijdstap, `?fps=30`). **iPhone en Low nog meten** |
 | ✅ | Na 10 minuten heen en weer lopen groeit het geheugen niet | Duurtest 1.11 |
 | ✅ | DataValidator, taal-key-check en Vitest (incl. seizoen en save-migratie) slagen | 232 tests |
 | ✅ | `docs/ARCHITECTURE.md` legt streaming, zones, triggers, data, saves en grafische standen uit | Stap 1.11 |
@@ -211,11 +211,11 @@ Elke stap is één branch + pull request. Na elke stap start de game zonder fout
 - Op een smalle telefoon valt het einde van lange regels in de debug-overlay buiten beeld; de uitslag van "Meet 20 s" staat ook in het cheatmenu (onder Fps meten).
 - Het testscript kon soms het cheatmenu niet openen vlak nadat de muis gevangen werd (pointer lock in de headless browser). Op een echte pc niet gezien; laat het weten als F6 een keer niets doet.
 
-**Gemeten fps** (met Cheats → Meet 20 s; vul "avg / 1% low" in per stand. De testbrowser zegt niets: die tekent zonder videokaart, 13–29 fps)
+**Gemeten fps** (met Cheats → Meet 20 s; "avg / 1% low" per stand. Mid zit op 60 en High op 120 omdat dat hun fps-doel is; "worst" van één schermverversing betekent: geen enkele hapering. De testbrowser zegt niets: die tekent zonder videokaart, 13–29 fps)
 
 | Apparaat | Low | Mid | High | Zelf gekozen stand |
 |---|---|---|---|---|
-| Pc | – | – | – | – |
+| Pc (Chrome, 1920×945, 120 Hz) | nog niet gemeten | **60,0 / 59,5** (worst 16,8 ms, 92 calls) | **120,0 / 117,6** (worst 8,5 ms, 118 calls) | niet doorgegeven |
 | iPhone | – | – | – | – |
 
 ---
@@ -325,3 +325,4 @@ Elke stap is één branch + pull request. Na elke stap start de game zonder fout
 - Fix na stap 1.9 (feedback: Treewardens niet te vinden): 10 in plaats van 3, verspreid over het bos (één 80 m van waar de teleport je neerzet), kroon nu violet (`spreukviolet`) zodat ze opvallen tussen de bomen. Getest in headless Chromium: na teleport naar de Greenwood staat er meteen een in beeld. Geen fouten.
 - Stap 1.10 gebouwd: QualityManager met Low/Mid/High (resolutie, anti-aliasing, schaduwen, kijkafstand, ringen, versiering, fps-doel), benchmark bij de eerste start (mediaan van werktijd incl. GPU), automatisch één stand omlaag bij < 58 fps over 5 s met melding, debug compleet (quality-regel, seizoen forceren, benchmark opnieuw, save export/import in het cheatmenu). Getest in headless Chromium (pc 1280×800 en 1000×640): hele flow, benchmark kiest Low op software-rendering met melding, alle drie de standen in Settings (schaduw alleen op Mid/High, mist korter op Low), export/import/Continue, ongeldige code, 3× wereld in/uit met wissels: geometrie terug naar 1/2. Geen fouten. Tijdelijke namen: geen nieuwe. Volgende stap: 1.11 (afronden en meten op echte apparaten).
 - Stap 1.11 gebouwd: knop "Meet 20 s" (fps, 1% low, langste frame) voor de echte apparaten, `ARCHITECTURE.md` compleet, README met meetinstructies, Definition of Done nagelopen. Getest in headless Chromium: duurtest van 10 minuten (geheugen groeit niet), automatisch High → Mid → Low, naadloos lopen Greenwood → Mournfen, save verwijderen, meten op pc- en telefoonformaat in EN en NL. Geen fouten. Open: fps meten op een echte pc en iPhone (Bo/Lucas). Tijdelijke namen: geen nieuwe.
+- Eerste echte meting (pc, Chrome, 120 Hz-scherm, 1920×945): Mid avg 60,0 / 1% low 59,5 / worst 16,8 ms; High avg 120,0 / 1% low 117,6 / worst 8,5 ms. Beide precies op hun fps-doel, langste frame = één schermverversing, dus geen haperingen. Low en iPhone nog niet gemeten.
