@@ -95,7 +95,7 @@ export function stepMovement(
     s.energy = Math.min(cfg.maxEnergy, s.energy + cfg.energyPerSecond * dt);
   }
 
-  let length = Math.sqrt(cmd.x * cmd.x + cmd.z * cmd.z);
+  const length = Math.sqrt(cmd.x * cmd.x + cmd.z * cmd.z);
 
   if (cmd.dash && s.dashTime <= 0 && s.dashCooldown <= 0 && s.energy >= cfg.dashEnergyCost) {
     s.energy -= cfg.dashEnergyCost;
@@ -129,7 +129,6 @@ export function stepMovement(
   }
   // Keyboard diagonals and a stick pushed past its edge never walk faster than walkSpeed.
   const scale = length > 1 ? 1 / length : 1;
-  if (length > 1) length = 1;
   const step = cfg.walkSpeed * dt * scale;
   world.moveCircle(s, cfg.radius, cmd.x * step, cmd.z * step);
   s.moving = true;

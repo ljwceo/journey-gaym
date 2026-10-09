@@ -159,8 +159,9 @@ describe('migrate', () => {
 
   it('upgrades a version 1 save: camera sensitivity gets its default', () => {
     const current = sampleSave();
-    const { cameraSensitivity: _dropped, ...oldSettings } = current.settings;
-    const v1 = { ...current, version: 1, settings: { ...oldSettings, volume: 0.3 } };
+    const oldSettings: Record<string, unknown> = { ...current.settings, volume: 0.3 };
+    delete oldSettings.cameraSensitivity;
+    const v1 = { ...current, version: 1, settings: oldSettings };
     const storage = new MemoryStorage();
     storage.setItem(SAVE_KEY, JSON.stringify(v1));
     const result = new SaveManager(storage).load();
