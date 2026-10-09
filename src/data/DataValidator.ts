@@ -1,0 +1,608 @@
+import type { z } from 'zod';
+import { boxContains, emptyBox, pointInShape, shapeBounds } from '../world/Shapes';
+import { dataFileNames, dataSchemas, type DataFileName } from './schemas';
+import type { GameData, Shape } from './types';
+
+export interface ValidationIssue {
+  /** Data file name without extension, e.g. "npcs". */
+  file: string;
+  /** Location inside the file, e.g. "npcs[3].zone". */
+  path: string;
+  message: string;
+}
+
+export interface ValidationOptions {
+  /** All keys from en.json; text keys in data are checked against this set when given. */
+  textKeys?: ReadonlySet<string>;
+  /** All color token names from the style guide; color fields are checked when given. */
+  colorTokens?: ReadonlySet<string> | ReadonlyMap<string, unknown>;
+}
+
+export interface ValidationResult {
+  /** Parsed data, or null when a file failed its structural check. */
+  data: GameData | null;
+  issues: ValidationIssue[];
+}
+
+export function formatIssue(issue: ValidationIssue): string {
+  return `${issue.file}.json${issue.path ? ` → ${issue.path}` : ''}: ${issue.message}`;
+}
+
+/**
+ * Checks every data file at boot: structure (via schemas), unique ids, references between files,
+ * positions inside their zones, sensible number ranges, and text keys that exist in en.json.
+ */
+export function validateGameData(
+  raw: Readonly<Record<DataFileName, unknown>>,
+  options: ValidationOptions = {},
+): ValidationResult {
+  const issues: ValidationIssue[] = [];
+  const parsed: Partial<Record<DataFileName, unknown>> = {};
+
+  for (const name of dataFileNames) {
+    const schema: z.ZodType = dataSchemas[name];
+    const result = schema.safeParse(raw[name]);
+    if (result.success) {
+      parsed[name] = result.data;
+    } else {
+      for (const zodIssue of result.error.issues) {
+        issues.push({ file: name, path: formatPath(zodIssue.path), message: zodIssue.message });
+      }
+    }
+  }
+  if (issues.length > 0) return { data: null, issues };
+
+  const data = parsed as GameData;
+  new CrossChecker(data, options, issues).run();
+  return { data, issues };
+}
+
+function formatPath(path: readonly PropertyKey[]): string {
+  let out = '';
+  for (const part of path) {
+    if (typeof part === 'number') out += `[${part}]`;
+    else out += out ? `.${String(part)}` : String(part);
+  }
+  return out;
+}
+
+const scratchOuter = emptyBox();
+const scratchInner = emptyBox();
+
+function shapeInside(outer: Shape, inner: Shape): boolean {
+  return boxContains(shapeBounds(outer, scratchOuter), shapeBounds(inner, scratchInner));
+}
+
+function shapeCenter(shape: Shape): [number, number] {
+  const box = shapeBounds(shape, scratchInner);
+  return [(box.minX + box.maxX) / 2, (box.minZ + box.maxZ) / 2];
+}
+
+class CrossChecker {
+  private readonly ids: Record<string, Set<string>> = {};
+
+  constructor(
+    private readonly data: GameData,
+    private readonly options: ValidationOptions,
+    private readonly issues: ValidationIssue[],
+  ) {}
+
+  run(): void {
+    this.collectIds();
+    this.checkZones();
+    this.checkNpcs();
+    this.checkPlayer();
+    this.checkMonsters();
+    this.checkItems();
+    this.checkAppearance();
+    this.checkQuality();
+    this.checkSeasons();
+    this.checkTriggers();
+    this.checkQuests();
+    this.checkSpells();
+    this.checkSkills();
+    this.checkCombos();
+    this.checkCutscenes();
+  }
+
+  // ------------------------------------------------------------ helpers
+
+  private issue(file: string, path: string, message: string): void {
+    this.issues.push({ file, path, message });
+  }
+
+  /** Registers ids under a namespace and reports duplicates. */
+  private unique(namespace: string, file: string, path: string, list: readonly { id: string }[]) {
+    const set = (this.ids[namespace] ??= new Set());
+    list.forEach((entry, i) => {
+      if (set.has(entry.id)) this.issue(file, `${path}[${i}].id`, `duplicate id "${entry.id}"`);
+      set.add(entry.id);
+    });
+  }
+
+  private ref(namespace: string, file: string, path: string, value: string | undefined): void {
+    if (value === undefined) return;
+    if (!this.ids[namespace]?.has(value)) {
+      this.issue(file, path, `unknown ${namespace} "${value}"`);
+    }
+  }
+
+  private text(file: string, path: string, key: string | undefined): void {
+    const keys = this.options.textKeys;
+    if (key === undefined || !keys) return;
+    if (!keys.has(key)) this.issue(file, path, `text key "${key}" is missing in en.json`);
+  }
+
+  private color(file: string, path: string, token: string): void {
+    const tokens = this.options.colorTokens;
+    if (tokens && !tokens.has(token)) {
+      this.issue(file, path, `unknown color token "${token}" (see docs/art-style/tokens.json)`);
+    }
+  }
+
+  private range(file: string, path: string, min: number, max: number): void {
+    if (min > max) this.issue(file, path, `min (${min}) is larger than max (${max})`);
+  }
+
+  private shape(file: string, path: string, shape: Shape): void {
+    if (shape.type === 'rect') {
+      if (shape.minX >= shape.maxX || shape.minZ >= shape.maxZ) {
+        this.issue(file, path, 'rect min must be smaller than max');
+      }
+    }
+  }
+
+  private collectIds(): void {
+    const d = this.data;
+    this.unique('zone', 'zones', 'zones', d.zones.zones);
+    d.zones.zones.forEach((zone, i) => {
+      this.unique(`spawn:${zone.id}`, 'zones', `zones[${i}].spawnPoints`, zone.spawnPoints);
+      this.unique('area', 'zones', `zones[${i}].areas`, zone.areas);
+      this.unique('instance', 'zones', `zones[${i}].instances`, zone.instances);
+      if (zone.checkpoint) this.unique('checkpoint', 'zones', `zones[${i}]`, [zone.checkpoint]);
+    });
+    this.unique('role', 'npcs', 'roles', d.npcs.roles);
+    this.unique('npc', 'npcs', 'npcs', d.npcs.npcs);
+    this.unique('monster', 'monsters', 'monsters', d.monsters.monsters);
+    this.unique('rarity', 'items', 'rarities', d.items.rarities);
+    this.unique('item', 'items', 'items', d.items.items);
+    this.unique('crystalSize', 'items', 'crystalSizes', d.items.crystalSizes.map(toEntry));
+    this.unique('bodyType', 'appearance', 'bodyTypes', d.appearance.bodyTypes);
+    this.unique('hairstyle', 'appearance', 'hairstyles', d.appearance.hairstyles);
+    this.unique('hairColor', 'appearance', 'hairColors', d.appearance.hairColors);
+    this.unique('skinTone', 'appearance', 'skinTones', d.appearance.skinTones);
+    this.unique('mantleColor', 'appearance', 'mantleColors', d.appearance.mantleColors);
+    this.unique('quality', 'quality', 'presets', d.quality.presets);
+    this.unique('season', 'seasons', 'seasons', d.seasons.seasons);
+    this.unique('trigger', 'triggers', 'triggers', d.triggers.triggers);
+    this.unique('quest', 'quests', 'quests', d.quests.quests);
+    this.unique('element', 'spells', 'elements', d.spells.elements);
+    this.unique('spell', 'spells', 'spells', d.spells.spells);
+    this.unique('coreStat', 'skills', 'core.stats', d.skills.core.stats);
+    this.unique('branch', 'skills', 'branches', d.skills.branches);
+    this.unique('skill', 'skills', 'skills', d.skills.skills);
+    this.unique('perk', 'skills', 'perks', d.skills.perks);
+    this.unique('combo', 'combos', 'combos', d.combos.combos);
+    this.unique('cutscene', 'cutscenes', 'cutscenes', d.cutscenes.cutscenes);
+    this.unique(
+      'condition',
+      'triggers',
+      'conditions',
+      Object.keys(d.triggers.conditions).map(toEntry),
+    );
+  }
+
+  // ------------------------------------------------------------ files
+
+  private checkZones(): void {
+    const { world, zones, startZone } = this.data.zones;
+    const f = 'zones';
+    this.shape(f, 'world.bounds', world.bounds);
+    this.color(f, 'world.outsideZoneColor', world.outsideZoneColor);
+    this.color(f, 'world.outsideZoneFog', world.outsideZoneFog);
+    this.ref('zone', f, 'startZone', startZone);
+    const byId = new Map(zones.map((zone) => [zone.id, zone]));
+
+    zones.forEach((zone, i) => {
+      const p = `zones[${i}]`;
+      this.shape(f, `${p}.bounds`, zone.bounds);
+      this.range(f, `${p}.levelRange`, zone.levelRange[0], zone.levelRange[1]);
+      this.color(f, `${p}.terrainColor`, zone.terrainColor);
+      this.color(f, `${p}.fogColor`, zone.fogColor);
+      this.ref('season', f, `${p}.season`, zone.season);
+      if (!shapeInside(world.bounds, zone.bounds)) {
+        this.issue(f, `${p}.bounds`, 'zone reaches outside the world bounds');
+      }
+      zone.neighbors.forEach((neighbor, n) => {
+        const path = `${p}.neighbors[${n}]`;
+        this.ref('zone', f, path, neighbor);
+        if (neighbor === zone.id) this.issue(f, path, 'a zone cannot be its own neighbor');
+        const other = byId.get(neighbor);
+        if (other && !other.neighbors.includes(zone.id)) {
+          this.issue(f, path, `"${neighbor}" does not list "${zone.id}" as a neighbor`);
+        }
+      });
+      zone.spawnPoints.forEach((spawn, s) => {
+        if (!pointInShape(zone.bounds, spawn.x, spawn.z)) {
+          this.issue(f, `${p}.spawnPoints[${s}]`, 'spawn point lies outside the zone');
+        }
+      });
+      if (zone.checkpoint && !pointInShape(zone.bounds, zone.checkpoint.x, zone.checkpoint.z)) {
+        this.issue(f, `${p}.checkpoint`, 'checkpoint lies outside the zone');
+      }
+      zone.areas.forEach((area, a) => {
+        this.shape(f, `${p}.areas[${a}].shape`, area.shape);
+        if (!shapeInside(zone.bounds, area.shape)) {
+          this.issue(f, `${p}.areas[${a}]`, 'area reaches outside the zone');
+        }
+      });
+      zone.instances.forEach((instance, n) => {
+        if (!pointInShape(zone.bounds, instance.entrance.x, instance.entrance.z)) {
+          this.issue(f, `${p}.instances[${n}].entrance`, 'entrance lies outside the zone');
+        }
+      });
+      zone.npcs.forEach((npcId, n) => this.ref('npc', f, `${p}.npcs[${n}]`, npcId));
+    });
+  }
+
+  private checkNpcs(): void {
+    const f = 'npcs';
+    const zones = new Map(this.data.zones.zones.map((zone) => [zone.id, zone]));
+    this.data.npcs.roles.forEach((role, i) => this.color(f, `roles[${i}].color`, role.color));
+
+    this.data.npcs.npcs.forEach((npc, i) => {
+      const p = `npcs[${i}]`;
+      this.ref('role', f, `${p}.role`, npc.role);
+      this.ref('zone', f, `${p}.zone`, npc.zone);
+      this.ref('monster', f, `${p}.monster`, npc.monster);
+      this.ref('season', f, `${p}.season`, npc.season);
+      npc.dialogue.forEach((key, d) => this.text(f, `${p}.dialogue[${d}]`, key));
+      this.text(f, `${p}.petText`, npc.petText);
+      npc.safeAreas?.forEach((area, a) => this.ref('area', f, `${p}.safeAreas[${a}]`, area));
+
+      if (npc.interaction === 'talk' && npc.dialogue.length === 0) {
+        this.issue(f, `${p}.dialogue`, 'an NPC you can talk to needs at least one line');
+      }
+      if (npc.interaction === 'pet' && !npc.petText) {
+        this.issue(f, `${p}.petText`, 'an NPC you can pet needs petText');
+      }
+      if (npc.behavior === 'follow' && !npc.follow) {
+        this.issue(f, `${p}.follow`, 'behavior "follow" needs follow settings');
+      }
+      if (npc.behavior === 'wander' && !npc.wander) {
+        this.issue(f, `${p}.wander`, 'behavior "wander" needs wander settings');
+      }
+
+      const zone = zones.get(npc.zone);
+      if (zone) {
+        if (!pointInShape(zone.bounds, npc.position.x, npc.position.z)) {
+          this.issue(f, `${p}.position`, `position lies outside zone "${zone.id}"`);
+        }
+        if (!zone.npcs.includes(npc.id)) {
+          this.issue(f, `${p}.zone`, `zone "${zone.id}" does not list this NPC in its npcs`);
+        }
+      }
+    });
+
+    // The reverse direction: a zone may only list NPCs that live in that zone.
+    const npcZone = new Map(this.data.npcs.npcs.map((npc) => [npc.id, npc.zone]));
+    this.data.zones.zones.forEach((zone, i) => {
+      zone.npcs.forEach((npcId, n) => {
+        const actual = npcZone.get(npcId);
+        if (actual && actual !== zone.id) {
+          this.issue('zones', `zones[${i}].npcs[${n}]`, `NPC "${npcId}" belongs to "${actual}"`);
+        }
+      });
+    });
+  }
+
+  private checkPlayer(): void {
+    const f = 'player';
+    const player = this.data.player;
+    this.ref('zone', f, 'start.zone', player.start.zone);
+    this.ref(`spawn:${player.start.zone}`, f, 'start.spawnPoint', player.start.spawnPoint);
+    player.start.items.forEach((stack, i) =>
+      this.ref('item', f, `start.items[${i}].item`, stack.item),
+    );
+    for (const [slot, itemId] of Object.entries(player.start.equipment)) {
+      this.ref('item', f, `start.equipment.${slot}`, itemId);
+      if (!player.start.items.some((stack) => stack.item === itemId)) {
+        this.issue(f, `start.equipment.${slot}`, `"${itemId}" is equipped but not in start.items`);
+      }
+    }
+    if (player.xpToNextLevel.length > player.maxLevel - 1) {
+      this.issue(f, 'xpToNextLevel', 'more XP steps than levels');
+    }
+    if (player.dash.energyCost > player.base.energy) {
+      this.issue(f, 'dash.energyCost', 'dash costs more energy than the maximum');
+    }
+  }
+
+  private checkMonsters(): void {
+    const f = 'monsters';
+    const speedClasses = this.data.monsters.speedClasses;
+    this.data.monsters.monsters.forEach((monster, i) => {
+      const p = `monsters[${i}]`;
+      this.range(f, `${p}.levelRange`, monster.levelRange[0], monster.levelRange[1]);
+      this.range(f, `${p}.damage`, monster.damage.min, monster.damage.max);
+      if (!(monster.speed in speedClasses)) {
+        this.issue(f, `${p}.speed`, `unknown speed class "${monster.speed}"`);
+      }
+      if (monster.behavior === 'ranged' && monster.range === undefined) {
+        this.issue(f, `${p}.range`, 'a ranged monster needs a range');
+      }
+      if (monster.groupSize)
+        this.range(f, `${p}.groupSize`, monster.groupSize.min, monster.groupSize.max);
+      this.ref('monster', f, `${p}.splitsInto.monster`, monster.splitsInto?.monster);
+      this.ref('npc', f, `${p}.transformsFrom`, monster.transformsFrom);
+      monster.drops.forEach((drop, d) => {
+        this.ref('item', f, `${p}.drops[${d}].item`, drop.item);
+        this.range(f, `${p}.drops[${d}]`, drop.min, drop.max);
+      });
+      monster.attacks?.forEach((attack, a) => {
+        if (attack.minHits !== undefined) {
+          this.range(f, `${p}.attacks[${a}]`, attack.minHits, attack.hits);
+        }
+      });
+    });
+  }
+
+  private checkItems(): void {
+    const f = 'items';
+    this.data.items.rarities.forEach((rarity, i) => {
+      this.color(f, `rarities[${i}].color`, rarity.color);
+      if (rarity.glowColor) this.color(f, `rarities[${i}].glowColor`, rarity.glowColor);
+    });
+    this.data.items.items.forEach((item, i) => {
+      const p = `items[${i}]`;
+      this.ref('rarity', f, `${p}.rarity`, item.rarity);
+      this.ref('item', f, `${p}.dryTo`, item.dryTo);
+      this.ref('season', f, `${p}.season`, item.season);
+      this.text(f, `${p}.description`, item.description);
+      if ((item.dryTo === undefined) !== (item.dryHours === undefined)) {
+        this.issue(f, p, 'dryTo and dryHours go together');
+      }
+      if ((item.type === 'weapon') !== (item.weapon !== undefined)) {
+        this.issue(f, `${p}.weapon`, 'weapon settings belong to (and are required for) weapons');
+      }
+      if ((item.type === 'crystal') !== (item.crystal !== undefined)) {
+        this.issue(f, `${p}.crystal`, 'crystal settings belong to (and are required for) crystals');
+      }
+      if (item.slot !== undefined && item.type !== 'armor') {
+        this.issue(f, `${p}.slot`, 'only armor has a slot');
+      }
+      if (item.type === 'armor' && item.slot === undefined) {
+        this.issue(f, `${p}.slot`, 'armor needs a slot');
+      }
+      this.ref('crystalSize', f, `${p}.weapon.maxCrystalSize`, item.weapon?.maxCrystalSize);
+      this.ref('crystalSize', f, `${p}.crystal.size`, item.crystal?.size);
+      item.crystal?.elements.forEach((element, e) =>
+        this.ref('element', f, `${p}.crystal.elements[${e}]`, element),
+      );
+    });
+  }
+
+  private checkAppearance(): void {
+    const f = 'appearance';
+    const a = this.data.appearance;
+    try {
+      new RegExp(a.name.pattern, 'u');
+    } catch {
+      this.issue(f, 'name.pattern', 'not a valid regular expression');
+    }
+    const lists = ['bodyTypes', 'hairstyles', 'hairColors', 'skinTones', 'mantleColors'] as const;
+    for (const list of lists) {
+      a[list].forEach((entry, i) => this.text(f, `${list}[${i}].label`, entry.label));
+    }
+    a.mantleColors.forEach((mantle, i) => {
+      this.color(f, `mantleColors[${i}].color`, mantle.color);
+      this.color(f, `mantleColors[${i}].embroidery`, mantle.embroidery);
+    });
+    a.hairstyles.forEach((style, i) =>
+      this.ref('bodyType', f, `hairstyles[${i}].bodyType`, style.bodyType),
+    );
+    a.bodyTypes.forEach((body, i) => {
+      if (!a.hairstyles.some((style) => style.bodyType === body.id)) {
+        this.issue(f, `bodyTypes[${i}]`, `no hairstyles for body type "${body.id}"`);
+      }
+    });
+    const d = a.defaults;
+    this.ref('bodyType', f, 'defaults.bodyType', d.bodyType);
+    this.ref('hairstyle', f, 'defaults.hairstyle', d.hairstyle);
+    this.ref('hairColor', f, 'defaults.hairColor', d.hairColor);
+    this.ref('skinTone', f, 'defaults.skinTone', d.skinTone);
+    this.ref('mantleColor', f, 'defaults.mantleColor', d.mantleColor);
+    const style = a.hairstyles.find((entry) => entry.id === d.hairstyle);
+    if (style && style.bodyType !== d.bodyType) {
+      this.issue(f, 'defaults.hairstyle', 'default hairstyle does not fit the default body type');
+    }
+  }
+
+  private checkQuality(): void {
+    const f = 'quality';
+    const q = this.data.quality;
+    for (const level of ['low', 'mid', 'high']) {
+      if (!q.presets.some((preset) => preset.id === level)) {
+        this.issue(f, 'presets', `missing preset "${level}"`);
+      }
+    }
+    q.presets.forEach((preset, i) => {
+      const p = `presets[${i}]`;
+      this.range(f, `${p}.pixelRatio`, preset.pixelRatio.min, preset.pixelRatio.max);
+      const rings = preset.chunkRings;
+      if (!(rings.active <= rings.preload && rings.preload < rings.unload)) {
+        this.issue(f, `${p}.chunkRings`, 'rings must grow: active ≤ preload < unload (hysteresis)');
+      }
+      if ((preset.shadows === 'off') !== (preset.shadowMapSize === 0)) {
+        this.issue(
+          f,
+          `${p}.shadowMapSize`,
+          'shadow map size must be 0 exactly when shadows are off',
+        );
+      }
+    });
+    if (q.benchmark.highMaxFrameMs >= q.benchmark.midMaxFrameMs) {
+      this.issue(f, 'benchmark', 'highMaxFrameMs must be smaller than midMaxFrameMs');
+    }
+  }
+
+  private checkSeasons(): void {
+    const f = 'seasons';
+    const s = this.data.seasons;
+    this.unique('seasonOrder', f, 'order', s.order.map(toEntry));
+    s.order.forEach((season, i) => this.ref('season', f, `order[${i}]`, season));
+    s.seasons.forEach((season, i) => {
+      const p = `seasons[${i}]`;
+      if (!s.order.includes(season.id)) this.issue(f, p, `season "${season.id}" is not in order`);
+      this.ref('element', f, `${p}.bonus.element`, season.bonus.element);
+      season.resources.forEach((item, r) => this.ref('item', f, `${p}.resources[${r}]`, item));
+      this.text(f, `${p}.label`, season.label);
+      this.text(f, `${p}.extra`, season.extra);
+    });
+    if (!s.order.includes(s.firstWeekSeason)) {
+      this.issue(f, 'firstWeekSeason', `"${s.firstWeekSeason}" is not in order`);
+    }
+    s.alwaysAvailable.forEach((item, i) => this.ref('item', f, `alwaysAvailable[${i}]`, item));
+  }
+
+  private checkTriggers(): void {
+    const f = 'triggers';
+    const zones = new Map(this.data.zones.zones.map((zone) => [zone.id, zone]));
+    for (const [name, condition] of Object.entries(this.data.triggers.conditions)) {
+      this.checkCondition(f, `conditions.${name}`, condition);
+    }
+    this.data.triggers.triggers.forEach((trigger, i) => {
+      const p = `triggers[${i}]`;
+      this.shape(f, `${p}.shape`, trigger.shape);
+      this.ref('zone', f, `${p}.zone`, trigger.zone);
+      this.ref('condition', f, `${p}.condition`, trigger.condition);
+      this.text(f, `${p}.firstVisitText`, trigger.firstVisitText);
+      this.text(f, `${p}.blockedText`, trigger.blockedText);
+      if (trigger.kind === 'gate' && !trigger.condition) {
+        this.issue(f, `${p}.condition`, 'a gate needs a condition');
+      }
+      const zone = zones.get(trigger.zone);
+      const [cx, cz] = shapeCenter(trigger.shape);
+      if (zone && !pointInShape(zone.bounds, cx, cz)) {
+        this.issue(f, `${p}.shape`, `trigger lies outside zone "${zone.id}"`);
+      }
+    });
+  }
+
+  private checkCondition(
+    file: string,
+    path: string,
+    condition: GameData['triggers']['conditions'][string],
+  ): void {
+    if (condition.type === 'questCompleted')
+      this.ref('quest', file, `${path}.quest`, condition.quest);
+    if (condition.type === 'all' || condition.type === 'any') {
+      condition.of.forEach((child, i) => this.checkCondition(file, `${path}.of[${i}]`, child));
+    }
+  }
+
+  private checkQuests(): void {
+    const f = 'quests';
+    this.data.quests.quests.forEach((quest, i) => {
+      const p = `quests[${i}]`;
+      this.ref('npc', f, `${p}.giver`, quest.giver);
+      this.text(f, `${p}.description`, quest.description);
+      quest.objectives.forEach((objective, o) => {
+        const op = `${p}.objectives[${o}]`;
+        if ('npc' in objective) this.ref('npc', f, `${op}.npc`, objective.npc);
+        if ('item' in objective) this.ref('item', f, `${op}.item`, objective.item);
+        if ('monster' in objective) this.ref('monster', f, `${op}.monster`, objective.monster);
+      });
+      quest.requires.quests?.forEach((required, r) => {
+        this.ref('quest', f, `${p}.requires.quests[${r}]`, required);
+        if (required === quest.id)
+          this.issue(f, `${p}.requires.quests[${r}]`, 'quest requires itself');
+      });
+      quest.requires.items?.forEach((stack, r) =>
+        this.ref('item', f, `${p}.requires.items[${r}].item`, stack.item),
+      );
+      quest.rewards.items.forEach((stack, r) =>
+        this.ref('item', f, `${p}.rewards.items[${r}].item`, stack.item),
+      );
+    });
+  }
+
+  private checkSpells(): void {
+    const f = 'spells';
+    this.data.spells.elements.forEach((element, i) =>
+      this.color(f, `elements[${i}].color`, element.color),
+    );
+    for (const [name, curve] of Object.entries(this.data.spells.powerCurves)) {
+      curve.forEach((step, i) => {
+        this.range(f, `powerCurves.${name}[${i}]`, step.fromLevel, step.toLevel);
+        const previous = curve[i - 1];
+        if (previous && step.fromLevel !== previous.toLevel + 1) {
+          this.issue(
+            f,
+            `powerCurves.${name}[${i}]`,
+            'level ranges must follow each other without gaps',
+          );
+        }
+      });
+    }
+    this.data.spells.spells.forEach((spell, i) =>
+      this.ref('element', f, `spells[${i}].element`, spell.element),
+    );
+  }
+
+  private checkSkills(): void {
+    const f = 'skills';
+    const s = this.data.skills;
+    s.core.opposites.forEach((pair, i) => {
+      this.ref('coreStat', f, `core.opposites[${i}].a`, pair.a);
+      this.ref('coreStat', f, `core.opposites[${i}].b`, pair.b);
+    });
+    s.branches.forEach((branch, i) => {
+      this.ref('element', f, `branches[${i}].element`, branch.element);
+      if ((branch.requires === 'element') !== (branch.element !== undefined)) {
+        this.issue(
+          f,
+          `branches[${i}].element`,
+          'element branches (and only those) name an element',
+        );
+      }
+      for (const tier of [1, 2, 3]) {
+        if (!s.skills.some((skill) => skill.branch === branch.id && skill.tier === tier)) {
+          this.issue(f, `branches[${i}]`, `branch "${branch.id}" has no tier ${tier} skill`);
+        }
+      }
+    });
+    s.skills.forEach((skill, i) => this.ref('branch', f, `skills[${i}].branch`, skill.branch));
+  }
+
+  private checkCombos(): void {
+    const f = 'combos';
+    const pairs = new Set<string>();
+    this.data.combos.combos.forEach((combo, i) => {
+      const p = `combos[${i}]`;
+      const [a, b] = combo.elements;
+      this.ref('element', f, `${p}.elements[0]`, a);
+      this.ref('element', f, `${p}.elements[1]`, b);
+      if (a === b) this.issue(f, `${p}.elements`, 'the same element twice never makes a combo');
+      const key = [a, b].sort().join('+');
+      if (pairs.has(key)) this.issue(f, `${p}.elements`, `another combo already uses ${key}`);
+      pairs.add(key);
+    });
+  }
+
+  private checkCutscenes(): void {
+    const f = 'cutscenes';
+    this.data.cutscenes.cutscenes.forEach((cutscene, i) => {
+      this.unique(`panel:${cutscene.id}`, f, `cutscenes[${i}].panels`, cutscene.panels);
+      cutscene.panels.forEach((panel, n) => {
+        const p = `cutscenes[${i}].panels[${n}]`;
+        this.text(f, `${p}.narration`, panel.narration);
+        panel.lines?.forEach((line, l) => this.text(f, `${p}.lines[${l}].text`, line.text));
+      });
+    });
+  }
+}
+
+function toEntry(id: string): { id: string } {
+  return { id };
+}

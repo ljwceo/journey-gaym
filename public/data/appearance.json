@@ -1,0 +1,143 @@
+{
+  "name": { "maxLength": 16, "pattern": "^[\\p{L}\\p{N}]+$" },
+  "bodyTypes": [
+    { "id": "male", "label": "appearance.body.male", "model": "placeholder:body_male" },
+    { "id": "female", "label": "appearance.body.female", "model": "placeholder:body_female" }
+  ],
+  "hairstyles": [
+    {
+      "id": "male_short",
+      "bodyType": "male",
+      "label": "appearance.hairstyle.short",
+      "model": "placeholder:hair_short"
+    },
+    {
+      "id": "male_swept",
+      "bodyType": "male",
+      "label": "appearance.hairstyle.swept",
+      "model": "placeholder:hair_swept"
+    },
+    {
+      "id": "male_messy",
+      "bodyType": "male",
+      "label": "appearance.hairstyle.messy",
+      "model": "placeholder:hair_messy"
+    },
+    {
+      "id": "male_long",
+      "bodyType": "male",
+      "label": "appearance.hairstyle.long",
+      "model": "placeholder:hair_long"
+    },
+    {
+      "id": "male_ponytail",
+      "bodyType": "male",
+      "label": "appearance.hairstyle.ponytail",
+      "model": "placeholder:hair_ponytail"
+    },
+    {
+      "id": "female_long",
+      "bodyType": "female",
+      "label": "appearance.hairstyle.long",
+      "model": "placeholder:hair_long"
+    },
+    {
+      "id": "female_bob",
+      "bodyType": "female",
+      "label": "appearance.hairstyle.bob",
+      "model": "placeholder:hair_bob"
+    },
+    {
+      "id": "female_braid",
+      "bodyType": "female",
+      "label": "appearance.hairstyle.braid",
+      "model": "placeholder:hair_braid"
+    },
+    {
+      "id": "female_bun",
+      "bodyType": "female",
+      "label": "appearance.hairstyle.bun",
+      "model": "placeholder:hair_bun"
+    },
+    {
+      "id": "female_ponytail",
+      "bodyType": "female",
+      "label": "appearance.hairstyle.ponytail",
+      "model": "placeholder:hair_ponytail"
+    }
+  ],
+  "hairColors": [
+    { "id": "red_light", "label": "appearance.hairColor.red_light", "hex": "#D2675A" },
+    { "id": "red_dark", "label": "appearance.hairColor.red_dark", "hex": "#8E2F2A" },
+    { "id": "orange_light", "label": "appearance.hairColor.orange_light", "hex": "#E59A55" },
+    { "id": "orange_dark", "label": "appearance.hairColor.orange_dark", "hex": "#B0602A" },
+    { "id": "yellow_light", "label": "appearance.hairColor.yellow_light", "hex": "#EBD38A" },
+    { "id": "yellow_dark", "label": "appearance.hairColor.yellow_dark", "hex": "#C9A24E" },
+    { "id": "green_light", "label": "appearance.hairColor.green_light", "hex": "#8DB07A" },
+    { "id": "green_dark", "label": "appearance.hairColor.green_dark", "hex": "#4B6B3E" },
+    { "id": "blue_light", "label": "appearance.hairColor.blue_light", "hex": "#7E9BD6" },
+    { "id": "blue_dark", "label": "appearance.hairColor.blue_dark", "hex": "#34497E" },
+    { "id": "purple_light", "label": "appearance.hairColor.purple_light", "hex": "#A98BD0" },
+    { "id": "purple_dark", "label": "appearance.hairColor.purple_dark", "hex": "#5B3F80" },
+    { "id": "pink_light", "label": "appearance.hairColor.pink_light", "hex": "#E7A6BE" },
+    { "id": "pink_dark", "label": "appearance.hairColor.pink_dark", "hex": "#B5607F" },
+    { "id": "brown_light", "label": "appearance.hairColor.brown_light", "hex": "#9A6B47" },
+    { "id": "brown_dark", "label": "appearance.hairColor.brown_dark", "hex": "#5A3B26" },
+    { "id": "black", "label": "appearance.hairColor.black", "hex": "#1E1C24" },
+    { "id": "white", "label": "appearance.hairColor.white", "hex": "#EEEAE6" },
+    { "id": "grey", "label": "appearance.hairColor.grey", "hex": "#8F8B92" }
+  ],
+  "skinTones": [
+    { "id": "tone_1", "label": "appearance.skin.tone_1", "hex": "#F3D7C2" },
+    { "id": "tone_2", "label": "appearance.skin.tone_2", "hex": "#E6B998" },
+    { "id": "tone_3", "label": "appearance.skin.tone_3", "hex": "#CF9A73" },
+    { "id": "tone_4", "label": "appearance.skin.tone_4", "hex": "#A8704D" },
+    { "id": "tone_5", "label": "appearance.skin.tone_5", "hex": "#7D4E33" },
+    { "id": "tone_6", "label": "appearance.skin.tone_6", "hex": "#553424" }
+  ],
+  "mantleColors": [
+    {
+      "id": "navy",
+      "label": "appearance.mantle.navy",
+      "color": "nachtinkt",
+      "embroidery": "ornamentgoud"
+    },
+    {
+      "id": "purple",
+      "label": "appearance.mantle.purple",
+      "color": "schemerviolet",
+      "embroidery": "ornamentgoud"
+    },
+    {
+      "id": "mist",
+      "label": "appearance.mantle.mist",
+      "color": "mistpaars",
+      "embroidery": "ornamentgoud"
+    },
+    {
+      "id": "stone",
+      "label": "appearance.mantle.stone",
+      "color": "steengrijs",
+      "embroidery": "ornamentgoud"
+    },
+    {
+      "id": "sunset",
+      "label": "appearance.mantle.sunset",
+      "color": "zonsondergang",
+      "embroidery": "ornamentgoud"
+    },
+    {
+      "id": "amber",
+      "label": "appearance.mantle.amber",
+      "color": "lantaarnamber",
+      "embroidery": "ornamentgoud"
+    }
+  ],
+  "defaults": {
+    "bodyType": "male",
+    "hairstyle": "male_short",
+    "hairColor": "brown_dark",
+    "skinTone": "tone_2",
+    "mantleColor": "navy"
+  }
+}

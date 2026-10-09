@@ -1,0 +1,226 @@
+{
+  "rarities": [
+    { "id": "common", "color": "steengrijs", "glowPx": 0 },
+    { "id": "rare", "color": "magieblauw", "glowPx": 14 },
+    { "id": "epic", "color": "spreukviolet", "glowPx": 18 },
+    { "id": "legendary", "color": "zonlicht", "glowColor": "lantaarnamber", "glowPx": 22 }
+  ],
+  "crystalSizes": ["small", "medium", "large", "grand"],
+  "items": [
+    {
+      "id": "gold",
+      "name": "Gold",
+      "type": "currency",
+      "rarity": "common",
+      "tradeable": true,
+      "description": "item.gold.desc"
+    },
+    {
+      "id": "old_sword",
+      "name": "Old Sword",
+      "type": "weapon",
+      "rarity": "common",
+      "tradeable": true,
+      "weight": 4,
+      "description": "item.old_sword.desc",
+      "weapon": { "kind": "sword", "damageBonus": 0 }
+    },
+    {
+      "id": "travel_mantle",
+      "name": "Travel Mantle",
+      "type": "armor",
+      "slot": "mantle",
+      "rarity": "common",
+      "tradeable": true,
+      "weight": 1,
+      "usesCharacterColor": true,
+      "description": "item.travel_mantle.desc"
+    },
+    {
+      "id": "mage_staff",
+      "name": "Mage Staff",
+      "type": "weapon",
+      "rarity": "common",
+      "tradeable": true,
+      "weight": 3,
+      "description": "item.mage_staff.desc",
+      "weapon": { "kind": "staff", "damageBonus": 0, "spellSlots": 1, "maxCrystalSize": "small" }
+    },
+    {
+      "id": "wizard_crystal",
+      "name": "Wizard Crystal",
+      "type": "crystal",
+      "rarity": "rare",
+      "tradeable": true,
+      "description": "item.wizard_crystal.desc",
+      "crystal": { "elements": ["water", "fire", "nature", "wind"], "size": "small" }
+    },
+    {
+      "id": "dark_crystal",
+      "name": "Dark Crystal",
+      "type": "crystal",
+      "rarity": "rare",
+      "tradeable": true,
+      "description": "item.dark_crystal.desc",
+      "crystal": { "elements": ["dark"], "size": "small" }
+    },
+    {
+      "id": "health_potion",
+      "name": "Health Potion",
+      "type": "potion",
+      "rarity": "common",
+      "tradeable": true
+    },
+    {
+      "id": "greater_health_potion",
+      "name": "Greater Health Potion",
+      "type": "potion",
+      "rarity": "rare",
+      "tradeable": true
+    },
+    {
+      "id": "recipe_greater_health_potion",
+      "name": "Recipe: Greater Health Potion",
+      "type": "recipe",
+      "rarity": "rare",
+      "tradeable": false
+    },
+    {
+      "id": "slime_gel",
+      "name": "Slime Gel",
+      "type": "resource",
+      "rarity": "common",
+      "tradeable": true,
+      "description": "item.slime_gel.desc"
+    },
+    { "id": "wood", "name": "Wood", "type": "resource", "rarity": "common", "tradeable": true },
+    {
+      "id": "iron_ore",
+      "name": "Iron Ore",
+      "type": "resource",
+      "rarity": "common",
+      "tradeable": true
+    },
+    {
+      "id": "crystal_shard",
+      "name": "Crystal Shard",
+      "type": "resource",
+      "rarity": "common",
+      "tradeable": true
+    },
+    {
+      "id": "sunherb",
+      "name": "Sunherb",
+      "type": "resource",
+      "rarity": "common",
+      "tradeable": true,
+      "season": "summer",
+      "dryTo": "dried_sunherb",
+      "dryHours": 72
+    },
+    {
+      "id": "dried_sunherb",
+      "name": "Dried Sunherb",
+      "type": "resource",
+      "rarity": "common",
+      "tradeable": true
+    },
+    {
+      "id": "beetle_shell",
+      "name": "Beetle Shell",
+      "type": "resource",
+      "rarity": "common",
+      "tradeable": true,
+      "season": "summer"
+    },
+    {
+      "id": "honey",
+      "name": "Honey",
+      "type": "resource",
+      "rarity": "common",
+      "tradeable": true,
+      "season": "summer"
+    },
+    {
+      "id": "mushroom",
+      "name": "Mushroom",
+      "type": "resource",
+      "rarity": "common",
+      "tradeable": true,
+      "season": "autumn"
+    },
+    {
+      "id": "ghost_dust",
+      "name": "Ghost Dust",
+      "type": "resource",
+      "rarity": "common",
+      "tradeable": true,
+      "season": "autumn"
+    },
+    {
+      "id": "storm_feather",
+      "name": "Storm Feather",
+      "type": "resource",
+      "rarity": "rare",
+      "tradeable": true,
+      "season": "autumn"
+    },
+    {
+      "id": "frostbloom",
+      "name": "Frostbloom",
+      "type": "resource",
+      "rarity": "common",
+      "tradeable": true,
+      "season": "winter"
+    },
+    {
+      "id": "wolf_pelt",
+      "name": "Wolf Pelt",
+      "type": "resource",
+      "rarity": "common",
+      "tradeable": true,
+      "season": "winter"
+    },
+    {
+      "id": "frozen_crystal",
+      "name": "Frozen Crystal",
+      "type": "resource",
+      "rarity": "rare",
+      "tradeable": true,
+      "season": "winter"
+    },
+    {
+      "id": "blossom",
+      "name": "Blossom",
+      "type": "resource",
+      "rarity": "common",
+      "tradeable": true,
+      "season": "spring",
+      "dryTo": "dried_blossom",
+      "dryHours": 72
+    },
+    {
+      "id": "dried_blossom",
+      "name": "Dried Blossom",
+      "type": "resource",
+      "rarity": "common",
+      "tradeable": true
+    },
+    {
+      "id": "dewdrop",
+      "name": "Dewdrop",
+      "type": "resource",
+      "rarity": "rare",
+      "tradeable": true,
+      "season": "spring"
+    },
+    {
+      "id": "pollen",
+      "name": "Pollen",
+      "type": "resource",
+      "rarity": "common",
+      "tradeable": true,
+      "season": "spring"
+    }
+  ]
+}

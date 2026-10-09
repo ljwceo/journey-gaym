@@ -1,0 +1,38 @@
+{
+  "elements": [
+    { "id": "water", "name": "Water", "color": "magieblauw" },
+    { "id": "fire", "name": "Fire", "color": "lantaarnamber" },
+    { "id": "nature", "name": "Nature", "color": "mosgroen" },
+    { "id": "wind", "name": "Wind", "color": "sneeuw" },
+    { "id": "dark", "name": "Dark", "color": "schemerviolet" }
+  ],
+  "powerCurves": {
+    "light": [
+      { "fromLevel": 1, "toLevel": 10, "factor": 1.0 },
+      { "fromLevel": 11, "toLevel": 20, "factor": 1.1 },
+      { "fromLevel": 21, "toLevel": 30, "factor": 1.2 },
+      { "fromLevel": 31, "toLevel": 50, "factor": 1.3 }
+    ],
+    "dark": [
+      { "fromLevel": 1, "toLevel": 10, "factor": 1.3 },
+      { "fromLevel": 11, "toLevel": 20, "factor": 1.15 },
+      { "fromLevel": 21, "toLevel": 30, "factor": 1.05 },
+      { "fromLevel": 31, "toLevel": 50, "factor": 1.0 }
+    ],
+    "sword": [{ "fromLevel": 1, "toLevel": 50, "factor": 1.15 }]
+  },
+  "maxSpellSlots": 3,
+  "spells": [
+    {
+      "id": "fireball",
+      "name": "Fireball",
+      "element": "fire",
+      "manaCost": 10,
+      "cooldownSeconds": 1.5,
+      "damage": 20,
+      "range": 15,
+      "usesPerLevel": 50,
+      "perLevel": { "damage": 4 }
+    }
+  ]
+}
