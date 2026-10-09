@@ -23,7 +23,7 @@ import type { StructureShape } from '../world/StructurePlacement';
  * Real glTF models replace this file later; nothing else changes.
  */
 
-type Part = [geometry: BufferGeometry, color: number, x: number, y: number, z: number];
+export type Part = [geometry: BufferGeometry, color: number, x: number, y: number, z: number];
 
 export interface StructureModel extends StructureShape {
   geometry: BufferGeometry;
@@ -36,7 +36,8 @@ const WALL = 0xffffff;
 const ROOF = 0x8a8494;
 const DARK = 0x4a4652;
 
-function colored(parts: Part[]): BufferGeometry {
+/** Merges parts into one geometry with their colors as vertex colors. */
+export function colored(parts: Part[]): BufferGeometry {
   const pieces = parts.map(([geometry, color, x, y, z]) => {
     const piece = geometry.index ? geometry.toNonIndexed() : geometry;
     if (piece !== geometry) geometry.dispose();

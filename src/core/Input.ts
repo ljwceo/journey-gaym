@@ -1,6 +1,7 @@
 /** Game actions, independent of key, button or (later) gamepad. */
 /** `down` only matters while flying (debug cheat): Shift or C. */
-export type Action = 'dash' | 'interact' | 'down';
+/** `confirm`: Enter, or a left click while the mouse is captured (e.g. next dialogue line). */
+export type Action = 'dash' | 'interact' | 'down' | 'confirm';
 
 /** Turning and zoom gathered since the camera last read them. */
 export interface LookDelta {
@@ -38,6 +39,8 @@ const KEY_RIGHT = ['KeyD', 'ArrowRight'] as const;
 const ACTION_KEYS: Readonly<Record<string, Action>> = {
   Space: 'dash',
   KeyE: 'interact',
+  Enter: 'confirm',
+  NumpadEnter: 'confirm',
   ShiftLeft: 'down',
   ShiftRight: 'down',
   KeyC: 'down',
@@ -61,7 +64,7 @@ const JOYSTICK_ZONE_TOP = 0.5;
  * (`getMoveVector`, `isPressed`, `consumePressed`), never for keys, so a gamepad can be added
  * here later without touching game code.
  *
- * - Keyboard: WASD / arrows to walk, Space to dash, E to interact.
+ * - Keyboard: WASD / arrows to walk, Space to dash, E to interact, Enter to confirm.
  * - Mouse (like Genshin Impact): click once to capture the mouse (pointer lock); from then on
  *   moving the mouse turns the camera without holding a button. Escape releases it (the browser
  *   does that itself). Without the lock, dragging with the right button also turns. Wheel zooms.
@@ -278,7 +281,14 @@ export class Input {
   private readonly onPointerDown = (event: PointerEvent): void => {
     const id = event.pointerId;
     if (event.pointerType === 'mouse') {
-      if (this.pointerLocked) return;
+      if (this.pointerLocked) {
+        // A click is a single press; nothing stays held.
+        if (event.button === 0) {
+          this.press('confirm');
+          this.release('confirm');
+        }
+        return;
+      }
       if (event.button === 0) this.requestPointerLock();
       else if (event.button === 2 && this.lookPointer === null) {
         this.startLook(event, this.cfg.rotateRadiansPerPixelMouse);

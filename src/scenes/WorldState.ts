@@ -16,9 +16,11 @@ import type { GameContext } from '../core/GameContext';
 import { Input, type LookDelta } from '../core/Input';
 import type { GameState } from '../core/StateMachine';
 import type { GameData, QualityPreset } from '../data/types';
+import { dialogueLines, isAttackable, type Npc } from '../entities/Npc';
 import { Player } from '../entities/Player';
 import { PropLibrary } from '../entities/PropFactory';
 import { CameraRig } from '../render/CameraRig';
+import { NpcRenderer } from '../render/NpcRenderer';
 import { colorTokens, palette, resolveColorToken } from '../render/palette';
 import { Cheats, stepFlying } from '../systems/Cheats';
 import { type Bounds, CollisionWorld } from '../systems/Collision';
@@ -29,7 +31,9 @@ import {
   screenToWorld,
   stepMovement,
 } from '../systems/Movement';
+import { type NpcWorld, Npcs } from '../systems/Npcs';
 import { CheatPanel } from '../ui/CheatPanel';
+import { Dialog } from '../ui/Dialog';
 import { HUD } from '../ui/HUD';
 import { StructureLabels } from '../ui/StructureLabels';
 import { el } from '../ui/dom';
@@ -53,19 +57,32 @@ import { Triggers } from '../world/Triggers';
 import { type StreamerStats, WorldStreamer } from '../world/WorldStreamer';
 import { ZoneLocator } from '../world/ZoneLocator';
 import { normalizeAppearance } from './creator';
-import type { Zone } from '../data/types';
+import type { Shape, Zone } from '../data/types';
 import { placeAtStart } from './flow';
 
 const DEG = Math.PI / 180;
 const DEBUG_REFRESH_MS = 250;
 /** Debug overlay lines this scene owns (removed again on exit). */
-const DEBUG_KEYS = ['pos', 'zone', 'chunks', 'places', 'energy', 'camera', 'cheats'] as const;
+const DEBUG_KEYS = [
+  'pos',
+  'zone',
+  'chunks',
+  'places',
+  'npcs',
+  'energy',
+  'camera',
+  'cheats',
+] as const;
 /** Seconds over which fog and sky change color after entering another zone. */
 const FOG_SHARPNESS = 1.5;
 /** The interaction icon stays this far (CSS px) from the screen edges. */
 const ICON_MARGIN = 60;
 /** The sea plane is this many times the view distance wide (it follows the player). */
 const WATER_SCALE = 3;
+/** The interaction icon floats this far (m) above an NPC's head. */
+const ICON_ABOVE_HEAD = 0.35;
+/** A conversation ends by itself when the player is this many interact ranges away. */
+const TALK_BREAK_RANGES = 3;
 
 /**
  * The open world: terrain chunks stream in around the player from a Web Worker (WorldStreamer),
@@ -74,11 +91,13 @@ const WATER_SCALE = 3;
  * Walking and dashing follow the ground (slope limit, deep water blocks); zone changes are
  * seamless, show the zone name and autosave. Triggers explain places on the first visit,
  * checkpoints are set by walking past them, and the city gate checks its condition.
- * A floating origin keeps drawing precise far from (0, 0).
+ * NPCs from npcs.json stand, wander or follow (Pringle); E or a tap talks to them (dialogue
+ * window) or pets them. A floating origin keeps drawing precise far from (0, 0).
  *
- * Simulation (fixed 60 Hz): input → walking direction → Movement + collision + ground →
- * gate → triggers, checkpoints, zone → save position. Rendering (every frame): streaming
- * budget, origin, interpolated player, camera (kept in front of walls), HUD. Debug mode adds
+ * Simulation (fixed 60 Hz): input → walking direction (none while talking) → Movement +
+ * collision + NPCs pushing + ground → gate → triggers, checkpoints, zone → save position →
+ * NPCs → interaction target. Rendering (every frame): streaming budget, origin, interpolated
+ * player and NPCs, camera (kept in front of walls), HUD. Debug mode adds
  * chunk info, building labels and a cheat menu (F6) for faster testing.
  */
 export class WorldState implements GameState, InstanceHost {
@@ -98,6 +117,18 @@ export class WorldState implements GameState, InstanceHost {
   private triggers: Triggers | null = null;
   private checkpoints: Checkpoints | null = null;
   private hud: HUD | null = null;
+  private npcs: Npcs | null = null;
+  private npcRenderer: NpcRenderer | null = null;
+  private npcWorld: NpcWorld | null = null;
+  private dialog: Dialog | null = null;
+  /** The NPC in the open dialogue window, or null. */
+  private talkingTo: Npc | null = null;
+  /** The NPC that E / the icon would use now (nearest in range), or null. */
+  private targetNpc: Npc | null = null;
+  /** Cached icon label (made only when the target or the language changes). */
+  private iconLabel = '';
+  private iconLabelFor: Npc | 'rest' | null = null;
+  private safeAreas: Map<string, Shape> | null = null;
   /** True while the closed city gate holds the player back (the message shows once). */
   private gateBlocked = false;
   private readonly fogTarget = new Color();
@@ -173,7 +204,11 @@ export class WorldState implements GameState, InstanceHost {
     });
     this.input.attach();
     // Escape releases the mouse (the browser does that itself); treat it like pausing.
-    this.input.onPointerLockLost = () => this.pause();
+    // While talking, Escape just ends the conversation.
+    this.input.onPointerLockLost = () => {
+      if (this.dialog?.isOpen) this.dialog.close();
+      else this.pause();
+    };
     this.touch = new TouchControls(this.input, t('controls.dash'), controls.joystickRadiusPx);
     ctx.ui.append(this.touch.root);
 
@@ -183,6 +218,11 @@ export class WorldState implements GameState, InstanceHost {
     if (this.labels) ctx.ui.append(this.labels.root);
     this.hud = new HUD(data.player.hud, data.player.lowHpThreshold, () => this.interact());
     ctx.ui.append(this.hud.root);
+    this.dialog = new Dialog((key) => ctx.i18n.t(key));
+    ctx.ui.append(this.dialog.root);
+    this.talkingTo = null;
+    this.targetNpc = null;
+    this.iconLabelFor = null;
     this.showZoneName(session.world.zone);
 
     this.cheatPanel = new CheatPanel(
@@ -217,6 +257,8 @@ export class WorldState implements GameState, InstanceHost {
         this.pauseButton?.setAttribute('aria-label', ctx.i18n.t('pause.title'));
         if (this.lookHint) this.lookHint.textContent = ctx.i18n.t('controls.clickToLook');
         this.cheatPanel?.updateTexts();
+        this.dialog?.updateTexts();
+        this.iconLabelFor = null;
       }),
       // A new graphics preset changes the view distance and the chunk rings right away.
       ctx.events.on('settingsChanged', () => this.applyPreset()),
@@ -256,6 +298,10 @@ export class WorldState implements GameState, InstanceHost {
     this.lookHint = null;
     this.hud?.dispose();
     this.hud = null;
+    this.dialog?.dispose();
+    this.dialog = null;
+    this.talkingTo = null;
+    this.targetNpc = null;
     this.labels?.dispose();
     this.labels = null;
     this.ctx.renderer.setCamera(null);
@@ -273,8 +319,18 @@ export class WorldState implements GameState, InstanceHost {
     screenToWorld(this.moveInput.x, this.moveInput.y, rig.orbit.yaw, this.moveWorld);
     this.command.x = this.moveWorld.x;
     this.command.z = this.moveWorld.z;
-    // Interaction: E (or tapping the icon) at a checkpoint; NPCs join in step 1.9.
-    if (input.consumePressed('interact')) this.interact();
+    if (this.dialog?.isOpen) {
+      // Talking: you stand still; E, Space, Enter or a click shows the next line.
+      this.command.x = 0;
+      this.command.z = 0;
+      const next = input.consumePressed('interact');
+      const dash = input.consumePressed('dash');
+      if (input.consumePressed('confirm') || next || dash) this.dialog.advance();
+    } else {
+      input.consumePressed('confirm');
+      // Interaction: E (or tapping the icon): talk to / pet an NPC, or rest at a checkpoint.
+      if (input.consumePressed('interact')) this.interact();
+    }
 
     player.beginStep();
     const s = player.state;
@@ -297,6 +353,8 @@ export class WorldState implements GameState, InstanceHost {
     } else {
       this.command.dash = input.consumePressed('dash');
       stepMovement(s, this.command, movement, dt, mover);
+      // You cannot walk through people (or Treewardens).
+      if (this.npcs?.pushOut(s, movement.radius)) this.collision?.resolve(s, movement.radius);
       this.checkGate(fromX, fromZ);
       s.y = streamer.heightAt(s.x, s.z);
     }
@@ -307,6 +365,7 @@ export class WorldState implements GameState, InstanceHost {
       this.triggers?.update(s.x, s.z, session.visitedPlaces);
       this.checkpoints?.update(s.x, s.z, session.world);
     }
+    this.updateNpcs(dt);
     this.hud?.rules.setEnergyFraction(s.energy / movement.maxEnergy);
     this.hud?.setBar('energy', s.energy / movement.maxEnergy);
   }
@@ -342,10 +401,58 @@ export class WorldState implements GameState, InstanceHost {
     // Nothing to leave yet: the player is always in the open world.
   }
 
-  /** E or a tap on the icon: rest at a checkpoint (health and mana follow in phase 2). */
+  /** NPCs move, the conversation ends when you are far away, the interaction target updates. */
+  private updateNpcs(dt: number): void {
+    const { npcs, player, npcWorld } = this;
+    if (!npcs || !player || !npcWorld) return;
+    const s = player.state;
+    npcs.update(dt, s.x, s.z, s.heading, npcWorld, this.talkingTo);
+    const talking = this.talkingTo;
+    if (talking) {
+      const far = npcs.settings.interactRange * TALK_BREAK_RANGES + talking.solidRadius;
+      if (!talking.shown || Math.hypot(talking.state.x - s.x, talking.state.z - s.z) > far) {
+        this.dialog?.close();
+      }
+    }
+    this.targetNpc = this.dialog?.isOpen ? null : npcs.nearestInteractable(s.x, s.z);
+  }
+
+  /**
+   * E or a tap on the icon: talk to or pet the nearest NPC, otherwise rest at a checkpoint
+   * (health and mana follow in phase 2).
+   */
   private interact(): void {
-    if (this.paused || !this.checkpoints?.near) return;
+    if (this.paused || this.dialog?.isOpen) return;
+    const npc = this.targetNpc;
+    if (npc) {
+      this.interactWith(npc);
+      return;
+    }
+    if (!this.checkpoints?.near) return;
     this.hud?.showMessage(this.ctx.i18n.t('hud.rested'));
+  }
+
+  private interactWith(npc: Npc): void {
+    const { ctx } = this;
+    const session = ctx.session;
+    const data = ctx.data;
+    if (!session || !data) return;
+    if (!session.metNpcs.includes(npc.id)) {
+      session.metNpcs.push(npc.id);
+      ctx.events.emit('npcMet', { npcId: npc.id });
+    }
+    ctx.events.emit('npcTalked', { npcId: npc.id });
+    if (npc.def.interaction === 'pet') {
+      npc.hop = data.npcs.settings.petHopSeconds;
+      if (npc.def.petText) this.hud?.showMessage(ctx.i18n.t(npc.def.petText));
+      return;
+    }
+    const lines = dialogueLines(npc.def, data.triggers.conditions, this.conditionContext);
+    this.talkingTo = npc;
+    this.targetNpc = null;
+    this.dialog?.open(npc.def.name, lines, () => {
+      this.talkingTo = null;
+    });
   }
 
   private showZoneName(zoneId: string | null): void {
@@ -372,6 +479,7 @@ export class WorldState implements GameState, InstanceHost {
     worldRoot.position.set(-origin.x, 0, -origin.z);
 
     player.syncModel(a);
+    this.npcRenderer?.update(a, this.ctx.data?.npcs.settings.petHopSeconds ?? 1);
     input.consumeLook(this.look);
     const look = this.look;
     const turning = input.turningCamera || look.yaw !== 0 || look.pitch !== 0;
@@ -424,15 +532,29 @@ export class WorldState implements GameState, InstanceHost {
     touch: boolean,
   ): void {
     const hud = this.hud;
-    const near = this.checkpoints?.near;
+    const npc = this.targetNpc;
+    const near = npc ? null : this.checkpoints?.near;
     const data = this.ctx.data;
     if (!hud) return;
-    if (!near || !data || this.paused || !this.streamer) {
+    if ((!npc && !near) || !data || this.paused || !this.streamer || this.dialog?.isOpen) {
       hud.setInteraction(null, 0, 0, false);
       return;
     }
-    const y = this.streamer.heightAt(near.x, near.z) + data.player.hud.interactHeight;
-    const p = this.labelPoint.set(near.x - originX, y, near.z - originZ).project(camera);
+    let wx: number;
+    let wy: number;
+    let wz: number;
+    if (npc) {
+      wx = npc.state.x;
+      wz = npc.state.z;
+      wy = npc.state.y + (this.npcRenderer?.heightOf(npc) ?? 1.8) + ICON_ABOVE_HEAD;
+    } else if (near) {
+      wx = near.x;
+      wz = near.z;
+      wy = this.streamer.heightAt(near.x, near.z) + data.player.hud.interactHeight;
+    } else {
+      return;
+    }
+    const p = this.labelPoint.set(wx - originX, wy, wz - originZ).project(camera);
     if (p.z > 1) {
       hud.setInteraction(null, 0, 0, false);
       return;
@@ -443,7 +565,19 @@ export class WorldState implements GameState, InstanceHost {
     const h = window.innerHeight;
     const x = Math.min(w - ICON_MARGIN, Math.max(ICON_MARGIN, ((p.x + 1) / 2) * w));
     const sy = Math.min(h * 0.5, Math.max(ICON_MARGIN * 2, ((1 - p.y) / 2) * h));
-    hud.setInteraction(this.ctx.i18n.t('hud.rest'), x, sy, !touch);
+    hud.setInteraction(this.interactionLabel(npc), x, sy, !touch);
+  }
+
+  /** "Talk to Marco the Merchant", "Pet Pringle" or "Rest"; made only when it changes. */
+  private interactionLabel(npc: Npc | null): string {
+    const target = npc ?? 'rest';
+    if (target === this.iconLabelFor) return this.iconLabel;
+    const t = this.ctx.i18n;
+    this.iconLabelFor = target;
+    this.iconLabel = npc
+      ? t.t(npc.def.interaction === 'pet' ? 'hud.pet' : 'hud.talkTo', { name: npc.def.name })
+      : t.t('hud.rest');
+    return this.iconLabel;
   }
 
   private readonly groundHeight = (x: number, z: number): number =>
@@ -463,7 +597,12 @@ export class WorldState implements GameState, InstanceHost {
 
   /** Shows "click to look around" on mouse devices while the mouse is not captured. */
   private updateLookHint(input: Input): void {
-    const show = !this.paused && !input.usedTouch && !input.pointerLocked && !this.coarsePointer;
+    const show =
+      !this.paused &&
+      !input.usedTouch &&
+      !input.pointerLocked &&
+      !this.coarsePointer &&
+      !this.dialog?.isOpen;
     if (show === this.lookHintShown || !this.lookHint) return;
     this.lookHintShown = show;
     this.lookHint.classList.toggle('ui-look-hint-visible', show);
@@ -535,6 +674,11 @@ export class WorldState implements GameState, InstanceHost {
     player.place(player.state.x, player.state.y, player.state.z, player.state.heading);
     origin.reset(player.state.x, player.state.z);
     rig.orbit.snap(player.state.x, player.state.y, player.state.z, rig.orbit.yaw);
+    this.dialog?.close();
+    if (this.npcWorld) {
+      const s = player.state;
+      this.npcs?.snapCompanions(s.x, s.z, s.heading, this.npcWorld);
+    }
     this.syncSave();
     this.checkZone();
   }
@@ -648,6 +792,18 @@ export class WorldState implements GameState, InstanceHost {
     worldRoot.add(player.model.root);
     this.player = player;
 
+    const collision = this.collision;
+    this.npcWorld = {
+      mover: this.mover,
+      heightAt: this.groundHeight,
+      resolve: (p, radius) => collision.resolve(p, radius),
+    };
+    this.npcs = new Npcs(data.npcs, this.ctx.seasons?.currentId() ?? '', resolveColorToken);
+    this.npcRenderer = new NpcRenderer(this.npcs.list, worldRoot);
+    this.safeAreas = new Map(
+      data.zones.zones.flatMap((entry) => entry.areas.map((area) => [area.id, area.shape])),
+    );
+
     this.rig = new CameraRig(data.player.camera, preset.fogFar + 20);
     this.rig.orbit.snap(player.state.x, player.state.y, player.state.z, player.state.heading);
     this.rig.apply(this.origin.x, this.origin.z, this.streamer, this.structures);
@@ -687,6 +843,11 @@ export class WorldState implements GameState, InstanceHost {
   private disposeScene(): void {
     this.player?.dispose();
     this.player = null;
+    this.npcRenderer?.dispose();
+    this.npcRenderer = null;
+    this.npcs = null;
+    this.npcWorld = null;
+    this.safeAreas = null;
     this.chunkDebug?.dispose();
     this.chunkDebug = null;
     // The streamer first: unloading its chunks also takes the structures away.
@@ -748,6 +909,7 @@ export class WorldState implements GameState, InstanceHost {
       'places',
       `in ${this.triggers?.current(this.placesInside).join(', ') || '-'} · checkpoint ${this.ctx.session?.world.checkpoint ?? '-'}${near ? ' (here)' : ''} · structures ${this.structures?.active.length ?? 0} (${this.structures?.colliderCount ?? 0} colliders) · visited ${this.ctx.session?.visitedPlaces.length ?? 0}`,
     );
+    debug.lines.set('npcs', this.npcDebugLine(s.x, s.z));
     debug.lines.set('energy', `${Math.round(s.energy)} · dash cd ${s.dashCooldown.toFixed(2)} s`);
     debug.lines.set(
       'camera',
@@ -759,10 +921,34 @@ export class WorldState implements GameState, InstanceHost {
     );
   };
 
+  /** Debug: NPCs shown, the target, met NPCs, Pringle's distance and nearby Treewardens. */
+  private npcDebugLine(px: number, pz: number): string {
+    const npcs = this.npcs;
+    if (!npcs) return '-';
+    const parts = [`npcs ${npcs.shownCount}/${npcs.list.length}`];
+    if (this.talkingTo) parts.push(`talking ${this.talkingTo.id}`);
+    else if (this.targetNpc) parts.push(`target ${this.targetNpc.id}`);
+    parts.push(`met ${this.ctx.session?.metNpcs.length ?? 0}`);
+    for (const npc of npcs.list) {
+      if (!npc.shown) continue;
+      const d = Math.hypot(npc.state.x - px, npc.state.z - pz);
+      if (npc.companion) parts.push(`${npc.id} ${d.toFixed(1)} m`);
+      else if (npc.def.monster && this.safeAreas) {
+        const safe = !isAttackable(npc.def, npc.state.x, npc.state.z, this.safeAreas);
+        parts.push(`${npc.id} ${Math.round(d)} m${safe ? ' safe' : ''}`);
+      }
+    }
+    return parts.join(' · ');
+  }
+
   private readonly onKeyDown = (event: KeyboardEvent): void => {
     // Overlays close themselves on Escape first; only an Escape with nothing open pauses.
     if (event.code === 'Escape' && !this.ctx.overlays.isOpen) {
       event.preventDefault();
+      if (this.dialog?.isOpen) {
+        this.dialog.close();
+        return;
+      }
       if (this.cheatPanel?.isOpen) {
         this.cheatPanel.toggle();
         return;
