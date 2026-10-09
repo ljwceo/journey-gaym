@@ -7,9 +7,9 @@
 | | |
 |---|---|
 | **Huidige fase** | Fase 1 – Basis + open wereld + character creator |
-| **Status** | Stap 1.7 klaar (open wereld), plus kleinere bundel en een cheatmenu voor testen |
-| **Volgende stap** | Stap 1.8: inhoud (placeholder-gebouwen in Greyhaven, Greenwood met Old Tjikko, riviertjes, elfenstad en heiligdom, Mournfen; triggers, eerste-bezoek-teksten, stadspoort, checkpoints, zonenaam in beeld, HUD-systeem met fade) |
-| **Laatste sessie** | 2026-10-09: stap 1.7 open wereld, bundel kleiner, cheatmenu |
+| **Status** | Stap 1.8 klaar (inhoud: gebouwen, rivieren, triggers, checkpoints, HUD) – wacht op feedback van Bo en Lucas over de HUD |
+| **Volgende stap** | Stap 1.9: NPC's (de 9 NPC's in Greyhaven, dialoogvenster, Pringle die volgt, rondlopende Treewardens) |
+| **Laatste sessie** | 2026-10-09: stap 1.8 inhoud |
 
 ---
 
@@ -49,7 +49,7 @@ Elke stap is één branch + pull request. Na elke stap start de game zonder fout
 ## Fase-log
 
 ### Fase 1 – Basis + open wereld + character creator
-**Status:** bezig, stap 1.1 t/m 1.7 klaar.
+**Status:** bezig, stap 1.1 t/m 1.8 klaar.
 **Gebouwd:**
 - 1.1 Projectopzet: Vite 8 + TypeScript 6 (strict), Three.js r186, ESLint + Prettier, Vitest. Leeg 3D-scherm met een draaiende kubus in stijlgidskleuren (draait per seconde, niet per frame). GitHub Actions controleert elke pull request (lint, opmaak, typecheck, tests, build) en zet `main` op GitHub Pages.
 - 1.2 Kern: `FixedStep` + `GameLoop` (simulatie altijd 60 Hz met accumulator, tekenen interpoleert, max 8 inhaalstappen per frame, frames > 0,25 s worden afgekapt, `?fps=N` om de framerate te beperken), getypte `EventBus` (geen allocaties bij `emit`), `StateMachine` (wissel gebeurt pas vóór de volgende update), `Random` (sfc32 met vaste seed) + `hashSeed` voor per-chunk seeds, `Renderer`, `DebugOverlay` (F3 / drie vingers / `?debug=1`: fps, frametijd, cpu-tijd, draw calls, triangles, geometries/textures, heap, resolutie, simulatiestappen, huidige state). Demo-scène: kubus die rondjes draait op de simulatie en vloeiend getekend wordt. 29 tests.
@@ -110,14 +110,34 @@ Elke stap is één branch + pull request. Na elke stap start de game zonder fout
   - **Snelheid** 1×, 2×, 5×, 10×, 25× (25× = 100 m/s). **Vliegen**: door muren heen, Spatie = omhoog, Shift (of C) = omlaag; op de telefoon ▲/▼-knoppen naast de dashknop. Niet onder de grond, maximaal 400 m hoog. Vliegen uit = landen op de grond.
   - **Teleport** naar het eerste spawnpunt van elke zone. **Chunkranden** aan/uit.
   - Wordt **nooit opgeslagen**; debugmodus uit = alle cheats uit. Op de telefoon staat het paneel boven de debug-overlay. 174 tests.
+- 1.8 Inhoud:
+  - **Gebouwen en plekken uit data** (`structures` per zone in `zones.json`): elk gebouw is een id, een vorm (`placeholder:house`, `tower`, `wall`, `platform`, `bridge`, `giant_tree`, `shrine`, `cave_entrance`, `stall`, `dummy`, `aqueduct`, `island`, `block`), positie, maat, draaiing, kleur uit de stijlgids en een soort botsing (`box`, `circle`, `posts` = vier palen waar je tussendoor loopt, `none`). Een nieuw gebouw = alleen data. Gebouwen staan altijd op de grond (iets ingegraven, zweven nooit op een helling), of hoger met `elevation` (hutje op een platform) of op een vaste hoogte met `y` (steigers in de haven). Een brug geeft alleen `connects` (twee platforms) en loopt dan van bovenkant naar bovenkant.
+  - **Greyhaven:** stadsmuur met landpoort (twee torens, label "City Gate") in het oosten, haven met steigers en pakhuis, rond eilandfort in de baai, Market Square met kraampjes aan de rivier, Forge, Alchemy Lab en The Golden Kettle eromheen, Monastery met klokkentoren op de kliffen aan de westkust (je wordt wakker naast je bed), Academy met vier torens in het midden, trainingsveld met hek en oefenpoppen ernaast, Garden met heggen en bedden aan de rivieroever, aquaductbrug waar de rivier de stad in komt (met een rooster eronder), wachttoren aan de noordkust, en 22 huizen. Binnen de muren groeien geen bomen (`noScatter` op het stadsgebied).
+  - **The Greenwood of Aerandir:** Old Tjikko (56 m breed, 64 m hoog, je botst alleen tegen de stam), elfenstad met 6 platforms op palen in een kring om Old Tjikko, 3 boomhutten en 6 bruggen, het elfenheiligdom als checkpoint, en de ingang van De Wortelgrotten (dicht).
+  - **The Mournfen:** klooster op palen als checkpoint (platform + hut + ladder).
+  - **Rivieren** (`world.rivers`): een lijn punten met breedte, oevers en diepte. Het terrein wordt in de Web Worker uitgesleten (bedding in waterkleur), het water is één lint per rivier dat het land volgt (alle rivieren samen 1 draw call). Rivieren zijn ondiep: je kunt erdoor waden. Bomen staan nooit in het water. Drie rivieren: de rivier van Greyhaven (onder het aquaduct door, langs de Market Square, de zee in bij de haven) en twee beekjes in de Greenwood (één stroomt naar de wortels van Old Tjikko).
+  - **Laden met de chunks** (`StructureLayer`): een gebouw verschijnt zodra één chunk waar het op staat geladen is, en verdwijnt (met zijn botsing) als geen enkele meer geladen is. Eén InstancedMesh per vorm voor de hele wereld: alle gebouwen samen ±13 draw calls. Alles wordt bij het opstarten één keer uitgerekend; tijdens het spelen geen nieuwe objecten.
+  - **Camera botst met gebouwen:** draai je de camera achter een muur of toren, dan schuift hij ervoor in plaats van erdoorheen te kijken.
+  - **Triggers** (`src/world/Triggers.ts`): elk eerste bezoek aan een plek geeft één keer een korte uitleg in beeld (Monastery, Market Square, Forge, Alchemy Lab, The Golden Kettle, Garden, Academy, trainingsveld, haven, aquaduct, wachttoren, Old Tjikko, elfenstad, heiligdom, De Wortelgrotten, klooster op palen). Bezochte plekken gaan in de save (autosave) en de events `triggerEntered` / `placeFirstVisited` staan klaar voor quests.
+  - **Stadspoort:** trigger met voorwaarde `canLeaveCity` (nu altijd waar). Is de voorwaarde onwaar, dan houdt de poort je tegen als een muur met de melding "Je bent nog niet klaar om de stad te verlaten". Voorwaarden in data: `always`, `never`, `level`, `questCompleted`, `all`, `any`.
+  - **Checkpoints** (`src/world/Checkpoints.ts`): elke zone heeft er één met een straal (`radius`). Langslopen = nieuw checkpoint, melding "Checkpoint ingesteld" en autosave. Sta je bij een checkpoint, dan verschijnt een icoontje **"E Rusten"** (op de telefoon zonder E, en je tikt erop). Rusten geeft nu alleen een melding; levens en mana komen in fase 2.
+  - **HUD-systeem** (`src/ui/HUD.ts`, `HudVisibility.ts`): elk element heeft redenen om zichtbaar te zijn (`show(reason)` / `hide(reason)`, eventueel met een tijd) en faded rustig in en uit. In beeld nu: de **zonenaam** groot bovenin bij het binnenkomen van een zone (ook bij Continue), **meldingen** eronder (één tegelijk, de rest wacht), het **interactie-icoontje**, en de **energiebalk** linksboven die verschijnt na een dash en weer verdwijnt als hij vol is. Klaargezet voor fase 2 volgens het concept: HP/mana/energie alleen in een gevecht, XP-balk na een verslagen vijand en daarna alles weg, HP-balk blijft onder 30 %, gold rechtsboven bij een shop of als het verandert. Alles staat bovenin, nooit in de joystick- of knoppenzone. Tijden in `player.json` (`hud`).
+  - **Mist en lucht** krijgen langzaam de kleur van de zone waar je binnenloopt.
+  - **Interieurs en dungeons:** alleen de interface (`enterInstance(id)` / `exitInstance()`); alle ingangen zijn nog dicht.
+  - De **testbaan** uit stap 1.6 is weg.
+  - **Validator:** gebouwen met een onbekende kleur, buiten hun zone, een draaiing die niet past bij een rechthoekige botsing, of een brug naar een gebouw dat niet bestaat geven een fout.
+  - **Debug:** label met de naam boven elk gebouw in de buurt (bijv. "The Golden Kettle"), en een regel met de triggers waar je in staat, je checkpoint, aantal gebouwen en botsingen, en hoeveel plekken je bezocht hebt. 197 tests.
 
 **Bekende problemen:**
 - ~~De game-bundel is ±666 kB~~ → opgelost in stap 1.7: opgesplitst in 7 bestanden, grootste 548 kB (Three.js zelf). Three.js kan niet verder opgesplitst worden; dat bestand groeit alleen bij een nieuwe Three.js-versie.
 - De grafische stand wordt al opgeslagen maar doet nog niets; de QualityManager komt in stap 1.10.
 - De pauzeknop is nu het teken "II"; volgens de stijlgids (U3) wordt dat later een geschilderd icoontje.
 - Kapsels en lichaamstypes zijn ruwe vormen (het vrouwelijke lijf is alleen iets smaller).
-- De testbaan is tijdelijk; stap 1.8 vervangt hem door gebouwen uit data.
-- De camera gaat nog door muren heen als je hem erachter draait (door heuvels niet meer). Camera-botsing met gebouwen komt in stap 1.8.
+- Gebouwen staan op het golvende terrein (ingegraven). De Academy staat daardoor niet "hoog in het midden" en het Monastery niet echt op kliffen; daarvoor moet het terrein later op die plekken gevormd worden (heuvel, klif). Graag laten weten of dat nu al moet.
+- Je kunt niet óp gebouwen of platforms lopen (geen trappen, geen hoogteverschil in de botsing). De elfenstad zie je dus alleen van onderen. Lopen op platforms en bruggen komt als het nodig is.
+- Rivieren volgen het land, dus het water loopt over een heuvel mee omhoog in plaats van er een dal in te slijten. Prima als placeholder.
+- Het water in de haven is maar een smalle strook (de kust zakt over 90 m weg). Het eilandfort staat daardoor vlak bij de kust en de steigers steken maar een klein stukje over het water.
+- Het interactie-icoontje staat boven het checkpoint zelf; staat het checkpoint achter de camera, dan zie je het icoontje niet (E werkt wel).
 - Zones zijn voor het terrein rechthoeken; een zone met een cirkel of veelhoek gebruikt voor de hoogte zijn omringende rechthoek (voor "in welke zone ben ik" wordt wel de echte vorm gebruikt).
 - Bij de overgang van lage naar volle detail kan de speler een paar cm "verspringen" in hoogte als hij heel snel (cheat) op een chunk komt die nog laag detail heeft.
 - Vanaf 150 m hoog vliegen zie je vooral mist: de mist hoort bij de kijkafstand van de stand.
@@ -195,6 +215,13 @@ Elke stap is één branch + pull request. Na elke stap start de game zonder fout
 | 2026-10-09 | Zeeniveau 0, water dieper dan 1 m houdt je tegen; The Mournfen basishoogte −0,4 (plassen) | "Diep water blokkeert" (§7) en "vlak, nat terrein" uit het concept |
 | 2026-10-09 | Terrein- en propgetallen (blend 120 m, heuvels 260 m golflengte, aantallen per hectare) zijn een **voorstel** in `zones.json` | Concept noemt ze niet; makkelijk aan te passen |
 | 2026-10-09 | Kleuren op vertices worden omgerekend van sRGB naar lineair | Anders zien de stijlgidskleuren er in Three.js te licht en te roze uit |
+| 2026-10-09 | Gebouwen staan als `structures` in `zones.json` (geen apart bestand) | Ze horen bij een zone, net als spawnpunten en checkpoints; een nieuw gebouw is alleen data |
+| 2026-10-09 | Monastery van Greyhaven verplaatst naar de westkust (x −1895), met spawnpunt, checkpoint, Brother Ansel en Pringle | Concept: "het Monastery aan de zeekant, op de kliffen in het westen" |
+| 2026-10-09 | Forge, Alchemy Lab en The Golden Kettle iets verschoven rond de Market Square (met hun NPC's en triggers) | De rivier loopt nu langs de Market Square; anders stonden ze in het water |
+| 2026-10-09 | Rivieren zijn ondiep (te waden) | Kleine riviertjes uit het concept; bruggen zijn dan nog niet nodig. Zeg het als je ze diep wilt (dan houden ze je tegen) |
+| 2026-10-09 | HUD staat helemaal bovenin (balken linksboven, gold rechtsboven, zonenaam en meldingen in het midden) | Zo zit hij nooit in de weg van de joystick of de knoppen op de telefoon |
+| 2026-10-09 | Bezochte plekken worden meteen opgeslagen (autosave bij elk eerste bezoek) | "Wordt opgeslagen wanneer een plek voor het eerst bezocht is" (§6) |
+| 2026-10-09 | Spelerniveau is voor voorwaarden voorlopig 1 en er zijn nog geen voltooide quests | Levels en quests komen in fase 2 en 3 |
 | 2026-10-09 | PerfTest verplaatst naar `experiments/perftest/` | Oude test-code hoort in `/experiments` (§5). Er was geen PeerJS-netwerktest in de repo, dus `experiments/net-test/` bestaat (nog) niet |
 
 ## Sessielog
@@ -212,3 +239,4 @@ Elke stap is één branch + pull request. Na elke stap start de game zonder fout
 - Stap 1.6 gebouwd: lopen, dash met energie, collision met spatial hash, camera die volgt, zoomt, vrij rondkijkt bij stilstaan en terugdraait bij lopen, toetsenbord/muis/touch-invoer, joystick en dashknop, testvloer met testbaan. Op verzoek: camerasnelheid 30–100% in Settings (save v2 + migratie). Getest in headless Chromium (pc 1280×800 en iPhone 13 met nagebootste vingers): 2 s lopen = 8 m, dash = 4 m en stopt tegen de muur, rondkijken laat het poppetje stil, lopen draait de camera terug, knijpen zoomt, dashknop werkt, oude v1-save wordt v2 met 70%, 4× wereld in en uit: geometrie terug naar 0. Geen fouten. Tijdelijke namen: geen nieuwe. Volgende stap: 1.7 (open wereld).
 - PR #10 (stap 1.6) samengevoegd. Feedback van Bo/Lucas: de camera moet zoals Genshin Impact zijn (over de schouder), en vrij draaien lukte niet goed. Camera omgebouwd: over de schouder, vrij draaien, geen terugdraaien bij lopen, muis vangen op pc, kleiner joystick-gebied. `CLAUDE.md` aangepast. Getest in headless Chromium (pc + iPhone 13): klik vangt de muis, muis bewegen draait de camera, W loopt waar de camera kijkt, Escape = pauze en muis vrij, Verder = muis weer gevangen, joystick/draaien/knijpen/dash op touch. Geen fouten. Volgende stap: 1.7 (open wereld).
 - Stap 1.7 gebouwd (één pull request, op verzoek met twee extra's): bundel opgesplitst en zod/mini (grootste bestand 731 → 548 kB, check in de build), open wereld met terrein uit een Web Worker, chunks met ringen en hysterese, grove wereldkaart eronder, bomen/rotsen per zone, lopen over terrein met helling-limiet en diep water, floating origin, naadloze zonewissel met autosave, en een cheatmenu (snelheid, vliegen, teleport, chunkranden). Getest in headless Chromium (pc 1280×800 en iPhone 13): hele flow, teleport naar Greenwood en Mournfen (zone + autosave kloppen), vliegen 25× (100 m/s, 150 m hoog), herladen + Continue zet je terug, 3× wereld in/uit: geometrie terug naar 0, op de telefoon ▲/▼ en het paneel boven de debug-overlay. Unittest: 10 rondes heen en weer lopen laat het aantal chunks en colliders niet groeien. Geen fouten. Tijdelijke namen: geen nieuwe. Volgende stap: 1.8 (inhoud).
+- Stap 1.8 gebouwd: gebouwen en plekken uit data in Greyhaven, de Greenwood (Old Tjikko, elfenstad met platforms en bruggen, heiligdom, ingang De Wortelgrotten) en de Mournfen (klooster op palen), drie rivieren, laden met de chunks, camera die niet door muren kijkt, triggers met eerste-bezoek-teksten, stadspoort met voorwaarde, checkpoints met rusten, HUD-systeem met fade (zonenaam, meldingen, interactie-icoontje, energiebalk), mist die per zone van kleur verandert. Testbaan weg. Getest in headless Chromium (pc 1280×800 en iPhone 13): wakker worden bij het Monastery met de uitleg en de zonenaam, E en tikken op "Rusten", dash laat de energiebalk zien, door de stadspoort lopen, teleport naar Greenwood en Mournfen, 3× wereld in/uit: geometrie terug naar 0, bezochte plek staat in de save. Geen fouten. Tijdelijke namen: geen nieuwe (Treewardens, De Wortelgrotten, de elfenstad en Gold staan alleen in data). Volgende stap: 1.9 (NPC's).
