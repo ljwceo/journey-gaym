@@ -249,7 +249,7 @@ Fase 1 is af als ik dit allemaal kan doen, op pc én iPhone:
 Bo en Lucas werken samen in deze repo en hebben soms verschillende ideeën. Daarom komt niets direct in `main`.
 - Per stap of taak een eigen branch (bijv. `fase-1-opzet`, `fix-joystick`). Daar werken en committen.
 - Klaar? Branch pushen en een pull request openen. In gewone taal (Nederlands): wat er veranderd is, waarom, en hoe je het test op pc en iPhone.
-- Bo of Lucas bekijkt de pull request en voegt hem samen (merge). Pas dan staat het in `main`.
+- Claude mag de pull request zelf samenvoegen (merge) in `main` als de taak af is en de game zonder fouten start (afgesproken op 2026-10-09). Bo of Lucas kan een pull request altijd nog bekijken of tegenhouden door dat te zeggen.
 - Verandert er iets aan het concept, de stijlgids of een eerdere beslissing? Zet dat bovenaan in de pull request.
 
 ### Spelconcept lezen
