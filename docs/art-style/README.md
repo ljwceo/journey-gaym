@@ -15,6 +15,7 @@
 | `tokens.json` | Dezelfde tokens als JSON (voor JS/TS, game-engine of tooling) |
 | `prompts.md` | AI-prompts om nieuwe beelden in deze stijl te genereren |
 | `stijlgids.html` | Visuele versie van deze gids, open in de browser |
+| `models.md` | Wat we aanleveren voor de echte personage-modellen (bestanden, maten, materialen, animaties) |
 
 **Regel voor code:** gebruik in de code nooit losse kleurcodes. Altijd een token uit `tokens.css` / `tokens.json`. Nieuwe kleur nodig? Eerst hier toevoegen.
 
