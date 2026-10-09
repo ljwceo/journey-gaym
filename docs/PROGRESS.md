@@ -7,9 +7,9 @@
 | | |
 |---|---|
 | **Huidige fase** | Fase 1 – Basis + open wereld + character creator |
-| **Status** | Stap 1.5 klaar (character creator) |
-| **Volgende stap** | Stap 1.6: speler en camera (WASD + joystick, 4 m/s, dash met energie, camera die volgt en draait, collision) |
-| **Laatste sessie** | 2026-10-09: stap 1.5 character creator |
+| **Status** | Stap 1.6 klaar (speler en camera) |
+| **Volgende stap** | Stap 1.7: open wereld (zones uit data, chunks met ringen, terrein in een Web Worker, gebudgetteerd laden, floating origin, mist, InstancedMesh, debug-kleuren voor chunks) |
+| **Laatste sessie** | 2026-10-09: stap 1.6 speler en camera |
 
 ---
 
@@ -49,7 +49,7 @@ Elke stap is één branch + pull request. Na elke stap start de game zonder fout
 ## Fase-log
 
 ### Fase 1 – Basis + open wereld + character creator
-**Status:** bezig, stap 1.1 t/m 1.5 klaar.
+**Status:** bezig, stap 1.1 t/m 1.6 klaar.
 **Gebouwd:**
 - 1.1 Projectopzet: Vite 8 + TypeScript 6 (strict), Three.js r186, ESLint + Prettier, Vitest. Leeg 3D-scherm met een draaiende kubus in stijlgidskleuren (draait per seconde, niet per frame). GitHub Actions controleert elke pull request (lint, opmaak, typecheck, tests, build) en zet `main` op GitHub Pages.
 - 1.2 Kern: `FixedStep` + `GameLoop` (simulatie altijd 60 Hz met accumulator, tekenen interpoleert, max 8 inhaalstappen per frame, frames > 0,25 s worden afgekapt, `?fps=N` om de framerate te beperken), getypte `EventBus` (geen allocaties bij `emit`), `StateMachine` (wissel gebeurt pas vóór de volgende update), `Random` (sfc32 met vaste seed) + `hashSeed` voor per-chunk seeds, `Renderer`, `DebugOverlay` (F3 / drie vingers / `?debug=1`: fps, frametijd, cpu-tijd, draw calls, triangles, geometries/textures, heap, resolutie, simulatiestappen, huidige state). Demo-scène: kubus die rondjes draait op de simulatie en vloeiend getekend wordt. 29 tests.
@@ -76,15 +76,30 @@ Elke stap is één branch + pull request. Na elke stap start de game zonder fout
   - Het poppetje draait langzaam rond (op de vaste tijdstap) en is met muis of vinger te draaien; 2 s na loslaten draait hij weer vanzelf. Op pc staat hij links van het paneel, op een staande telefoon erboven; de camera past zich aan zodat hij altijd past.
   - **Toetsenbord (iPhone):** Gereed/Enter/Escape sluit het toetsenbord, tikken ergens anders ook (Safari doet dat zelf niet bij knoppen), bij weggaan altijd dicht, en daarna wordt de pagina teruggezet. Naamveld 18 px (onder 16 px zoomt Safari in), geen autocorrectie of automatische hoofdletter (`src/ui/keyboard.ts`, herbruikbaar voor latere tekstvelden).
   - Save: naam, uiterlijk, 0 gold, startspullen `old_sword` + `travel_mantle` (uit `player.json`) en die als uitrusting. 116 tests.
+- 1.6 Speler en camera:
+  - **Lopen** (`src/systems/Movement.ts`): 4 m/s, met de joystick half ingedrukt langzamer, schuin nooit sneller. Het poppetje draait vloeiend naar de looprichting (720°/s). Alles op de vaste tijdstap: op 60 en 120 fps leg je exact dezelfde afstand af (test).
+  - **Dash:** 4 m in 0,18 s in je looprichting (stilstaand: waar je naar kijkt), kost 25 energie, 1 s cooldown, niet zonder genoeg energie. Energie vult 20/s bij, pas 1 s nadat je energie gebruikte. De dash gaat in stapjes van max 20 cm, zodat je nooit door een dunne muur schiet.
+  - **Collision** (`src/world/SpatialHash.ts`, `Colliders.ts`, `src/systems/Collision.ts`): cirkels en rechthoeken in een spatial hash; de speler is een cirkel die langs muren en in hoeken schuift. De wereldrand uit `zones.json` houdt je tegen. Klaar om per chunk colliders toe te voegen en te verwijderen (stap 1.7).
+  - **Camera** (`src/render/CameraRig.ts`): schuin van boven (55°), volgt soepel, zoomen tussen 4 en 20 m. **Stilstaand kun je helemaal rondkijken** (360°, en tussen 10° en 80° omhoog/omlaag) zonder dat je poppetje meedraait. **Zodra je loopt** draait de camera na 0,15 s vloeiend terug achter je en naar de normale hoek. Zolang je de camera zelf vasthoudt, draait hij niet terug. Alle getallen in het nieuwe blok `camera` in `player.json`.
+  - **Looprichting blijft recht:** terwijl de camera terugdraait, blijf je dezelfde kant op lopen zolang je dezelfde toets/richting vasthoudt; pas bij een duidelijk andere richting (> 30°) telt de nieuwe camerastand. Anders loop je in een cirkel als je A of D vasthoudt.
+  - **Camerasnelheid** (op verzoek): nieuwe schuif in Settings van 30% tot 100% (standaard 70%), werkt meteen. Bereik in `player.json`; de save is daarvoor naar **versie 2** gegaan, met een migratie (test) zodat oude saves blijven werken.
+  - **Invoer** (`src/core/Input.ts`): WASD/pijltjes, spatie = dash, E = interactie (doet nog niets tot stap 1.9). Rechtermuisknop slepen = camera draaien, scrollwiel = zoomen. Touch: joystick verschijnt waar je duim neerkomt in de linker helft onderaan, één vinger ergens anders = camera draaien, twee vingers knijpen = zoomen, **Dash**-knop rechtsonder (`src/ui/TouchControls.ts`). Vaste veilige zones voor joystick en knoppen staan in `ui.css` (`--joystick-zone-*`, `--button-zone-*`).
+  - **Wereld** (`src/scenes/WorldState.ts`): je poppetje uit de creator (eigen kleuren) staat op een vlakke testvloer in Greyhaven met een raster van 4 m (1 hokje = 1 seconde lopen) en een **tijdelijke testbaan** (`src/world/TestCourse.ts`: muur met opening, hoek, dunne muur voor de dash, pilaren, een "gebouw"). Mist- en grondkleur uit de zone, kijkafstand uit de grafische stand. Positie en kijkrichting gaan mee in de save, dus Continue zet je terug waar je was. Pauze laat alle toetsen los.
+  - Debug-overlay: positie, kijkrichting, lopen/dash, energie, dash-cooldown, camerahoek, zoom en gevoeligheid. 142 tests.
 
 **Bekende problemen:**
 - De game-bundel is ±666 kB (Three.js ±530 kB, zod ±130 kB). Waarschuwingsgrens op 800 kB gezet; opsplitsen als de game groeit. Wordt zod te zwaar, dan kan het naar `zod/mini` (veel kleiner, zelfde werking).
 - De grafische stand wordt al opgeslagen maar doet nog niets; de QualityManager komt in stap 1.10.
 - De pauzeknop is nu het teken "II"; volgens de stijlgids (U3) wordt dat later een geschilderd icoontje.
-- De wereld is nog de testkubus; op een staand iPhone-scherm staat die erg groot in beeld. Speler en camera komen in stap 1.6.
-- Kapsels en lichaamstypes zijn ruwe vormen (het vrouwelijke lijf is alleen iets smaller). Het poppetje staat nog niet in de wereld; dat komt in stap 1.6.
+- Kapsels en lichaamstypes zijn ruwe vormen (het vrouwelijke lijf is alleen iets smaller).
+- De testvloer en testbaan zijn tijdelijk; stap 1.7/1.8 vervangen ze door terrein, zones en gebouwen uit data. De grond is nog vlak, dus de helling-limiet (40°) doet nog niets.
+- De camera gaat nog door muren heen als je hem erachter draait; camera-botsing komt als er echte gebouwen en heuvels zijn (stap 1.7/1.8).
+- Het poppetje kost ±16 draw calls (losse onderdelen). Prima nu; later samenvoegen of vervangen door één model.
+- Touch: twee vingers knijpen in het joystick-gebied (linksonder) maakt de eerste vinger een joystick. Knijp boven of rechts in beeld. Tikken met drie vingers zet nog steeds de debug-overlay aan of uit.
+- Op een iPhone-scherm bedekt de debug-overlay een groot deel van het beeld (alleen in debug).
+- Joystick, rondkijken en knijpen zijn getest met nagebootste vingers in de headless browser; graag op een echte iPhone testen of het lekker voelt.
 - Of het toetsenbord op een echte iPhone netjes dichtgaat, kan ik in de headless browser niet zien. Graag testen op de telefoon.
-- Bundel nu ±705 kB (grens 800 kB).
+- Bundel nu ±730 kB (grens 800 kB).
 - Veel getallen die niet in het concept staan zijn een **voorstel** (zie besluiten): spell-, combo- en skillwaarden, Sultans waarschuwingstijden, dash-afstand, vijandsnelheden in m/s. Ze staan in data en zijn makkelijk aan te passen.
 **Gemeten fps:**
 
@@ -132,6 +147,14 @@ Elke stap is één branch + pull request. Na elke stap start de game zonder fout
 | 2026-10-09 | De save wordt pas gemaakt als je personage klaar is; Terug laat de oude save heel | Anders ben je je save al kwijt als je in de creator van gedachten verandert |
 | 2026-10-09 | Willekeurig kiest geen naam | De naam is iets persoonlijks; zeg het als je ook willekeurige namen wilt |
 | 2026-10-09 | "Travel Mantle" is een voorlopige naam (niet uit het concept) | Concept zegt "eenvoudige reismantel" |
+| 2026-10-09 | **Camerasnelheid** 30–100% in Settings, standaard 70% | Verzoek van Bo/Lucas bij stap 1.6. Save naar versie 2 met migratie |
+| 2026-10-09 | Stilstaand vrij rondkijken (360°), het poppetje draait niet mee; lopen = camera draait na 0,15 s terug achter je | Verzoek van Bo/Lucas bij stap 1.6 |
+| 2026-10-09 | Zolang je dezelfde kant op stuurt, blijft je looprichting gelijk terwijl de camera terugdraait (pas > 30° andere richting telt opnieuw) | Anders loop je in rondjes als je A of D vasthoudt en de camera achter je aan draait |
+| 2026-10-09 | Draaien: slepen naar rechts = naar rechts kijken; slepen omlaag = meer van bovenaf kijken (muis en touch hetzelfde) | Zelfde gevoel als de meeste 3D-games. Zeg het als het andersom moet |
+| 2026-10-09 | Camera-, joystick- en draaigetallen in `player.json` (blokken `camera` en `controls`), niet in een apart `camera.json` | Minder bestanden; het hoort bij hoe de speler zich bestuurt |
+| 2026-10-09 | Energie in stap 1.6 alleen in de debug-overlay; de energiebalk in beeld komt met het HUD-systeem (stap 1.8) | HUD met faden is één systeem; niet twee keer bouwen |
+| 2026-10-09 | Joystick-gebied: linker helft van het scherm, onder de bovenste 35% | Ruim voor duimen van elke grootte; rechts blijft vrij voor draaien en knoppen |
+| 2026-10-09 | Tijdelijke testbaan staat in code (`TestCourse.ts`), niet in data | Het is ontwikkel-gereedschap voor deze stap, geen spelinhoud; verdwijnt in 1.7/1.8 |
 | 2026-10-09 | PerfTest verplaatst naar `experiments/perftest/` | Oude test-code hoort in `/experiments` (§5). Er was geen PeerJS-netwerktest in de repo, dus `experiments/net-test/` bestaat (nog) niet |
 
 ## Sessielog
@@ -146,3 +169,4 @@ Elke stap is één branch + pull request. Na elke stap start de game zonder fout
 - Stap 1.4 gebouwd: Boot met laadbalk, taalkeuze, titelscherm, intro-stub, world-stub met pauze, Settings en Pause als overlays. Hele flow getest in headless Chromium (pc en iPhone 13-formaat): taal kiezen, instellingen wijzigen (ook taal live), New Game → intro → wereld, pauze, terug naar titel, Continue, overschrijven-vraag, herladen, save verwijderen (2×) → terug naar de taalkeuze. Geen fouten. Volgende stap: 1.5 (character creator).
 - Stap 1.5 gebouwd: character creator met draaiend placeholder-poppetje, alle keuzes uit `appearance.json`, Willekeurig, naamcontrole, toetsenbord-afhandeling voor de iPhone. Getest in headless Chromium (pc 1280×800, 900×500 en iPhone 13): verkeerde tekens worden weggefilterd, lege naam geeft een melding, tikken op een kleur sluit het toetsenbord, Enter sluit het toetsenbord en de pagina blijft op zijn plek, Terug laat de save heel, Begin maakt de save met naam, uiterlijk en startspullen, intro en wereld starten. 5× heen en weer tussen titel en creator: geometrie gaat elke keer terug naar 0. Geen fouten. Tijdelijke namen: Travel Mantle (nieuw, voorlopig). Volgende stap: 1.6 (speler en camera).
 - Op verzoek: `docs/art-style/models.md` beschrijft wat Bo en Lucas moeten aanleveren voor het echte personage (15 .glb-bestanden of tekeningen, maten, materiaalnamen, animaties, eerst een proef). PR #9 samengevoegd.
+- Stap 1.6 gebouwd: lopen, dash met energie, collision met spatial hash, camera die volgt, zoomt, vrij rondkijkt bij stilstaan en terugdraait bij lopen, toetsenbord/muis/touch-invoer, joystick en dashknop, testvloer met testbaan. Op verzoek: camerasnelheid 30–100% in Settings (save v2 + migratie). Getest in headless Chromium (pc 1280×800 en iPhone 13 met nagebootste vingers): 2 s lopen = 8 m, dash = 4 m en stopt tegen de muur, rondkijken laat het poppetje stil, lopen draait de camera terug, knijpen zoomt, dashknop werkt, oude v1-save wordt v2 met 70%, 4× wereld in en uit: geometrie terug naar 0. Geen fouten. Tijdelijke namen: geen nieuwe. Volgende stap: 1.7 (open wereld).
