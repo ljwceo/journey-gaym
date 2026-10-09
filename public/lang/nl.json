@@ -308,6 +308,9 @@
     "saveCopy": "Kopiëren",
     "saveLoad": "Laden",
     "savePaste": "Plak hier een save-code",
-    "saveInvalid": "Dit is geen geldige save-code."
+    "saveInvalid": "Dit is geen geldige save-code.",
+    "measure": "Fps meten",
+    "measureNote": "Loop {seconds} s gewoon rond. De uitslag staat daarna in de debug-overlay (regel \"measure\").",
+    "measureStart": "Meet {seconds} s"
   }
 }

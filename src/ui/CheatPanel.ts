@@ -17,6 +17,9 @@ export interface CheatPanelHandlers {
 
 type SaveTool = 'none' | 'export' | 'import';
 
+/** Length of an fps measurement from the cheat menu (seconds). */
+const MEASURE_SECONDS = 20;
+
 /**
  * Debug-only cheat menu for quick testing: walk faster, fly through walls, teleport to a zone,
  * show chunk borders. Opens with F6 or the "Cheats" button (both only in debug mode). It is a
@@ -199,6 +202,23 @@ export class CheatPanel {
           chip(t('cheats.rerunBenchmark'), false, () => {
             this.handlers.rerunBenchmark();
             this.rebuild();
+          }),
+        ),
+      ),
+      section(
+        t('cheats.measure'),
+        el('p', {
+          className: 'ui-note',
+          text: t('cheats.measureNote', { seconds: MEASURE_SECONDS }),
+        }),
+        el('p', { className: 'ui-note', text: this.ctx.perfText() }),
+        el(
+          'div',
+          { className: 'ui-chips' },
+          chip(t('cheats.measureStart', { seconds: MEASURE_SECONDS }), false, () => {
+            this.ctx.perf.start(MEASURE_SECONDS);
+            // The panel itself costs a little; measure the plain game.
+            this.close();
           }),
         ),
       ),

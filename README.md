@@ -15,6 +15,18 @@ Elke keer dat er iets in `main` komt, bouwt GitHub de game opnieuw en zet hem on
 |---|---|
 | Debug-overlay (fps, draw calls, …) | F3, tik met drie vingers op de iPhone, of zet `?debug=1` achter het adres |
 | Framerate beperken (test of 30/60/120 fps even snel loopt) | zet `?fps=30` achter het adres (combineren: `?debug=1&fps=30`) |
+| Cheatmenu (snelheid, vliegen, teleport, seizoen, save-code, fps meten) | F6 of de knop **Cheats** rechtsboven (alleen in debugmodus) |
+
+**Fps meten per grafische stand (voor de tabel in `docs/PROGRESS.md`)**
+1. Open de game (online of lokaal), zet de debugmodus aan (Settings → Debug, of F3 / drie vingers).
+2. Kies in Settings een stand: **Low**, daarna **Mid**, daarna **High**.
+3. Ga naar Greyhaven (Market Square, veel gebouwen) of het bos (Cheats → Teleport → The Greenwood of Aerandir).
+4. Cheats → **Meet 20 s**, en loop 20 seconden gewoon rond (ook dashen en de camera draaien).
+5. Lees de regel `measure` in de debug-overlay, bijv. `mid · avg 60.0 fps · 1% low 55.1 · worst 24.0 ms · calls 70 · 2532x1170`. Stuur die regel per stand door (op de pc staat hij ook in de console, F12).
+   - **avg** = gemiddelde fps (doel: 60, of 120 op High op een 120 Hz-scherm).
+   - **1% low** = de traagste 1% van de frames; ver onder 60 betekent haperen.
+   - **worst** = de langste frame in ms; boven ±50 ms zie je een duidelijke hapering.
+6. Na afloop weer **Auto** kiezen in Settings.
 
 **Handige commando's**
 | Commando | Wat |
