@@ -1,0 +1,8 @@
+dist/
+node_modules/
+coverage/
+experiments/
+docs/
+package-lock.json
+CLAUDE.md
+README.md
