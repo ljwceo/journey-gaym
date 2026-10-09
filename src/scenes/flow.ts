@@ -43,9 +43,13 @@ export function startNewGame(
 }
 
 /** The frame cap for the game loop (0 = follow the display). A `?fps=` test value wins. */
-export function frameCapFor(setting: SaveSettings['fpsCap'], testOverride = 0): number {
+export function frameCapFor(
+  setting: SaveSettings['fpsCap'],
+  testOverride = 0,
+  autoTarget = 0,
+): number {
   if (testOverride > 0) return testOverride;
-  return setting === 'auto' ? 0 : Number(setting);
+  return setting === 'auto' ? autoTarget : Number(setting);
 }
 
 /**

@@ -4,6 +4,8 @@ import type { WorldGenConfig } from './terrainConfig';
 /** Messages to the terrain worker. */
 export type TerrainRequest =
   | { type: 'init'; config: WorldGenConfig }
+  /** New graphics preset: density of decorative props (no collider) for chunks built from now on. */
+  | { type: 'density'; density: number }
   | { type: 'chunk'; id: number; cx: number; cz: number; lod: number; props: boolean };
 
 /** Messages from the terrain worker. All typed arrays are transferred (not copied). */

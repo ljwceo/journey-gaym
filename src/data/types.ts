@@ -16,6 +16,7 @@ export type ItemDef = ItemsFile['items'][number];
 export type AppearanceFile = GameData['appearance'];
 export type QualityFile = GameData['quality'];
 export type QualityPreset = QualityFile['presets'][number];
+export type QualityLevel = QualityPreset['id'];
 export type SeasonsFile = GameData['seasons'];
 export type SeasonDef = SeasonsFile['seasons'][number];
 export type TriggersFile = GameData['triggers'];

@@ -57,6 +57,9 @@ describe('frameCapFor', () => {
     expect(frameCapFor('60')).toBe(60);
     expect(frameCapFor('120')).toBe(120);
     expect(frameCapFor('120', 30)).toBe(30);
+    // "Auto" follows the preset's fps target; a chosen cap wins over it.
+    expect(frameCapFor('auto', 0, 60)).toBe(60);
+    expect(frameCapFor('120', 0, 60)).toBe(120);
   });
 });
 

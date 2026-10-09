@@ -480,6 +480,10 @@ export const qualityFileSchema = z.strictObject({
       pixelRatio: z.strictObject({ min: max(positive, 4), max: max(positive, 4) }),
       shadows: z.enum(['off', 'simple', 'soft']),
       shadowMapSize: intRange(0, 8192),
+      /** Shadows are drawn this far (m) around the player; further away there are none. */
+      shadowDistance: max(nonNegative, 500),
+      /** Shadow edge blur in shadow-map texels (1 = crisp, higher = softer). */
+      shadowSoftness: max(nonNegative, 10),
       antialias: z.enum(['off', 'fxaa', 'msaa']),
       chunkRings: z.strictObject({
         active: intRange(1, 8),

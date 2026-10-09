@@ -164,7 +164,8 @@
     "dash": "Dash",
     "rest": "Rusten",
     "talkTo": "Praat met {name}",
-    "pet": "Aai {name}"
+    "pet": "Aai {name}",
+    "qualityChosen": "Graphics ingesteld op {quality} voor dit apparaat. Je kunt het wijzigen in Instellingen."
   },
   "dialog": {
     "next": "Verder",
@@ -296,6 +297,17 @@
     "close": "Sluiten",
     "open": "Cheats",
     "flyUp": "Omhoog vliegen",
-    "flyDown": "Omlaag vliegen"
+    "flyDown": "Omlaag vliegen",
+    "season": "Seizoen",
+    "seasonCalendar": "Kalender",
+    "quality": "Graphics",
+    "rerunBenchmark": "Benchmark opnieuw",
+    "save": "Save-code",
+    "saveExport": "Exporteren",
+    "saveImport": "Importeren",
+    "saveCopy": "Kopiëren",
+    "saveLoad": "Laden",
+    "savePaste": "Plak hier een save-code",
+    "saveInvalid": "Dit is geen geldige save-code."
   }
 }

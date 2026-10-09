@@ -44,6 +44,7 @@ export class NpcRenderer {
         mesh.instanceMatrix.setUsage(DynamicDrawUsage);
         mesh.count = 0;
         mesh.name = `npcs:${key}`;
+        mesh.castShadow = true;
         mesh.matrixAutoUpdate = false;
         // NPCs move: the cached bounding sphere of the instances would go stale.
         mesh.frustumCulled = false;

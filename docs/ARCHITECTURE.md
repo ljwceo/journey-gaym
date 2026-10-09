@@ -57,7 +57,7 @@ Alleen data in `public/data/zones.json`:
 - `scripts/check-bundle.mjs` laat de build falen als één bestand groter is dan 800 kB.
 
 ## Cheatmenu (alleen debug)
-`src/systems/Cheats.ts` (snelheid, vliegen) en `src/ui/CheatPanel.ts` (F6 of de knop "Cheats"). Wordt nooit opgeslagen; zet je debugmodus uit, dan gaan alle cheats uit.
+`src/systems/Cheats.ts` (snelheid, vliegen) en `src/ui/CheatPanel.ts` (F6 of de knop "Cheats"): snelheid, vliegen, chunkranden, seizoen forceren, benchmark opnieuw, save exporteren/importeren als tekstcode, teleport naar elke zone. Wordt nooit opgeslagen; zet je debugmodus uit, dan gaan alle cheats uit.
 
 ## NPC's (stap 1.9)
 
@@ -67,3 +67,13 @@ Alleen data in `public/data/zones.json`:
 - **Praten** (`WorldState` + `ui/Dialog.ts`): het dichtstbijzijnde NPC binnen bereik krijgt het interactie-icoontje; E of tikken opent het dialoogvenster. Events: `npcTalked` (elk gesprek), `npcMet` (eerste keer → autosave).
 - **Nieuwe NPC toevoegen:** zet hem in `npcs.json` (en zijn id in `npcs` van zijn zone in `zones.json`) en zijn teksten in `en.json` + `nl.json`. De validator controleert de rest.
 
+
+## Grafische standen (stap 1.10)
+
+- **Eén baas:** `src/render/QualityManager.ts` kiest de stand en zet de renderer (resolutie, anti-aliasing). Iedereen die meer wil aanpassen luistert naar het event `qualityChanged`; de wereld (`WorldState.applyPreset`) past dan mist, kijkafstand, chunk-ringen, schaduwen en de dichtheid van versiering (riet) aan.
+- **Welke stand:** `chosenLevel` in `src/render/quality.ts`: koos de speler Low/Mid/High in Settings, dan die; bij Auto de automatisch gekozen stand (`autoQuality` in de save); daarvoor de `default` uit `quality.json`.
+- **Benchmark** (alleen bij Auto zonder gekozen stand): de eerste seconden in de wereld (na `warmupSeconds`, `durationSeconds` lang) wacht elk frame op de GPU (één pixel teruglezen) en meet hoe lang simuleren + tekenen duurt. De **mediaan** (één trage frame door laden telt niet) bepaalt de stand: ≤ `highMaxFrameMs` High, ≤ `midMaxFrameMs` Mid, anders Low. Opgeslagen + melding.
+- **Automatisch omlaag** (alleen bij Auto): `QualityTuner` middelt de fps over vensters van `windowSeconds`. Onder `belowFps` → één stand omlaag + melding. Na elke wissel, pauze of binnenkomen eerst `graceSecondsAfterChange` niets. Nooit omhoog. Alleen spelen in de wereld telt (niet pauze, menu's of de tab op de achtergrond).
+- **Wat een stand verandert** (alleen uiterlijk, nooit gameplay, §2.3): resolutie (`pixelRatio`), anti-aliasing (`off`, `fxaa` als nabewerking, `msaa` via een render target met 4 samples), schaduwen (`shadowDistance` m rond de speler, `shadowMapSize`, `shadowSoftness`), kijkafstand en mist (`fogFar`), chunk-ringen, versiering zonder botsing (`density.props`), fps-doel bij fps "Auto" (`fpsTarget`). Botsing, NPC-afstand en bomen/rotsen zijn op elke stand gelijk.
+- **Schaduwen:** één zon (`DirectionalLight`) die met de speler meeschuift (in hele schaduw-texels, tegen kruipende randen). Chunks en gebouwen ontvangen, bomen/rotsen/gebouwen/speler/NPC's werpen.
+- `density.grass`, `density.effects` en `lodBias` staan al in de data voor later (gras, effecten); ze doen nog niets.

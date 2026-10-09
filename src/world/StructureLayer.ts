@@ -71,6 +71,8 @@ export class StructureLayer implements ChunkListener, CameraOccluder {
       mesh.count = 0;
       mesh.visible = false;
       mesh.name = `structures:${name}`;
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
       // Matrices are in world coordinates; the mesh itself never moves.
       mesh.matrixAutoUpdate = false;
       root.add(mesh);

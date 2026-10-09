@@ -1,6 +1,7 @@
 import type { GameData } from '../data/types';
 import type { I18n } from '../i18n/I18n';
 import type { DebugOverlay } from '../render/DebugOverlay';
+import type { QualityManager } from '../render/QualityManager';
 import type { Renderer } from '../render/Renderer';
 import type { SaveData } from '../save/SaveData';
 import type { SaveManager } from '../save/SaveManager';
@@ -21,6 +22,8 @@ export interface GameContext {
   readonly i18n: I18n;
   readonly saves: SaveManager;
   readonly debug: DebugOverlay;
+  /** Graphics preset (Low / Mid / High): benchmark, auto-downgrade, renderer settings. */
+  readonly quality: QualityManager;
   /** Layer for HTML screens and panels, above the canvas. */
   readonly ui: HTMLElement;
   readonly overlays: Overlays;

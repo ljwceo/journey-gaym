@@ -36,6 +36,10 @@ self.onmessage = (event: MessageEvent<TerrainRequest>) => {
     return;
   }
   if (!config || !field) return;
+  if (message.type === 'density') {
+    config.scatter.density = message.density;
+    return;
+  }
   const start = performance.now();
   const segments = config.lodSegments[message.lod] ?? config.lodSegments[1];
   const mesh = buildChunkMesh(
