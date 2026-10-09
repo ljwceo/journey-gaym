@@ -1,5 +1,7 @@
 import {
+  type Camera,
   Color,
+  Vector3,
   DirectionalLight,
   Fog,
   Group,
@@ -17,7 +19,7 @@ import type { GameData, QualityPreset } from '../data/types';
 import { Player } from '../entities/Player';
 import { PropLibrary } from '../entities/PropFactory';
 import { CameraRig } from '../render/CameraRig';
-import { colorTokens, palette, resolveColorToken, terrainColors } from '../render/palette';
+import { colorTokens, palette, resolveColorToken } from '../render/palette';
 import { Cheats, stepFlying } from '../systems/Cheats';
 import { type Bounds, CollisionWorld } from '../systems/Collision';
 import {
@@ -28,40 +30,60 @@ import {
   stepMovement,
 } from '../systems/Movement';
 import { CheatPanel } from '../ui/CheatPanel';
+import { HUD } from '../ui/HUD';
+import { StructureLabels } from '../ui/StructureLabels';
 import { el } from '../ui/dom';
 import { pausePanel } from '../ui/menus/PausePanel';
 import { TouchControls } from '../ui/TouchControls';
+import { Checkpoints, checkpointsOf } from '../world/Checkpoints';
 import { ChunkDebug } from '../world/ChunkDebug';
+import type { ConditionContext } from '../world/Conditions';
 import { FloatingOrigin } from '../world/FloatingOrigin';
 import { GroundedMover } from '../world/GroundedMover';
+import type { InstanceHost } from '../world/Instances';
+import { buildRiverWater } from '../world/RiverWater';
 import { emptyBox, shapeBounds } from '../world/Shapes';
 import { SpatialHash } from '../world/SpatialHash';
+import { StructureLayer } from '../world/StructureLayer';
+import { placeStructures } from '../world/StructurePlacement';
+import { structureShape } from '../entities/StructureFactory';
 import { buildWorldGenConfig } from '../world/terrainConfig';
 import { TerrainField } from '../world/TerrainField';
-import { buildTestCourse } from '../world/TestCourse';
+import { Triggers } from '../world/Triggers';
 import { type StreamerStats, WorldStreamer } from '../world/WorldStreamer';
 import { ZoneLocator } from '../world/ZoneLocator';
 import { normalizeAppearance } from './creator';
+import type { Zone } from '../data/types';
 import { placeAtStart } from './flow';
 
 const DEG = Math.PI / 180;
 const DEBUG_REFRESH_MS = 250;
 /** Debug overlay lines this scene owns (removed again on exit). */
-const DEBUG_KEYS = ['pos', 'zone', 'chunks', 'energy', 'camera', 'cheats'] as const;
+const DEBUG_KEYS = ['pos', 'zone', 'chunks', 'places', 'energy', 'camera', 'cheats'] as const;
+/** Seconds over which fog and sky change color after entering another zone. */
+const FOG_SHARPNESS = 1.5;
+/** The interaction icon stays this far (CSS px) from the screen edges. */
+const ICON_MARGIN = 60;
 /** The sea plane is this many times the view distance wide (it follows the player). */
 const WATER_SCALE = 3;
 
 /**
- * The open world (step 1.7): terrain chunks stream in around the player from a Web Worker
- * (WorldStreamer), with the low-detail far map underneath, sea, fog and scattered props.
+ * The open world: terrain chunks stream in around the player from a Web Worker (WorldStreamer),
+ * with the low-detail far map underneath, sea, rivers, fog and scattered props. Placeholder
+ * buildings and landmarks (StructureLayer) come and go with the chunks they stand on.
  * Walking and dashing follow the ground (slope limit, deep water blocks); zone changes are
- * seamless and autosave. A floating origin keeps drawing precise far from (0, 0).
+ * seamless, show the zone name and autosave. Triggers explain places on the first visit,
+ * checkpoints are set by walking past them, and the city gate checks its condition.
+ * A floating origin keeps drawing precise far from (0, 0).
  *
  * Simulation (fixed 60 Hz): input → walking direction → Movement + collision + ground →
- * zone check → save position. Rendering (every frame): streaming budget, origin, interpolated
- * player, camera. Debug mode adds chunk info and a cheat menu (F6) for faster testing.
+ * gate → triggers, checkpoints, zone → save position. Rendering (every frame): streaming
+ * budget, origin, interpolated player, camera (kept in front of walls), HUD. Debug mode adds
+ * chunk info, building labels and a cheat menu (F6) for faster testing.
  */
-export class WorldState implements GameState {
+export class WorldState implements GameState, InstanceHost {
+  readonly currentInstance: string | null = null;
+
   private scene: Scene | null = null;
   private worldRoot: Group | null = null;
   private rig: CameraRig | null = null;
@@ -71,6 +93,17 @@ export class WorldState implements GameState {
   private streamer: WorldStreamer | null = null;
   private props: PropLibrary | null = null;
   private chunkDebug: ChunkDebug | null = null;
+  private structures: StructureLayer | null = null;
+  private labels: StructureLabels | null = null;
+  private triggers: Triggers | null = null;
+  private checkpoints: Checkpoints | null = null;
+  private hud: HUD | null = null;
+  /** True while the closed city gate holds the player back (the message shows once). */
+  private gateBlocked = false;
+  private readonly fogTarget = new Color();
+  private readonly conditionContext: ConditionContext = { level: 1, completedQuests: new Set() };
+  private readonly placesInside: string[] = [];
+  private readonly labelPoint = new Vector3();
   private water: Mesh | null = null;
   private origin: FloatingOrigin | null = null;
   private zones: ZoneLocator | null = null;
@@ -146,6 +179,11 @@ export class WorldState implements GameState {
 
     this.buildScene(data);
     this.paused = false;
+    this.gateBlocked = false;
+    if (this.labels) ctx.ui.append(this.labels.root);
+    this.hud = new HUD(data.player.hud, data.player.lowHpThreshold, () => this.interact());
+    ctx.ui.append(this.hud.root);
+    this.showZoneName(session.world.zone);
 
     this.cheatPanel = new CheatPanel(
       ctx,
@@ -182,6 +220,13 @@ export class WorldState implements GameState {
       }),
       // A new graphics preset changes the view distance and the chunk rings right away.
       ctx.events.on('settingsChanged', () => this.applyPreset()),
+      // Hooks for later: music per zone listens to the same event.
+      ctx.events.on('zoneEntered', ({ zoneId }) => this.showZoneName(zoneId)),
+      ctx.events.on('placeFirstVisited', ({ triggerId }) => {
+        const def = this.triggers?.defs.find((trigger) => trigger.id === triggerId);
+        if (def?.firstVisitText) this.hud?.showMessage(ctx.i18n.t(def.firstVisitText));
+      }),
+      ctx.events.on('checkpointSet', () => this.hud?.showMessage(ctx.i18n.t('hud.checkpointSet'))),
     );
     this.debugTimer = window.setInterval(this.updateDebug, DEBUG_REFRESH_MS);
   }
@@ -209,6 +254,10 @@ export class WorldState implements GameState {
     this.pauseButton = null;
     this.lookHint?.remove();
     this.lookHint = null;
+    this.hud?.dispose();
+    this.hud = null;
+    this.labels?.dispose();
+    this.labels = null;
     this.ctx.renderer.setCamera(null);
     this.disposeScene();
   }
@@ -224,11 +273,13 @@ export class WorldState implements GameState {
     screenToWorld(this.moveInput.x, this.moveInput.y, rig.orbit.yaw, this.moveWorld);
     this.command.x = this.moveWorld.x;
     this.command.z = this.moveWorld.z;
-    // Interaction (E / tap) is read here once NPCs exist (step 1.9).
-    input.consumePressed('interact');
+    // Interaction: E (or tapping the icon) at a checkpoint; NPCs join in step 1.9.
+    if (input.consumePressed('interact')) this.interact();
 
     player.beginStep();
     const s = player.state;
+    const fromX = s.x;
+    const fromZ = s.z;
     if (this.cheats.fly) {
       // Debug cheat: Space / ▲ up, Shift / ▼ down, through walls.
       input.consumePressed('dash');
@@ -246,11 +297,62 @@ export class WorldState implements GameState {
     } else {
       this.command.dash = input.consumePressed('dash');
       stepMovement(s, this.command, movement, dt, mover);
+      this.checkGate(fromX, fromZ);
       s.y = streamer.heightAt(s.x, s.z);
     }
     // Position first: entering a zone autosaves, and that save must have the new position.
     this.syncSave();
     this.checkZone();
+    if (session) {
+      this.triggers?.update(s.x, s.z, session.visitedPlaces);
+      this.checkpoints?.update(s.x, s.z, session.world);
+    }
+    this.hud?.rules.setEnergyFraction(s.energy / movement.maxEnergy);
+    this.hud?.setBar('energy', s.energy / movement.maxEnergy);
+  }
+
+  /** The closed city gate (condition false) holds the player back like a wall. */
+  private checkGate(fromX: number, fromZ: number): void {
+    const s = this.player?.state;
+    if (!s || !this.triggers) return;
+    const gate = this.triggers.blockingGate(s.x, s.z, this.conditionContext);
+    if (!gate) {
+      this.gateBlocked = false;
+      return;
+    }
+    s.x = fromX;
+    s.z = fromZ;
+    s.dashTime = 0;
+    if (!this.gateBlocked && gate.blockedText) {
+      this.hud?.showMessage(this.ctx.i18n.t(gate.blockedText));
+    }
+    this.gateBlocked = true;
+  }
+
+  /** Instances (interiors, dungeons) come in a later phase; every entrance is still closed. */
+  enterInstance(id: string): boolean {
+    const exists = this.ctx.data?.zones.zones.some((zone) =>
+      zone.instances.some((instance) => instance.id === id && instance.enabled),
+    );
+    if (exists) this.ctx.reportProblem(`Instance "${id}" is enabled but not built yet`);
+    return false;
+  }
+
+  exitInstance(): void {
+    // Nothing to leave yet: the player is always in the open world.
+  }
+
+  /** E or a tap on the icon: rest at a checkpoint (health and mana follow in phase 2). */
+  private interact(): void {
+    if (this.paused || !this.checkpoints?.near) return;
+    this.hud?.showMessage(this.ctx.i18n.t('hud.rested'));
+  }
+
+  private showZoneName(zoneId: string | null): void {
+    const zone = this.ctx.data?.zones.zones.find((entry: Zone) => entry.id === zoneId);
+    if (!zone) return;
+    this.hud?.showZone(zone.name);
+    this.fogTarget.set(resolveColorToken(zone.fogColor));
   }
 
   render(alpha: number, frameSeconds: number): void {
@@ -285,12 +387,63 @@ export class WorldState implements GameState {
       turning,
       this.ctx.session?.settings.cameraSensitivity ?? 1,
     );
-    rig.apply(origin.x, origin.z, streamer);
+    rig.apply(origin.x, origin.z, streamer, this.structures ?? undefined);
     // The sea follows the player (one plane, always under the view).
     this.water?.position.set(root.position.x, this.water.position.y, root.position.z);
     this.touch?.update();
     this.updateLookHint(input);
+    this.updateFog(scene, frameSeconds);
+    this.updateInteraction(rig.camera, origin.x, origin.z, input.usedTouch || this.coarsePointer);
+    this.labels?.update(
+      this.ctx.debug.isVisible,
+      rig.camera,
+      window.innerWidth,
+      window.innerHeight,
+      origin.x,
+      origin.z,
+      s.x,
+      s.z,
+    );
+    this.hud?.update(frameSeconds);
     this.ctx.renderer.render(scene, rig.camera);
+  }
+
+  /** Fog and sky drift towards the color of the zone you are in. */
+  private updateFog(scene: Scene, seconds: number): void {
+    const fog = scene.fog as Fog;
+    const amount = 1 - Math.exp(-FOG_SHARPNESS * seconds);
+    fog.color.lerp(this.fogTarget, amount);
+    (scene.background as Color).copy(fog.color);
+  }
+
+  /** The interaction icon above the checkpoint you stand at (projected to the screen). */
+  private updateInteraction(
+    camera: Camera,
+    originX: number,
+    originZ: number,
+    touch: boolean,
+  ): void {
+    const hud = this.hud;
+    const near = this.checkpoints?.near;
+    const data = this.ctx.data;
+    if (!hud) return;
+    if (!near || !data || this.paused || !this.streamer) {
+      hud.setInteraction(null, 0, 0, false);
+      return;
+    }
+    const y = this.streamer.heightAt(near.x, near.z) + data.player.hud.interactHeight;
+    const p = this.labelPoint.set(near.x - originX, y, near.z - originZ).project(camera);
+    if (p.z > 1) {
+      hud.setInteraction(null, 0, 0, false);
+      return;
+    }
+    // Kept on screen (and in the upper half, away from the joystick and buttons), so it can
+    // always be tapped.
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+    const x = Math.min(w - ICON_MARGIN, Math.max(ICON_MARGIN, ((p.x + 1) / 2) * w));
+    const sy = Math.min(h * 0.5, Math.max(ICON_MARGIN * 2, ((1 - p.y) / 2) * h));
+    hud.setInteraction(this.ctx.i18n.t('hud.rest'), x, sy, !touch);
   }
 
   private readonly groundHeight = (x: number, z: number): number =>
@@ -337,6 +490,7 @@ export class WorldState implements GameState {
     this.paused = true;
     this.input?.releasePointerLock();
     this.input?.releaseAll();
+    this.hud?.setInteraction(null, 0, 0, false);
     this.syncSave();
     this.ctx.persist();
     this.ctx.overlays.open(
@@ -421,6 +575,18 @@ export class WorldState implements GameState {
     const genConfig = buildWorldGenConfig(data.zones, resolveColorToken, preset.density.props);
     const field = new TerrainField(genConfig.terrain);
     this.props = new PropLibrary(world.props.map((prop) => prop.model));
+    const placed = placeStructures(
+      data.zones.zones,
+      (x, z) => field.heightAt(x, z),
+      structureShape,
+      world.chunkSize,
+      world.terrain.structureSink,
+    );
+    this.structures = new StructureLayer(placed, worldRoot, hash, resolveColorToken);
+    this.labels = new StructureLabels(this.structures);
+    this.triggers = new Triggers(data.triggers.triggers, data.triggers.conditions, this.ctx.events);
+    this.checkpoints = new Checkpoints(checkpointsOf(data.zones.zones), this.ctx.events);
+    this.fogTarget.set(fogColor);
     this.streamer = new WorldStreamer({
       config: genConfig,
       field,
@@ -432,6 +598,7 @@ export class WorldState implements GameState {
       collisionRing: world.terrain.collisionRing,
       createWorker: () =>
         new Worker(new URL('../workers/terrain.worker.ts', import.meta.url), { type: 'module' }),
+      listener: this.structures,
     });
     this.mover = new GroundedMover(this.collision, this.streamer, {
       maxRise: Math.tan(data.player.movement.slopeLimitDegrees * DEG),
@@ -449,17 +616,13 @@ export class WorldState implements GameState {
     worldRoot.add(water);
     this.water = water;
 
-    // Temporary test course around the spawn point until the buildings arrive (step 1.8).
-    const spawnPoint = zone?.spawnPoints[0];
-    const course = buildTestCourse(
-      spawnPoint?.x ?? spawn.x,
-      spawnPoint?.z ?? spawn.z,
-      terrainColors.zandsteen,
-      palette.mistpaars,
-      (x, z) => field.heightAt(x, z),
+    const rivers = buildRiverWater(
+      field,
+      genConfig.terrain.rivers,
+      world.terrain.riverWaterDrop,
+      colorTokens.get('zeewater') ?? palette.nachtinkt,
     );
-    for (const collider of course.colliders) hash.insert(collider);
-    for (const mesh of course.meshes) worldRoot.add(mesh);
+    if (rivers) worldRoot.add(rivers);
 
     const maxUnload = Math.max(...data.quality.presets.map((entry) => entry.chunkRings.unload));
     this.chunkDebug = new ChunkDebug(this.streamer, (maxUnload * 2 + 1) ** 2);
@@ -487,7 +650,7 @@ export class WorldState implements GameState {
 
     this.rig = new CameraRig(data.player.camera, preset.fogFar + 20);
     this.rig.orbit.snap(player.state.x, player.state.y, player.state.z, player.state.heading);
-    this.rig.apply(this.origin.x, this.origin.z, this.streamer);
+    this.rig.apply(this.origin.x, this.origin.z, this.streamer, this.structures);
     this.ctx.renderer.setCamera(this.rig.camera);
     this.worldRoot = worldRoot;
     this.scene = scene;
@@ -526,11 +689,14 @@ export class WorldState implements GameState {
     this.player = null;
     this.chunkDebug?.dispose();
     this.chunkDebug = null;
+    // The streamer first: unloading its chunks also takes the structures away.
     this.streamer?.dispose();
     this.streamer = null;
+    this.structures?.dispose();
+    this.structures = null;
     this.props?.dispose();
     this.props = null;
-    // What is left: the test course, the sea and the lights.
+    // What is left: the rivers, the sea and the lights.
     this.scene?.traverse((object) => {
       if (object instanceof Mesh) {
         object.geometry.dispose();
@@ -544,6 +710,8 @@ export class WorldState implements GameState {
     this.scene = null;
     this.worldRoot = null;
     this.water = null;
+    this.triggers = null;
+    this.checkpoints = null;
     this.rig = null;
     this.collision = null;
     this.mover = null;
@@ -574,6 +742,11 @@ export class WorldState implements GameState {
     debug.lines.set(
       'chunks',
       `near ${st.near} far ${st.far} loading ${st.loading} · worker ${st.workerMs.toFixed(1)} ms · apply max ${st.applyMsMax.toFixed(1)} ms · colliders ${st.colliders} · ${this.preset?.id ?? '?'}`,
+    );
+    const near = this.checkpoints?.near;
+    debug.lines.set(
+      'places',
+      `in ${this.triggers?.current(this.placesInside).join(', ') || '-'} · checkpoint ${this.ctx.session?.world.checkpoint ?? '-'}${near ? ' (here)' : ''} · structures ${this.structures?.active.length ?? 0} (${this.structures?.colliderCount ?? 0} colliders) · visited ${this.ctx.session?.visitedPlaces.length ?? 0}`,
     );
     debug.lines.set('energy', `${Math.round(s.energy)} · dash cd ${s.dashCooldown.toFixed(2)} s`);
     debug.lines.set(

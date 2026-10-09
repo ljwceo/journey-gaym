@@ -18,7 +18,7 @@
       "name": "Brother Ansel",
       "role": "priest",
       "zone": "greyhaven",
-      "position": { "x": -1755, "z": -135 },
+      "position": { "x": -1865, "z": -131 },
       "interaction": "talk",
       "behavior": "static",
       "dialogue": ["npc.brother_ansel.1", "npc.brother_ansel.2", "npc.brother_ansel.3"]
@@ -28,7 +28,7 @@
       "name": "Marco the Merchant",
       "role": "merchant",
       "zone": "greyhaven",
-      "position": { "x": -1815, "z": 125 },
+      "position": { "x": -1815, "z": 124 },
       "interaction": "talk",
       "behavior": "static",
       "dialogue": ["npc.marco.1", "npc.marco.2"]
@@ -38,7 +38,7 @@
       "name": "Hilda Ironhand",
       "role": "smith",
       "zone": "greyhaven",
-      "position": { "x": -1842, "z": 148 },
+      "position": { "x": -1843, "z": 147 },
       "interaction": "talk",
       "behavior": "static",
       "dialogue": ["npc.hilda.1", "npc.hilda.2"]
@@ -48,7 +48,7 @@
       "name": "Professor Fizzwick",
       "role": "alchemist",
       "zone": "greyhaven",
-      "position": { "x": -1798, "z": 162 },
+      "position": { "x": -1797, "z": 106 },
       "interaction": "talk",
       "behavior": "static",
       "dialogue": ["npc.fizzwick.1", "npc.fizzwick.2"]
@@ -58,7 +58,7 @@
       "name": "Rose the Herbalist",
       "role": "herbalist",
       "zone": "greyhaven",
-      "position": { "x": -1778, "z": 205 },
+      "position": { "x": -1780, "z": 197 },
       "interaction": "talk",
       "behavior": "static",
       "dialogue": ["npc.rose.1", "npc.rose.2"]
@@ -68,7 +68,7 @@
       "name": "Old Bertha",
       "role": "innkeeper",
       "zone": "greyhaven",
-      "position": { "x": -1830, "z": 92 },
+      "position": { "x": -1832, "z": 98 },
       "interaction": "talk",
       "behavior": "static",
       "dialogue": ["npc.bertha.1", "npc.bertha.2", "npc.bertha.3"]
@@ -108,7 +108,7 @@
       "name": "Pringle",
       "role": "companion",
       "zone": "greyhaven",
-      "position": { "x": -1758, "z": -125 },
+      "position": { "x": -1864, "z": -118 },
       "interaction": "pet",
       "behavior": "follow",
       "follow": { "distance": 1.8, "speed": 4.5 },

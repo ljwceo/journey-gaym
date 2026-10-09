@@ -27,6 +27,21 @@ export interface TerrainZone {
   color: number;
 }
 
+/** A river carved into the ground (zones.json `world.rivers`). Plain numbers for the worker. */
+export interface TerrainRiver {
+  /** Half the water width and the bank width (m). */
+  half: number;
+  bank: number;
+  depth: number;
+  /** Center line as x, z pairs. */
+  points: number[];
+  /** Bounding box of the river including its banks (quick rejection). */
+  minX: number;
+  minZ: number;
+  maxX: number;
+  maxZ: number;
+}
+
 export interface TerrainConfig {
   seed: number;
   /** World rectangle; outside it is sea. */
@@ -46,6 +61,9 @@ export interface TerrainConfig {
   /** Color of the sea floor, 0xRRGGBB. */
   seaColor: number;
   zones: TerrainZone[];
+  rivers: TerrainRiver[];
+  /** Color of a river bed, 0xRRGGBB. */
+  riverColor: number;
 }
 
 /** Result of `TerrainField.sample` (reused; no allocation). */
@@ -72,6 +90,9 @@ export class TerrainField {
   private readonly seaR: number;
   private readonly seaG: number;
   private readonly seaB: number;
+  private readonly riverR: number;
+  private readonly riverG: number;
+  private readonly riverB: number;
   private readonly scratch: TerrainSample = { height: 0, r: 0, g: 0, b: 0 };
 
   constructor(readonly config: TerrainConfig) {
@@ -83,6 +104,50 @@ export class TerrainField {
     this.seaR = ((config.seaColor >> 16) & 255) / 255;
     this.seaG = ((config.seaColor >> 8) & 255) / 255;
     this.seaB = (config.seaColor & 255) / 255;
+    this.riverR = ((config.riverColor >> 16) & 255) / 255;
+    this.riverG = ((config.riverColor >> 8) & 255) / 255;
+    this.riverB = (config.riverColor & 255) / 255;
+  }
+
+  /** Ground height at (x, z) as if there were no rivers (the river's water level follows it). */
+  landHeightAt(x: number, z: number): number {
+    return this.sample(x, z, this.scratch, false).height;
+  }
+
+  /**
+   * How much a river carves at (x, z): 1 in the water, falling to 0 at the outer edge of the
+   * banks, 0 elsewhere. Allocation-free.
+   */
+  riverAt(x: number, z: number): number {
+    const rivers = this.config.rivers;
+    let strongest = 0;
+    for (let r = 0; r < rivers.length; r++) {
+      const river = rivers[r] as TerrainRiver;
+      if (x < river.minX || x > river.maxX || z < river.minZ || z > river.maxZ) continue;
+      const d = distanceToLine(river.points, x, z);
+      const reach = river.half + river.bank;
+      if (d >= reach) continue;
+      const profile = d <= river.half ? 1 : 1 - smoothstep(river.half, reach, d);
+      if (profile > strongest) strongest = profile;
+    }
+    return strongest;
+  }
+
+  /** Depth (m) a river carves at (x, z); 0 away from rivers. */
+  private riverCarve(x: number, z: number): number {
+    const rivers = this.config.rivers;
+    let carve = 0;
+    for (let r = 0; r < rivers.length; r++) {
+      const river = rivers[r] as TerrainRiver;
+      if (x < river.minX || x > river.maxX || z < river.minZ || z > river.maxZ) continue;
+      const d = distanceToLine(river.points, x, z);
+      const reach = river.half + river.bank;
+      if (d >= reach) continue;
+      const profile = d <= river.half ? 1 : 1 - smoothstep(river.half, reach, d);
+      const depth = river.depth * profile;
+      if (depth > carve) carve = depth;
+    }
+    return carve;
   }
 
   /** Ground height at (x, z). */
@@ -90,8 +155,11 @@ export class TerrainField {
     return this.sample(x, z, this.scratch).height;
   }
 
-  /** Height and color at (x, z), written into `out`. Allocation-free. */
-  sample(x: number, z: number, out: TerrainSample): TerrainSample {
+  /**
+   * Height and color at (x, z), written into `out`. Allocation-free.
+   * @param rivers false = the land without river beds
+   */
+  sample(x: number, z: number, out: TerrainSample, rivers = true): TerrainSample {
     const cfg = this.config;
     const half = cfg.blendWidth / 2;
     // Start from the sea; each priority group is painted over what lies below it.
@@ -144,6 +212,18 @@ export class TerrainField {
     g = this.seaG + (g - this.seaG) * land;
     b = this.seaB + (b - this.seaB) * land;
 
+    // Rivers: the bed sinks below the land and takes the river color.
+    if (rivers && cfg.rivers.length > 0) {
+      const carve = this.riverCarve(x, z);
+      if (carve > 0) {
+        height -= carve;
+        const wet = Math.min(1, carve / 0.5);
+        r += (this.riverR - r) * wet;
+        g += (this.riverG - g) * wet;
+        b += (this.riverB - b) * wet;
+      }
+    }
+
     // Slight brightness variation, from a finer noise layer than the hills.
     const shade = 1 + fbm2((cfg.seed ^ 0x5bd1e995) | 0, x, z, 40, 2) * COLOR_VARIATION * 2;
     out.height = height;
@@ -152,4 +232,23 @@ export class TerrainField {
     out.b = Math.min(1, b * shade);
     return out;
   }
+}
+
+/** Distance from (x, z) to a polyline given as x, z pairs. Allocation-free. */
+export function distanceToLine(points: readonly number[], x: number, z: number): number {
+  let best = Infinity;
+  for (let i = 0; i + 3 < points.length; i += 2) {
+    const ax = points[i] as number;
+    const az = points[i + 1] as number;
+    const dx = (points[i + 2] as number) - ax;
+    const dz = (points[i + 3] as number) - az;
+    const lengthSq = dx * dx + dz * dz;
+    let t = lengthSq > 0 ? ((x - ax) * dx + (z - az) * dz) / lengthSq : 0;
+    t = t < 0 ? 0 : t > 1 ? 1 : t;
+    const px = x - (ax + dx * t);
+    const pz = z - (az + dz * t);
+    const d = px * px + pz * pz;
+    if (d < best) best = d;
+  }
+  return Math.sqrt(best);
 }

@@ -24,6 +24,7 @@ import { circleCollider, type CircleCollider } from './Colliders';
 import type { Ground } from './Ground';
 import { PROP_STRIDE } from './Scatter';
 import type { SpatialHash } from './SpatialHash';
+import type { ChunkListener } from './StructureLayer';
 import type { WorldGenConfig } from './terrainConfig';
 import type { TerrainField } from './TerrainField';
 import type { TerrainRequest, TerrainResponse } from './terrainProtocol';
@@ -88,6 +89,8 @@ export interface StreamerOptions {
   collisionRing: number;
   /** Creates the terrain worker (a stub in tests). */
   createWorker: () => Worker;
+  /** Told when a chunk first gets ground and when it is unloaded (structures follow chunks). */
+  listener?: ChunkListener;
 }
 
 /**
@@ -336,6 +339,7 @@ export class WorldStreamer implements Ground {
     chunk.propData = chunk.lod === 0 ? result.props : null;
     if (chunk.propData) this.addPropMeshes(chunk, chunk.propData);
     this.syncColliders(chunk);
+    if (!old) this.options.listener?.chunkLoaded(chunk.cx, chunk.cz);
   }
 
   private applyFar(data: FarMeshData): void {
@@ -441,6 +445,7 @@ export class WorldStreamer implements Ground {
     if (chunk.mesh) {
       chunk.mesh.removeFromParent();
       chunk.mesh.geometry.dispose();
+      this.options.listener?.chunkUnloaded(chunk.cx, chunk.cz);
     }
     chunk.mesh = null;
     chunk.heights = null;

@@ -24,7 +24,9 @@
       "skirtDepth": 6,
       "collisionRing": 1,
       "farGridSpacing": 32,
-      "clearingRadius": 18
+      "clearingRadius": 18,
+      "riverWaterDrop": 0.45,
+      "structureSink": 1.0
     },
     "props": [
       {
@@ -52,6 +54,58 @@
         "model": "placeholder:reed",
         "colliderRadius": 0
       }
+    ],
+    "rivers": [
+      {
+        "id": "greyhaven_river",
+        "width": 8,
+        "bank": 3,
+        "depth": 1.4,
+        "points": [
+          [-1300, 40],
+          [-1400, 110],
+          [-1470, 170],
+          [-1520, 180],
+          [-1600, 178],
+          [-1700, 190],
+          [-1770, 182],
+          [-1840, 168],
+          [-1900, 155],
+          [-1960, 150],
+          [-1998, 150]
+        ]
+      },
+      {
+        "id": "greenwood_brook_north",
+        "width": 5,
+        "bank": 2.5,
+        "depth": 1.1,
+        "points": [
+          [-1060, -1230],
+          [-1090, -1000],
+          [-1150, -820],
+          [-1190, -700],
+          [-1230, -560],
+          [-1300, -430],
+          [-1380, -280],
+          [-1440, -120],
+          [-1460, 40],
+          [-1420, 105]
+        ]
+      },
+      {
+        "id": "greenwood_brook_east",
+        "width": 4,
+        "bank": 2,
+        "depth": 1.0,
+        "points": [
+          [-740, -1150],
+          [-800, -900],
+          [-880, -760],
+          [-960, -700],
+          [-1030, -680]
+        ]
+      }
     ]
   },
   "startZone": "greyhaven",
@@ -77,8 +131,8 @@
       "spawnPoints": [
         {
           "id": "monastery_bed",
-          "x": -1760,
-          "z": -130
+          "x": -1868,
+          "z": -122
         },
         {
           "id": "city_gate",
@@ -89,8 +143,9 @@
       "checkpoint": {
         "id": "greyhaven_monastery",
         "kind": "monastery",
-        "x": -1760,
-        "z": -145
+        "x": -1871,
+        "z": -125,
+        "radius": 8
       },
       "npcs": [
         "brother_ansel",
@@ -113,10 +168,609 @@
             "minZ": -380,
             "maxX": -1520,
             "maxZ": 340
-          }
+          },
+          "noScatter": true
         }
       ],
       "instances": [],
+      "structures": [
+        {
+          "id": "wall_north",
+          "model": "placeholder:wall",
+          "x": -1730,
+          "z": -380,
+          "size": [420, 9, 3],
+          "color": "steengrijs",
+          "collider": "box"
+        },
+        {
+          "id": "wall_south",
+          "model": "placeholder:wall",
+          "x": -1730,
+          "z": 340,
+          "size": [420, 9, 3],
+          "color": "steengrijs",
+          "collider": "box"
+        },
+        {
+          "id": "wall_east_north",
+          "model": "placeholder:wall",
+          "x": -1520,
+          "z": -194,
+          "size": [3, 9, 372],
+          "color": "steengrijs",
+          "collider": "box"
+        },
+        {
+          "id": "wall_east_middle",
+          "model": "placeholder:wall",
+          "x": -1520,
+          "z": 89,
+          "size": [3, 9, 162],
+          "color": "steengrijs",
+          "collider": "box"
+        },
+        {
+          "id": "wall_east_south",
+          "model": "placeholder:wall",
+          "x": -1520,
+          "z": 265,
+          "size": [3, 9, 150],
+          "color": "steengrijs",
+          "collider": "box"
+        },
+        {
+          "id": "gate_tower_north",
+          "name": "City Gate",
+          "model": "placeholder:tower",
+          "x": -1520,
+          "z": -13,
+          "size": [8, 14, 8],
+          "color": "steengrijs",
+          "collider": "circle"
+        },
+        {
+          "id": "gate_tower_south",
+          "model": "placeholder:tower",
+          "x": -1520,
+          "z": 13,
+          "size": [8, 14, 8],
+          "color": "steengrijs",
+          "collider": "circle"
+        },
+        {
+          "id": "aqueduct",
+          "name": "Aqueduct Bridge",
+          "model": "placeholder:aqueduct",
+          "x": -1520,
+          "z": 180,
+          "size": [6, 14, 26],
+          "color": "steengrijs",
+          "collider": "none"
+        },
+        {
+          "id": "river_grate",
+          "model": "placeholder:wall",
+          "x": -1520,
+          "z": 180,
+          "size": [0.6, 3, 22],
+          "color": "schemerviolet",
+          "collider": "box"
+        },
+        {
+          "id": "watchtower",
+          "name": "Watchtower",
+          "model": "placeholder:tower",
+          "x": -1880,
+          "z": -355,
+          "size": [9, 22, 9],
+          "color": "steengrijs",
+          "collider": "circle"
+        },
+        {
+          "id": "monastery",
+          "name": "Monastery",
+          "model": "placeholder:house",
+          "x": -1895,
+          "z": -130,
+          "size": [26, 10, 16],
+          "color": "steengrijs",
+          "collider": "box"
+        },
+        {
+          "id": "monastery_bell_tower",
+          "model": "placeholder:tower",
+          "x": -1906,
+          "z": -142,
+          "size": [6, 18, 6],
+          "color": "steengrijs",
+          "collider": "circle"
+        },
+        {
+          "id": "monastery_bed",
+          "model": "placeholder:block",
+          "x": -1877,
+          "z": -125,
+          "size": [2, 0.6, 1],
+          "color": "zonsondergang",
+          "collider": "none"
+        },
+        {
+          "id": "academy",
+          "name": "Academy",
+          "model": "placeholder:house",
+          "x": -1725,
+          "z": -15,
+          "size": [36, 16, 24],
+          "color": "steengrijs",
+          "collider": "box"
+        },
+        {
+          "id": "academy_tower_1",
+          "model": "placeholder:tower",
+          "x": -1743,
+          "z": -27,
+          "size": [7, 28, 7],
+          "color": "schemerviolet",
+          "collider": "circle"
+        },
+        {
+          "id": "academy_tower_2",
+          "model": "placeholder:tower",
+          "x": -1707,
+          "z": -27,
+          "size": [7, 28, 7],
+          "color": "schemerviolet",
+          "collider": "circle"
+        },
+        {
+          "id": "academy_tower_3",
+          "model": "placeholder:tower",
+          "x": -1743,
+          "z": -3,
+          "size": [7, 28, 7],
+          "color": "schemerviolet",
+          "collider": "circle"
+        },
+        {
+          "id": "academy_tower_4",
+          "model": "placeholder:tower",
+          "x": -1707,
+          "z": -3,
+          "size": [7, 28, 7],
+          "color": "schemerviolet",
+          "collider": "circle"
+        },
+        {
+          "id": "training_fence_north",
+          "name": "Training Field",
+          "model": "placeholder:block",
+          "x": -1685,
+          "z": 50,
+          "size": [30, 1.2, 0.4],
+          "color": "zandsteen",
+          "collider": "box"
+        },
+        {
+          "id": "training_fence_south",
+          "model": "placeholder:block",
+          "x": -1685,
+          "z": 80,
+          "size": [30, 1.2, 0.4],
+          "color": "zandsteen",
+          "collider": "box"
+        },
+        {
+          "id": "training_fence_east",
+          "model": "placeholder:block",
+          "x": -1670,
+          "z": 65,
+          "size": [0.4, 1.2, 30],
+          "color": "zandsteen",
+          "collider": "box"
+        },
+        {
+          "id": "training_dummy_1",
+          "model": "placeholder:dummy",
+          "x": -1680,
+          "z": 58,
+          "size": [1.4, 2, 0.5],
+          "color": "zandsteen",
+          "collider": "circle"
+        },
+        {
+          "id": "training_dummy_2",
+          "model": "placeholder:dummy",
+          "x": -1676,
+          "z": 71,
+          "size": [1.4, 2, 0.5],
+          "color": "zandsteen",
+          "collider": "circle"
+        },
+        {
+          "id": "forge",
+          "name": "Forge",
+          "model": "placeholder:house",
+          "x": -1852,
+          "z": 138,
+          "size": [10, 7, 10],
+          "color": "lavasteen",
+          "collider": "box"
+        },
+        {
+          "id": "alchemy_lab",
+          "name": "Alchemy Lab",
+          "model": "placeholder:house",
+          "x": -1792,
+          "z": 96,
+          "size": [10, 8, 8],
+          "color": "schemerviolet",
+          "collider": "box"
+        },
+        {
+          "id": "golden_kettle",
+          "name": "The Golden Kettle",
+          "model": "placeholder:house",
+          "x": -1842,
+          "z": 88,
+          "size": [14, 9, 10],
+          "color": "zonsondergang",
+          "collider": "box"
+        },
+        {
+          "id": "market_stall_1",
+          "name": "Market Square",
+          "model": "placeholder:stall",
+          "x": -1830,
+          "z": 110,
+          "size": [4, 3, 3],
+          "color": "lantaarnamber",
+          "collider": "box"
+        },
+        {
+          "id": "market_stall_2",
+          "model": "placeholder:stall",
+          "x": -1818,
+          "z": 107,
+          "size": [4, 3, 3],
+          "color": "lantaarnamber",
+          "collider": "box"
+        },
+        {
+          "id": "market_stall_3",
+          "model": "placeholder:stall",
+          "x": -1806,
+          "z": 112,
+          "size": [4, 3, 3],
+          "color": "lantaarnamber",
+          "collider": "box"
+        },
+        {
+          "id": "market_stall_4",
+          "model": "placeholder:stall",
+          "x": -1830,
+          "z": 128,
+          "size": [4, 3, 3],
+          "color": "lantaarnamber",
+          "collider": "box"
+        },
+        {
+          "id": "garden_hedge_west",
+          "name": "Garden",
+          "model": "placeholder:block",
+          "x": -1795,
+          "z": 208,
+          "size": [1, 1.2, 26],
+          "color": "bosgroen",
+          "collider": "box"
+        },
+        {
+          "id": "garden_hedge_east",
+          "model": "placeholder:block",
+          "x": -1765,
+          "z": 208,
+          "size": [1, 1.2, 26],
+          "color": "bosgroen",
+          "collider": "box"
+        },
+        {
+          "id": "garden_hedge_south",
+          "model": "placeholder:block",
+          "x": -1780,
+          "z": 221,
+          "size": [30, 1.2, 1],
+          "color": "bosgroen",
+          "collider": "box"
+        },
+        {
+          "id": "garden_bed_1",
+          "model": "placeholder:block",
+          "x": -1786,
+          "z": 206,
+          "size": [6, 0.4, 10],
+          "color": "mosgroen",
+          "collider": "none"
+        },
+        {
+          "id": "garden_bed_2",
+          "model": "placeholder:block",
+          "x": -1774,
+          "z": 206,
+          "size": [6, 0.4, 10],
+          "color": "mosgroen",
+          "collider": "none"
+        },
+        {
+          "id": "harbor_pier_north",
+          "name": "Harbor",
+          "model": "placeholder:block",
+          "x": -1952,
+          "z": 122,
+          "size": [44, 1.2, 4],
+          "color": "zandsteen",
+          "y": 0.2,
+          "collider": "none"
+        },
+        {
+          "id": "harbor_pier_south",
+          "model": "placeholder:block",
+          "x": -1952,
+          "z": 188,
+          "size": [44, 1.2, 4],
+          "color": "zandsteen",
+          "y": 0.2,
+          "collider": "none"
+        },
+        {
+          "id": "harbor_warehouse",
+          "model": "placeholder:house",
+          "x": -1892,
+          "z": 112,
+          "size": [16, 8, 10],
+          "color": "steengrijs",
+          "collider": "box"
+        },
+        {
+          "id": "island",
+          "model": "placeholder:island",
+          "x": -1985,
+          "z": 250,
+          "size": [26, 10, 26],
+          "color": "steengrijs",
+          "collider": "circle"
+        },
+        {
+          "id": "island_fort",
+          "name": "Island Fort",
+          "model": "placeholder:tower",
+          "x": -1985,
+          "z": 250,
+          "size": [13, 12, 13],
+          "color": "steengrijs",
+          "elevation": 10,
+          "collider": "none"
+        },
+        {
+          "id": "house_1",
+          "model": "placeholder:house",
+          "x": -1880,
+          "z": -80,
+          "size": [12, 7, 10],
+          "rotation": 0,
+          "color": "zandsteen",
+          "collider": "box"
+        },
+        {
+          "id": "house_2",
+          "model": "placeholder:house",
+          "x": -1880,
+          "z": -50,
+          "size": [10, 8, 12],
+          "rotation": 90,
+          "color": "steengrijs",
+          "collider": "box"
+        },
+        {
+          "id": "house_3",
+          "model": "placeholder:house",
+          "x": -1880,
+          "z": -18,
+          "size": [12, 7, 10],
+          "rotation": 0,
+          "color": "zandsteen",
+          "collider": "box"
+        },
+        {
+          "id": "house_4",
+          "model": "placeholder:house",
+          "x": -1880,
+          "z": 14,
+          "size": [10, 9, 10],
+          "rotation": 0,
+          "color": "steengrijs",
+          "collider": "box"
+        },
+        {
+          "id": "house_5",
+          "model": "placeholder:house",
+          "x": -1842,
+          "z": -85,
+          "size": [12, 8, 10],
+          "rotation": 90,
+          "color": "zandsteen",
+          "collider": "box"
+        },
+        {
+          "id": "house_6",
+          "model": "placeholder:house",
+          "x": -1842,
+          "z": -52,
+          "size": [10, 7, 12],
+          "rotation": 0,
+          "color": "steengrijs",
+          "collider": "box"
+        },
+        {
+          "id": "house_7",
+          "model": "placeholder:house",
+          "x": -1842,
+          "z": -20,
+          "size": [12, 8, 10],
+          "rotation": 0,
+          "color": "zandsteen",
+          "collider": "box"
+        },
+        {
+          "id": "house_8",
+          "model": "placeholder:house",
+          "x": -1842,
+          "z": 40,
+          "size": [10, 7, 10],
+          "rotation": 90,
+          "color": "steengrijs",
+          "collider": "box"
+        },
+        {
+          "id": "house_9",
+          "model": "placeholder:house",
+          "x": -1790,
+          "z": -60,
+          "size": [14, 8, 10],
+          "rotation": 0,
+          "color": "zandsteen",
+          "collider": "box"
+        },
+        {
+          "id": "house_10",
+          "model": "placeholder:house",
+          "x": -1790,
+          "z": -25,
+          "size": [12, 7, 12],
+          "rotation": 0,
+          "color": "steengrijs",
+          "collider": "box"
+        },
+        {
+          "id": "house_11",
+          "model": "placeholder:house",
+          "x": -1785,
+          "z": 45,
+          "size": [12, 8, 10],
+          "rotation": 90,
+          "color": "zandsteen",
+          "collider": "box"
+        },
+        {
+          "id": "house_12",
+          "model": "placeholder:house",
+          "x": -1760,
+          "z": 75,
+          "size": [10, 7, 10],
+          "rotation": 0,
+          "color": "steengrijs",
+          "collider": "box"
+        },
+        {
+          "id": "house_13",
+          "model": "placeholder:house",
+          "x": -1650,
+          "z": -120,
+          "size": [14, 8, 12],
+          "rotation": 0,
+          "color": "zandsteen",
+          "collider": "box"
+        },
+        {
+          "id": "house_14",
+          "model": "placeholder:house",
+          "x": -1620,
+          "z": -80,
+          "size": [12, 7, 10],
+          "rotation": 90,
+          "color": "steengrijs",
+          "collider": "box"
+        },
+        {
+          "id": "house_15",
+          "model": "placeholder:house",
+          "x": -1650,
+          "z": 120,
+          "size": [12, 8, 12],
+          "rotation": 0,
+          "color": "zandsteen",
+          "collider": "box"
+        },
+        {
+          "id": "house_16",
+          "model": "placeholder:house",
+          "x": -1600,
+          "z": 100,
+          "size": [10, 7, 10],
+          "rotation": 0,
+          "color": "steengrijs",
+          "collider": "box"
+        },
+        {
+          "id": "house_17",
+          "model": "placeholder:house",
+          "x": -1610,
+          "z": 250,
+          "size": [14, 8, 10],
+          "rotation": 90,
+          "color": "zandsteen",
+          "collider": "box"
+        },
+        {
+          "id": "house_18",
+          "model": "placeholder:house",
+          "x": -1700,
+          "z": 260,
+          "size": [12, 7, 12],
+          "rotation": 0,
+          "color": "steengrijs",
+          "collider": "box"
+        },
+        {
+          "id": "house_19",
+          "model": "placeholder:house",
+          "x": -1860,
+          "z": 250,
+          "size": [12, 8, 10],
+          "rotation": 0,
+          "color": "zandsteen",
+          "collider": "box"
+        },
+        {
+          "id": "house_20",
+          "model": "placeholder:house",
+          "x": -1640,
+          "z": -250,
+          "size": [14, 8, 12],
+          "rotation": 90,
+          "color": "steengrijs",
+          "collider": "box"
+        },
+        {
+          "id": "house_21",
+          "model": "placeholder:house",
+          "x": -1760,
+          "z": -250,
+          "size": [12, 7, 10],
+          "rotation": 0,
+          "color": "zandsteen",
+          "collider": "box"
+        },
+        {
+          "id": "house_22",
+          "model": "placeholder:house",
+          "x": -1700,
+          "z": -300,
+          "size": [12, 8, 10],
+          "rotation": 0,
+          "color": "steengrijs",
+          "collider": "box"
+        }
+      ],
       "scatter": [
         {
           "prop": "tree",
@@ -161,7 +815,8 @@
         "id": "greenwood_shrine",
         "kind": "elven_shrine",
         "x": -1250,
-        "z": -400
+        "z": -394,
+        "radius": 8
       },
       "npcs": ["treewarden_1", "treewarden_2", "treewarden_3"],
       "areas": [
@@ -184,6 +839,170 @@
             "z": -1000
           },
           "enabled": false
+        }
+      ],
+      "structures": [
+        {
+          "id": "old_tjikko",
+          "name": "Old Tjikko",
+          "model": "placeholder:giant_tree",
+          "x": -1100,
+          "z": -650,
+          "size": [56, 64, 56],
+          "collider": "circle"
+        },
+        {
+          "id": "elven_platform_1",
+          "name": "Elven City",
+          "model": "placeholder:platform",
+          "x": -1030,
+          "z": -631,
+          "size": [14, 9, 14],
+          "color": "zandsteen",
+          "collider": "posts"
+        },
+        {
+          "id": "elven_house_1",
+          "model": "placeholder:house",
+          "x": -1030,
+          "z": -631,
+          "size": [8, 5, 8],
+          "color": "mosgroen",
+          "elevation": 9,
+          "collider": "none"
+        },
+        {
+          "id": "elven_platform_2",
+          "model": "placeholder:platform",
+          "x": -1081,
+          "z": -580,
+          "size": [14, 9, 14],
+          "color": "zandsteen",
+          "collider": "posts"
+        },
+        {
+          "id": "elven_platform_3",
+          "model": "placeholder:platform",
+          "x": -1151,
+          "z": -599,
+          "size": [14, 9, 14],
+          "color": "zandsteen",
+          "collider": "posts"
+        },
+        {
+          "id": "elven_house_2",
+          "model": "placeholder:house",
+          "x": -1151,
+          "z": -599,
+          "size": [8, 5, 8],
+          "color": "mosgroen",
+          "elevation": 9,
+          "collider": "none"
+        },
+        {
+          "id": "elven_platform_4",
+          "model": "placeholder:platform",
+          "x": -1170,
+          "z": -669,
+          "size": [14, 9, 14],
+          "color": "zandsteen",
+          "collider": "posts"
+        },
+        {
+          "id": "elven_platform_5",
+          "model": "placeholder:platform",
+          "x": -1119,
+          "z": -720,
+          "size": [14, 9, 14],
+          "color": "zandsteen",
+          "collider": "posts"
+        },
+        {
+          "id": "elven_house_3",
+          "model": "placeholder:house",
+          "x": -1119,
+          "z": -720,
+          "size": [8, 5, 8],
+          "color": "mosgroen",
+          "elevation": 9,
+          "collider": "none"
+        },
+        {
+          "id": "elven_platform_6",
+          "model": "placeholder:platform",
+          "x": -1049,
+          "z": -701,
+          "size": [14, 9, 14],
+          "color": "zandsteen",
+          "collider": "posts"
+        },
+        {
+          "id": "elven_bridge_1",
+          "model": "placeholder:bridge",
+          "size": [2.5, 0.4, 0],
+          "color": "zandsteen",
+          "collider": "none",
+          "connects": ["elven_platform_1", "elven_platform_2"]
+        },
+        {
+          "id": "elven_bridge_2",
+          "model": "placeholder:bridge",
+          "size": [2.5, 0.4, 0],
+          "color": "zandsteen",
+          "collider": "none",
+          "connects": ["elven_platform_2", "elven_platform_3"]
+        },
+        {
+          "id": "elven_bridge_3",
+          "model": "placeholder:bridge",
+          "size": [2.5, 0.4, 0],
+          "color": "zandsteen",
+          "collider": "none",
+          "connects": ["elven_platform_3", "elven_platform_4"]
+        },
+        {
+          "id": "elven_bridge_4",
+          "model": "placeholder:bridge",
+          "size": [2.5, 0.4, 0],
+          "color": "zandsteen",
+          "collider": "none",
+          "connects": ["elven_platform_4", "elven_platform_5"]
+        },
+        {
+          "id": "elven_bridge_5",
+          "model": "placeholder:bridge",
+          "size": [2.5, 0.4, 0],
+          "color": "zandsteen",
+          "collider": "none",
+          "connects": ["elven_platform_5", "elven_platform_6"]
+        },
+        {
+          "id": "elven_bridge_6",
+          "model": "placeholder:bridge",
+          "size": [2.5, 0.4, 0],
+          "color": "zandsteen",
+          "collider": "none",
+          "connects": ["elven_platform_6", "elven_platform_1"]
+        },
+        {
+          "id": "greenwood_shrine",
+          "name": "Elven Shrine",
+          "model": "placeholder:shrine",
+          "x": -1250,
+          "z": -400,
+          "size": [8, 4, 8],
+          "color": "steengrijs",
+          "collider": "circle"
+        },
+        {
+          "id": "wortelgrotten_entrance",
+          "name": "De Wortelgrotten",
+          "model": "placeholder:cave_entrance",
+          "x": -900,
+          "z": -1000,
+          "size": [16, 8, 12],
+          "color": "lavasteen",
+          "collider": "box"
         }
       ],
       "scatter": [
@@ -236,11 +1055,43 @@
         "id": "mournfen_monastery",
         "kind": "stilt_monastery",
         "x": -1100,
-        "z": 600
+        "z": 612,
+        "radius": 8
       },
       "npcs": [],
       "areas": [],
       "instances": [],
+      "structures": [
+        {
+          "id": "stilt_platform",
+          "name": "Stilt Monastery",
+          "model": "placeholder:platform",
+          "x": -1100,
+          "z": 600,
+          "size": [18, 3.5, 14],
+          "color": "zandsteen",
+          "collider": "posts"
+        },
+        {
+          "id": "stilt_monastery",
+          "model": "placeholder:house",
+          "x": -1100,
+          "z": 600,
+          "size": [12, 6, 9],
+          "color": "zandsteen",
+          "elevation": 3.5,
+          "collider": "none"
+        },
+        {
+          "id": "stilt_ladder",
+          "model": "placeholder:block",
+          "x": -1100,
+          "z": 608,
+          "size": [2, 3.5, 1],
+          "color": "zandsteen",
+          "collider": "none"
+        }
+      ],
       "scatter": [
         {
           "prop": "reed",

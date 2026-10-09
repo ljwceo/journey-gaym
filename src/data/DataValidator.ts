@@ -2,7 +2,7 @@ import type { z } from 'zod/mini';
 import { boxContains, emptyBox, pointInShape, shapeBounds } from '../world/Shapes';
 import { DEFAULT_CAMERA_SENSITIVITY } from '../save/SaveData';
 import { dataFileNames, dataSchemas, type DataFileName } from './schemas';
-import type { GameData, Shape } from './types';
+import type { GameData, Shape, Zone } from './types';
 
 export interface ValidationIssue {
   /** Data file name without extension, e.g. "npcs". */
@@ -157,10 +157,12 @@ class CrossChecker {
     const d = this.data;
     this.unique('zone', 'zones', 'zones', d.zones.zones);
     this.unique('prop', 'zones', 'world.props', d.zones.world.props);
+    this.unique('river', 'zones', 'world.rivers', d.zones.world.rivers ?? []);
     d.zones.zones.forEach((zone, i) => {
       this.unique(`spawn:${zone.id}`, 'zones', `zones[${i}].spawnPoints`, zone.spawnPoints);
       this.unique('area', 'zones', `zones[${i}].areas`, zone.areas);
       this.unique('instance', 'zones', `zones[${i}].instances`, zone.instances);
+      this.unique('structure', 'zones', `zones[${i}].structures`, zone.structures ?? []);
       if (zone.checkpoint) this.unique('checkpoint', 'zones', `zones[${i}]`, [zone.checkpoint]);
     });
     this.unique('role', 'npcs', 'roles', d.npcs.roles);
@@ -249,10 +251,43 @@ class CrossChecker {
         }
       });
       zone.npcs.forEach((npcId, n) => this.ref('npc', f, `${p}.npcs[${n}]`, npcId));
+      this.checkStructures(zone, p);
       zone.scatter?.forEach((rule, n) => {
         this.ref('prop', f, `${p}.scatter[${n}].prop`, rule.prop);
         this.range(f, `${p}.scatter[${n}]`, rule.minScale, rule.maxScale);
       });
+    });
+  }
+
+  private checkStructures(zone: Zone, p: string): void {
+    const f = 'zones';
+    const own = new Set((zone.structures ?? []).map((structure) => structure.id));
+    zone.structures?.forEach((structure, n) => {
+      const sp = `${p}.structures[${n}]`;
+      if (structure.color) this.color(f, `${sp}.color`, structure.color);
+      const rotation = structure.rotation ?? 0;
+      if (structure.collider === 'box' && rotation % 90 !== 0) {
+        this.issue(f, `${sp}.rotation`, 'a box collider needs a rotation in steps of 90°');
+      }
+      if (structure.connects) {
+        if (structure.x !== undefined || structure.z !== undefined) {
+          this.issue(f, sp, 'a structure with connects takes its position from them (no x / z)');
+        }
+        structure.connects.forEach((other, c) => {
+          if (!own.has(other)) {
+            this.issue(f, `${sp}.connects[${c}]`, `no structure "${other}" in this zone`);
+          } else if (other === structure.id) {
+            this.issue(f, `${sp}.connects[${c}]`, 'a structure cannot connect to itself');
+          }
+        });
+        return;
+      }
+      if (structure.x === undefined || structure.z === undefined) {
+        this.issue(f, sp, 'needs x and z (or connects)');
+      } else if (!pointInShape(zone.bounds, structure.x, structure.z)) {
+        this.issue(f, sp, 'structure lies outside the zone');
+      }
+      if (structure.size[2] <= 0) this.issue(f, `${sp}.size`, 'depth must be larger than 0');
     });
   }
 

@@ -72,6 +72,17 @@
     "goldLossFraction": 0.1
   },
   "lowHpThreshold": 0.3,
+  "hud": {
+    "fadeSeconds": 0.6,
+    "zoneBannerSeconds": 4,
+    "messageMinSeconds": 3,
+    "messagePerCharacterSeconds": 0.05,
+    "messageMaxSeconds": 8,
+    "barLingerSeconds": 1.5,
+    "xpShowSeconds": 3,
+    "goldShowSeconds": 3,
+    "interactHeight": 2.4
+  },
   "start": {
     "zone": "greyhaven",
     "spawnPoint": "monastery_bed",
