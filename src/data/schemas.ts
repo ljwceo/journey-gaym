@@ -62,6 +62,43 @@ const itemStack = z.strictObject({ item: id, count: posInt });
 
 // ---------------------------------------------------------------- zones.json
 
+/**
+ * A building or landmark. `model` names a placeholder shape (later a glTF file); `size` is
+ * [width (x), height, depth (z)] in meters before rotation. It stands on the ground (sunk in,
+ * so it never floats on a slope) unless `elevation` lifts it, e.g. a hut on top of a platform
+ * with the same center. A bridge gives `connects` (two structure ids) instead of x / z: it
+ * spans from the top of one to the top of the other.
+ */
+const structureSchema = z.strictObject({
+  id,
+  /** Shown above the block in debug mode (English; names are never translated). */
+  name: optional(name),
+  model: name,
+  x: optional(coord),
+  z: optional(coord),
+  size: z.tuple([max(positive, 500), max(positive, 500), max(nonNegative, 500)]),
+  /** Degrees around the vertical axis; a box collider needs a multiple of 90. */
+  rotation: optional(range(-360, 360)),
+  color: optional(colorToken),
+  elevation: optional(range(0, 200)),
+  /** Absolute height of the base instead of the ground (e.g. piers just above the sea). */
+  y: optional(range(-200, 1000)),
+  /** box = the footprint, circle = round footprint, posts = four corner posts, none = walk through. */
+  collider: z.enum(['box', 'circle', 'posts', 'none']),
+  connects: optional(z.tuple([id, id])),
+});
+
+/** A river: a line of points (from the source to the mouth) carved into the terrain. */
+const riverSchema = z.strictObject({
+  id,
+  /** Width (m) of the water; the banks slope up over `bank` meters on both sides. */
+  width: range(1, 200),
+  bank: range(0.5, 100),
+  /** How deep (m) the bed lies below the land; the water stays shallow enough to wade. */
+  depth: range(0.2, 20),
+  points: atLeast(z.array(z.tuple([coord, coord])), 2),
+});
+
 const zoneSchema = z.strictObject({
   id,
   name,
@@ -79,9 +116,15 @@ const zoneSchema = z.strictObject({
   }),
   neighbors: z.array(id),
   spawnPoints: atLeast(z.array(z.strictObject({ id, x: coord, z: coord }))),
-  checkpoint: optional(z.strictObject({ id, kind: id, x: coord, z: coord })),
+  /** Walking within `radius` meters makes this your checkpoint (and lets you rest there). */
+  checkpoint: optional(
+    z.strictObject({ id, kind: id, x: coord, z: coord, radius: max(positive, 100) }),
+  ),
   npcs: z.array(id),
-  areas: z.array(z.strictObject({ id, shape: shapeSchema })),
+  /** Named parts of a zone; `noScatter` keeps trees and rocks out (e.g. inside the city walls). */
+  areas: z.array(z.strictObject({ id, shape: shapeSchema, noScatter: optional(z.boolean()) })),
+  /** Placeholder buildings and landmarks (later real models), loaded with the chunks they touch. */
+  structures: optional(z.array(structureSchema)),
   instances: z.array(z.strictObject({ id, name, entrance: pointSchema, enabled: z.boolean() })),
   /** Props (trees, rocks) scattered over the zone; `perHectare` before the quality density. */
   scatter: optional(
@@ -132,8 +175,13 @@ export const zonesFileSchema = z.strictObject({
       farGridSpacing: range(4, 512),
       /** No props within this distance of spawn points, checkpoints and instance entrances. */
       clearingRadius: range(0, 500),
+      /** River water surface, in meters below the land along the river's center line. */
+      riverWaterDrop: range(0, 10),
+      /** Buildings are sunk this far below the lowest ground under them (never floating). */
+      structureSink: range(0, 20),
     }),
     props: z.array(propSchema),
+    rivers: optional(z.array(riverSchema)),
   }),
   startZone: id,
   zones: atLeast(z.array(zoneSchema)),
@@ -243,6 +291,22 @@ export const playerFileSchema = z.strictObject({
   }),
   death: z.strictObject({ goldLossFraction: fraction }),
   lowHpThreshold: fraction,
+  /** Subtle HUD (seconds): things fade in when needed and fade out again. */
+  hud: z.strictObject({
+    fadeSeconds: max(nonNegative, 5),
+    zoneBannerSeconds: max(positive, 30),
+    /** A message stays min + perCharacter × length seconds, at most max. */
+    messageMinSeconds: max(positive, 30),
+    messagePerCharacterSeconds: max(nonNegative, 1),
+    messageMaxSeconds: max(positive, 60),
+    /** Bars stay this long after they are no longer needed (e.g. energy full again). */
+    barLingerSeconds: max(nonNegative, 30),
+    /** After a defeated enemy: the XP bar (and the other bars) stay this long. */
+    xpShowSeconds: max(positive, 30),
+    goldShowSeconds: max(positive, 30),
+    /** The interaction icon floats this high (m) above the ground at the object. */
+    interactHeight: max(nonNegative, 20),
+  }),
   start: z.strictObject({
     zone: id,
     spawnPoint: id,

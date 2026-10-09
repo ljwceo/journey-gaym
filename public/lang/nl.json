@@ -161,7 +161,8 @@
     "rested": "Je rust even uit.",
     "qualityLowered": "Graphics verlaagd naar {quality} zodat het spel vloeiend blijft.",
     "interact": "Gebruiken",
-    "dash": "Dash"
+    "dash": "Dash",
+    "rest": "Rusten"
   },
   "place": {
     "monastery": "Het Monastery is je checkpoint. Val je, dan word je hier wakker. Rust uit in je bed om bij te komen.",
@@ -175,7 +176,12 @@
     "harbor": "De haven van Greyhaven. Schepen komen en gaan over de baai.",
     "city_gate_blocked": "Je bent nog niet klaar om de stad te verlaten.",
     "old_tjikko": "Old Tjikko, de eeuwenoude boom. De elven halen hun magie uit deze boom.",
-    "elven_city": "De stad van de elven, hoog in de takken. Hier worden Treewardens nooit aangevallen."
+    "elven_city": "De stad van de elven, hoog in de takken. Hier worden Treewardens nooit aangevallen.",
+    "aqueduct": "De aquaductbrug voert de rivier de stad in. Boven het water hangt mist.",
+    "watchtower": "De wachttoren houdt de noordkust in de gaten.",
+    "greenwood_shrine": "Een klein elfenheiligdom. Dit is je checkpoint in de Greenwood.",
+    "wortelgrotten": "Wortels versperren de ingang van De Wortelgrotten. Diep beneden beweegt iets.",
+    "mournfen_monastery": "Een houten klooster op palen, hoog boven de natte grond. Dit is je checkpoint in de Mournfen."
   },
   "npc": {
     "brother_ansel": {

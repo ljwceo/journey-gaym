@@ -10,35 +10,35 @@
       "id": "monastery",
       "zone": "greyhaven",
       "kind": "place",
-      "shape": { "type": "circle", "x": -1760, "z": -145, "radius": 18 },
+      "shape": { "type": "circle", "x": -1882, "z": -128, "radius": 18 },
       "firstVisitText": "place.monastery"
     },
     {
       "id": "market_square",
       "zone": "greyhaven",
       "kind": "place",
-      "shape": { "type": "circle", "x": -1820, "z": 120, "radius": 22 },
+      "shape": { "type": "circle", "x": -1820, "z": 118, "radius": 22 },
       "firstVisitText": "place.market_square"
     },
     {
       "id": "forge",
       "zone": "greyhaven",
       "kind": "place",
-      "shape": { "type": "circle", "x": -1845, "z": 150, "radius": 10 },
+      "shape": { "type": "circle", "x": -1848, "z": 146, "radius": 9 },
       "firstVisitText": "place.forge"
     },
     {
       "id": "alchemy_lab",
       "zone": "greyhaven",
       "kind": "place",
-      "shape": { "type": "circle", "x": -1800, "z": 165, "radius": 10 },
+      "shape": { "type": "circle", "x": -1794, "z": 104, "radius": 9 },
       "firstVisitText": "place.alchemy_lab"
     },
     {
       "id": "golden_kettle",
       "zone": "greyhaven",
       "kind": "place",
-      "shape": { "type": "circle", "x": -1832, "z": 90, "radius": 10 },
+      "shape": { "type": "circle", "x": -1836, "z": 97, "radius": 9 },
       "firstVisitText": "place.golden_kettle"
     },
     {
@@ -52,7 +52,7 @@
       "id": "academy",
       "zone": "greyhaven",
       "kind": "place",
-      "shape": { "type": "circle", "x": -1720, "z": 0, "radius": 30 },
+      "shape": { "type": "circle", "x": -1725, "z": -15, "radius": 34 },
       "firstVisitText": "place.academy"
     },
     {
@@ -66,8 +66,22 @@
       "id": "harbor",
       "zone": "greyhaven",
       "kind": "place",
-      "shape": { "type": "circle", "x": -1900, "z": 150, "radius": 30 },
+      "shape": { "type": "circle", "x": -1915, "z": 150, "radius": 32 },
       "firstVisitText": "place.harbor"
+    },
+    {
+      "id": "aqueduct",
+      "zone": "greyhaven",
+      "kind": "place",
+      "shape": { "type": "circle", "x": -1532, "z": 180, "radius": 16 },
+      "firstVisitText": "place.aqueduct"
+    },
+    {
+      "id": "watchtower",
+      "zone": "greyhaven",
+      "kind": "place",
+      "shape": { "type": "circle", "x": -1880, "z": -355, "radius": 16 },
+      "firstVisitText": "place.watchtower"
     },
     {
       "id": "city_gate",
@@ -90,6 +104,27 @@
       "kind": "place",
       "shape": { "type": "circle", "x": -1100, "z": -650, "radius": 160 },
       "firstVisitText": "place.elven_city"
+    },
+    {
+      "id": "greenwood_shrine",
+      "zone": "greenwood",
+      "kind": "place",
+      "shape": { "type": "circle", "x": -1250, "z": -400, "radius": 12 },
+      "firstVisitText": "place.greenwood_shrine"
+    },
+    {
+      "id": "wortelgrotten",
+      "zone": "greenwood",
+      "kind": "place",
+      "shape": { "type": "circle", "x": -900, "z": -992, "radius": 16 },
+      "firstVisitText": "place.wortelgrotten"
+    },
+    {
+      "id": "mournfen_monastery",
+      "zone": "mournfen",
+      "kind": "place",
+      "shape": { "type": "circle", "x": -1100, "z": 606, "radius": 18 },
+      "firstVisitText": "place.mournfen_monastery"
     }
   ]
 }

@@ -161,7 +161,8 @@
     "rested": "You rest for a while.",
     "qualityLowered": "Graphics lowered to {quality} to keep the game smooth.",
     "interact": "Interact",
-    "dash": "Dash"
+    "dash": "Dash",
+    "rest": "Rest"
   },
   "place": {
     "monastery": "The Monastery is your checkpoint. If you fall, you wake up here. Rest in your bed to recover.",
@@ -175,7 +176,12 @@
     "harbor": "The harbor of Greyhaven. Ships come and go across the bay.",
     "city_gate_blocked": "You are not ready to leave the city yet.",
     "old_tjikko": "Old Tjikko, the ancient tree. The elves draw their magic from it.",
-    "elven_city": "The city of the elves, high in the branches. Treewardens are never attacked here."
+    "elven_city": "The city of the elves, high in the branches. Treewardens are never attacked here.",
+    "aqueduct": "The aqueduct bridge carries the river into the city. Mist hangs above the water.",
+    "watchtower": "The watchtower keeps an eye on the northern coast.",
+    "greenwood_shrine": "A small elven shrine. It is your checkpoint in the Greenwood.",
+    "wortelgrotten": "Roots block the entrance to De Wortelgrotten. Something stirs deep below.",
+    "mournfen_monastery": "A wooden monastery on stilts, high above the wet ground. It is your checkpoint in the Mournfen."
   },
   "npc": {
     "brother_ansel": {
