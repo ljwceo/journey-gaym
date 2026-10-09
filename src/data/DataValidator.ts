@@ -1,5 +1,6 @@
 import type { z } from 'zod';
 import { boxContains, emptyBox, pointInShape, shapeBounds } from '../world/Shapes';
+import { DEFAULT_CAMERA_SENSITIVITY } from '../save/SaveData';
 import { dataFileNames, dataSchemas, type DataFileName } from './schemas';
 import type { GameData, Shape } from './types';
 
@@ -316,6 +317,17 @@ class CrossChecker {
     if (player.dash.energyCost > player.base.energy) {
       this.issue(f, 'dash.energyCost', 'dash costs more energy than the maximum');
     }
+    const cam = player.camera;
+    const between = (path: string, value: number, min: number, max: number): void => {
+      if (min > max) this.issue(f, path, `min ${min} is larger than max ${max}`);
+      else if (value < min || value > max) {
+        this.issue(f, path, `${value} is outside ${min}–${max}`);
+      }
+    };
+    between('camera.pitchDegrees', cam.pitchDegrees, cam.minPitchDegrees, cam.maxPitchDegrees);
+    between('camera.distance', cam.distance, cam.minDistance, cam.maxDistance);
+    const s = cam.sensitivity;
+    between('camera.sensitivity', DEFAULT_CAMERA_SENSITIVITY, s.min, s.max);
   }
 
   private checkMonsters(): void {

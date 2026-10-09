@@ -6,8 +6,8 @@ import type { Panel } from '../Overlays';
 import { bindT, confirmPanel } from './ConfirmPanel';
 
 /**
- * Settings: language, graphics preset, frame rate cap, volume, debug mode and deleting the save
- * (two confirmations). Every change is saved immediately.
+ * Settings: language, graphics preset, frame rate cap, volume, camera sensitivity, debug mode
+ * and deleting the save (two confirmations). Every change is saved immediately.
  */
 export function settingsPanel(ctx: GameContext): Panel {
   const change = (apply: (settings: SaveSettings) => void): void => {
@@ -76,6 +76,35 @@ export function settingsPanel(ctx: GameContext): Panel {
         }
       });
 
+      // Camera sensitivity: range from player.json (e.g. 30–100%), shown as a percentage.
+      const range = ctx.data?.player.camera.sensitivity ?? { min: 0.3, max: 1 };
+      const percent = (value: number): string => `${Math.round(value * 100)}%`;
+      const sensitivityValue = el('span', {
+        className: 'ui-slider-value',
+        text: percent(settings.cameraSensitivity),
+      });
+      const sensitivity = el('input', {
+        className: 'ui-slider',
+        attrs: {
+          type: 'range',
+          min: String(Math.round(range.min * 100)),
+          max: String(Math.round(range.max * 100)),
+          step: '5',
+          value: String(Math.round(settings.cameraSensitivity * 100)),
+          'aria-label': t('settings.cameraSensitivity'),
+        },
+      });
+      sensitivity.addEventListener('input', () => {
+        sensitivityValue.textContent = percent(Number(sensitivity.value) / 100);
+      });
+      sensitivity.addEventListener('change', () => {
+        if (ctx.session) {
+          ctx.session.settings.cameraSensitivity = Number(sensitivity.value) / 100;
+          ctx.persist();
+          ctx.events.emit('settingsChanged', {});
+        }
+      });
+
       return el(
         'div',
         { className: 'ui-panel ui-settings', attrs: { role: 'dialog' } },
@@ -114,6 +143,10 @@ export function settingsPanel(ctx: GameContext): Panel {
           ),
         ),
         row(t('settings.volume'), volume),
+        row(
+          t('settings.cameraSensitivity'),
+          el('div', { className: 'ui-slider-row' }, sensitivity, sensitivityValue),
+        ),
         row(
           t('settings.debug'),
           segmented(

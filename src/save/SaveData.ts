@@ -3,7 +3,10 @@ import { qualityLevelSchema } from '../data/schemas';
 import { LANGUAGES, type Language } from '../i18n/I18n';
 
 /** Current save format. Bump it and add `migrations[old]` whenever the shape changes. */
-export const SAVE_VERSION = 1;
+export const SAVE_VERSION = 2;
+
+/** Camera sensitivity for new saves (1 = 100%); the allowed range is in player.json. */
+export const DEFAULT_CAMERA_SENSITIVITY = 0.7;
 
 const id = z.string().min(1);
 const finite = z.number().finite();
@@ -20,6 +23,8 @@ export const saveDataSchema = z.object({
     autoQuality: qualityLevelSchema.nullable(),
     fpsCap: z.enum(['auto', '60', '120']),
     volume: z.number().min(0).max(1),
+    /** How fast dragging turns the camera, as a fraction (0.3 = 30%). */
+    cameraSensitivity: z.number().min(0.05).max(2),
     debug: z.boolean(),
   }),
   /** Null until the character creator is finished (New Game). */
@@ -63,7 +68,14 @@ export function createNewSave(language: Language, now: Date = new Date()): SaveD
     createdAt: stamp,
     updatedAt: stamp,
     language,
-    settings: { quality: 'auto', autoQuality: null, fpsCap: 'auto', volume: 0.8, debug: false },
+    settings: {
+      quality: 'auto',
+      autoQuality: null,
+      fpsCap: 'auto',
+      volume: 0.8,
+      cameraSensitivity: DEFAULT_CAMERA_SENSITIVITY,
+      debug: false,
+    },
     character: null,
     path: null,
     world: { zone: null, position: null, heading: 0, checkpoint: null },
@@ -80,7 +92,17 @@ export type Migration = (save: Record<string, unknown>) => Record<string, unknow
  * Save migrations: `migrations[v]` turns a version-v save into version v+1.
  * Example for a future v2: `1: (save) => ({ ...save, version: 2, mount: null })`.
  */
-export const migrations: Readonly<Record<number, Migration>> = {};
+export const migrations: Readonly<Record<number, Migration>> = {
+  // v2 (step 1.6): camera sensitivity setting.
+  1: (save) => {
+    const settings = (save.settings ?? {}) as Record<string, unknown>;
+    return {
+      ...save,
+      version: 2,
+      settings: { ...settings, cameraSensitivity: DEFAULT_CAMERA_SENSITIVITY },
+    };
+  },
+};
 
 export type MigrateResult =
   | { ok: true; save: Record<string, unknown> }
