@@ -1,68 +1,42 @@
-import {
-  AmbientLight,
-  BoxGeometry,
-  Clock,
-  DirectionalLight,
-  Fog,
-  Mesh,
-  MeshStandardMaterial,
-  PerspectiveCamera,
-  Scene,
-  WebGLRenderer,
-} from 'three';
-import { palette, uiColors } from './render/palette';
+import { createEventBus } from './core/events';
+import { GameLoop } from './core/GameLoop';
+import { StateMachine } from './core/StateMachine';
+import { DebugOverlay } from './render/DebugOverlay';
+import { Renderer } from './render/Renderer';
+import { DemoState } from './scenes/Demo';
 import './style.css';
-
-// Step 1.1 placeholder: an empty 3D scene with a spinning cube.
-// The real game loop (fixed 60 Hz step + interpolation) arrives in step 1.2.
-
-const MAX_PIXEL_RATIO = 2;
-/** Cube spin speed in radians per second (never per frame). */
-const SPIN_SPEED = 0.8;
 
 const container = document.getElementById('app');
 if (!container) {
   throw new Error('Missing #app element');
 }
 
-const renderer = new WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, MAX_PIXEL_RATIO));
-renderer.setClearColor(uiColors.bg);
-container.appendChild(renderer.domElement);
+const events = createEventBus();
+const renderer = new Renderer(container);
 
-const scene = new Scene();
-scene.fog = new Fog(palette.mistpaars, 6, 20);
+type StateId = 'demo';
+const states = new StateMachine<StateId>((from, to) => events.emit('stateChanged', { from, to }));
+states.register('demo', new DemoState(renderer));
 
-const camera = new PerspectiveCamera(50, 1, 0.1, 100);
-camera.position.set(0, 2.5, 5);
-camera.lookAt(0, 0, 0);
-
-scene.add(new AmbientLight(palette.schemerviolet, 1.5));
-const sun = new DirectionalLight(palette.zonsondergang, 2.5);
-sun.position.set(3, 5, 2);
-scene.add(sun);
-
-const cube = new Mesh(
-  new BoxGeometry(1.2, 1.2, 1.2),
-  new MeshStandardMaterial({ color: palette.lantaarnamber }),
-);
-scene.add(cube);
-
-function resize(): void {
-  const width = container?.clientWidth ?? window.innerWidth;
-  const height = container?.clientHeight ?? window.innerHeight;
-  renderer.setSize(width, height, false);
-  camera.aspect = width / Math.max(height, 1);
-  camera.updateProjectionMatrix();
-}
-window.addEventListener('resize', resize);
-resize();
-
-const clock = new Clock();
-renderer.setAnimationLoop(() => {
-  // Clamp so a long pause (tab hidden) does not cause a jump.
-  const dt = Math.min(clock.getDelta(), 0.25);
-  cube.rotation.x += SPIN_SPEED * 0.6 * dt;
-  cube.rotation.y += SPIN_SPEED * dt;
-  renderer.render(scene, camera);
+let debug: DebugOverlay | null = null;
+const loop = new GameLoop({
+  update: (dt) => states.update(dt),
+  render: (alpha, frameSeconds) => {
+    const start = performance.now();
+    states.render(alpha, frameSeconds);
+    debug?.frame(frameSeconds, loop.updateMs + performance.now() - start);
+  },
 });
+debug = new DebugOverlay(container, renderer.three, loop.time, () => states.id);
+
+// `?fps=30` caps the frame rate, to check that the game runs equally fast at any fps.
+const fpsParam = Number(new URLSearchParams(window.location.search).get('fps'));
+if (fpsParam > 0) loop.frameCap = fpsParam;
+
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) loop.resetClock();
+});
+
+states.change('demo');
+states.applyPending();
+loop.start();

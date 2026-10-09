@@ -7,9 +7,9 @@
 | | |
 |---|---|
 | **Huidige fase** | Fase 1 – Basis + open wereld + character creator |
-| **Status** | Stap 1.1 klaar (projectopzet) |
-| **Volgende stap** | Stap 1.2: kern (GameLoop met vaste tijdstap, EventBus, StateMachine, Random, debug-overlay) |
-| **Laatste sessie** | 2026-10-09: stap 1.1 projectopzet |
+| **Status** | Stap 1.2 klaar (kern) |
+| **Volgende stap** | Stap 1.3: data, taal, opslaan, seizoen (JSON-bestanden, DataLoader + DataValidator, I18n, SaveManager, SeasonService) |
+| **Laatste sessie** | 2026-10-09: stap 1.2 kern |
 
 ---
 
@@ -49,9 +49,10 @@ Elke stap is één branch + pull request. Na elke stap start de game zonder fout
 ## Fase-log
 
 ### Fase 1 – Basis + open wereld + character creator
-**Status:** bezig, stap 1.1 klaar.
+**Status:** bezig, stap 1.1 en 1.2 klaar.
 **Gebouwd:**
 - 1.1 Projectopzet: Vite 8 + TypeScript 6 (strict), Three.js r186, ESLint + Prettier, Vitest. Leeg 3D-scherm met een draaiende kubus in stijlgidskleuren (draait per seconde, niet per frame). GitHub Actions controleert elke pull request (lint, opmaak, typecheck, tests, build) en zet `main` op GitHub Pages.
+- 1.2 Kern: `FixedStep` + `GameLoop` (simulatie altijd 60 Hz met accumulator, tekenen interpoleert, max 8 inhaalstappen per frame, frames > 0,25 s worden afgekapt, `?fps=N` om de framerate te beperken), getypte `EventBus` (geen allocaties bij `emit`), `StateMachine` (wissel gebeurt pas vóór de volgende update), `Random` (sfc32 met vaste seed) + `hashSeed` voor per-chunk seeds, `Renderer`, `DebugOverlay` (F3 / drie vingers / `?debug=1`: fps, frametijd, cpu-tijd, draw calls, triangles, geometries/textures, heap, resolutie, simulatiestappen, huidige state). Demo-scène: kubus die rondjes draait op de simulatie en vloeiend getekend wordt. 29 tests.
 
 **Bekende problemen:**
 - De game-bundel is ±530 kB (vooral Three.js). Waarschuwingsgrens op 800 kB gezet; opsplitsen als de game groeit.
@@ -77,6 +78,9 @@ Elke stap is één branch + pull request. Na elke stap start de game zonder fout
 | 2026-10-09 | De build kopieert de PerfTest (en de twee token-bestanden die hij nodig heeft) mee naar Pages | Zo blijft `…/experiments/perftest/` werken |
 | 2026-10-09 | TypeScript 6.0 in plaats van 7.0 | typescript-eslint ondersteunt 7.0 nog niet |
 | 2026-10-09 | Kleuren in code komen uit `docs/art-style/tokens.json` via `src/render/palette.ts` | Stijlgids-regel: geen losse kleurcodes |
+| 2026-10-09 | Debug-overlay-labels (fps, calls, tris, …) staan in de code en niet in de taalbestanden | Technische afkortingen voor ontwikkelaars, geen tekst voor spelers. Zeg het als je dit anders wilt |
+| 2026-10-09 | Debug-overlay op de iPhone: tik met drie vingers (net als bij de PerfTest) | Een iPhone heeft geen F3 |
+| 2026-10-09 | Simulatie haalt maximaal 8 stappen per frame in; daarboven loopt het spel even trager in plaats van te haperen | Voorkomt dat een trage telefoon steeds verder achterloopt |
 | 2026-10-09 | PerfTest verplaatst naar `experiments/perftest/` | Oude test-code hoort in `/experiments` (§5). Er was geen PeerJS-netwerktest in de repo, dus `experiments/net-test/` bestaat (nog) niet |
 
 ## Sessielog
@@ -86,3 +90,4 @@ Elke stap is één branch + pull request. Na elke stap start de game zonder fout
 - Plan goedgekeurd. Oude 2D-plannen gearchiveerd, GitHub-werkwijze en spelconcept-link in `CLAUDE.md`.
 - Volgende stap: stap 1.1 (projectopzet).
 - Stap 1.1 gebouwd: Vite + TypeScript + Three.js, lint/format/tests, deploy-workflow, draaiende kubus. Getest in headless Chromium (kubus zichtbaar, geen fouten). Volgende stap: 1.2 (kern).
+- Stap 1.2 gebouwd: vaste tijdstap + interpolatie, EventBus, StateMachine, Random, Renderer, debug-overlay, demo-scène. Getest in headless Chromium (overlay, F3, `?fps=30`, geen fouten). Volgende stap: 1.3 (data, taal, opslaan, seizoen).
