@@ -266,6 +266,7 @@
     "nextIn": "Volgend seizoen over {days} d {hours} u"
   },
   "controls": {
-    "dash": "Dash"
+    "dash": "Dash",
+    "clickToLook": "Klik om rond te kijken · Esc voor het menu"
   }
 }

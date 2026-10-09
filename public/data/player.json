@@ -28,20 +28,20 @@
     "durationSeconds": 0.18
   },
   "camera": {
-    "fovDegrees": 50,
-    "targetHeight": 1.1,
-    "pitchDegrees": 55,
-    "minPitchDegrees": 10,
-    "maxPitchDegrees": 80,
-    "distance": 11,
-    "minDistance": 4,
-    "maxDistance": 20,
-    "followSharpness": 10,
+    "fovDegrees": 55,
+    "targetHeight": 1.45,
+    "pitchDegrees": 12,
+    "minPitchDegrees": -35,
+    "maxPitchDegrees": 70,
+    "distance": 5,
+    "minDistance": 2.5,
+    "maxDistance": 9,
+    "minHeightAboveGround": 0.3,
+    "followSharpness": 25,
     "zoomSharpness": 12,
-    "returnDelaySeconds": 0.15,
-    "returnSharpness": 3,
-    "rotateRadiansPerPixelMouse": 0.008,
-    "rotateRadiansPerPixelTouch": 0.012,
+    "strafeFollowDegreesPerSecond": 45,
+    "rotateRadiansPerPixelMouse": 0.005,
+    "rotateRadiansPerPixelTouch": 0.01,
     "zoomStepPerWheelNotch": 0.12,
     "sensitivity": {
       "min": 0.3,
@@ -50,8 +50,7 @@
   },
   "controls": {
     "joystickRadiusPx": 56,
-    "joystickDeadZone": 0.12,
-    "moveRetargetDegrees": 30
+    "joystickDeadZone": 0.12
   },
   "sword": {
     "fastHit": {

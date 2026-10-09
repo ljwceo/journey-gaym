@@ -13,30 +13,34 @@ function damp(sharpness: number, seconds: number): number {
 }
 
 /**
- * The camera's orbit around the character, as plain numbers (testable without WebGL).
+ * Third-person camera over the shoulder, like Genshin Impact, as plain numbers (testable
+ * without WebGL).
  *
- * - Standing still you can look all the way round (yaw) and between min and max pitch;
- *   the character does not turn with the camera.
- * - Once the character walks (and you are not dragging), the camera waits
- *   `returnDelaySeconds` and then swings smoothly back behind it, and to the default pitch.
+ * - The camera orbits a point at head height on the character and stays tight on it.
+ * - The player turns it freely all the way round, and up and down between min and max pitch;
+ *   the character never turns with the camera.
+ * - Walking does not swing the camera back: it stays where the player put it, and walking is
+ *   relative to it (W walks where the camera looks). Walking sideways turns it slightly along.
  * - Yaw is the direction the camera looks along the ground: (sin yaw, cos yaw), the same
- *   convention as a character's heading, so "behind the character" means yaw = heading.
+ *   convention as a character's heading. Pitch is the angle below the horizon (negative = up).
  */
 export class CameraOrbit {
   yaw = 0;
   pitch: number;
-  distance: number;
+  /** Distance the player zoomed to. */
   targetDistance: number;
+  /** Smoothed zoom distance. */
+  zoomDistance: number;
+  /** Distance actually used this frame (shorter when looking up, so it stays above the ground). */
+  distance: number;
   /** Smoothed point the camera looks at. */
   x = 0;
   y = 0;
   z = 0;
-  private walkingSeconds = 0;
 
   constructor(private readonly cfg: CameraConfig) {
     this.pitch = cfg.pitchDegrees * DEG;
-    this.distance = cfg.distance;
-    this.targetDistance = cfg.distance;
+    this.targetDistance = this.zoomDistance = this.distance = cfg.distance;
   }
 
   /** Jumps straight behind the character (entering the world, teleporting). */
@@ -46,15 +50,15 @@ export class CameraOrbit {
     this.z = z;
     this.yaw = heading;
     this.pitch = this.cfg.pitchDegrees * DEG;
-    this.distance = this.targetDistance;
-    this.walkingSeconds = 0;
+    this.zoomDistance = this.distance = this.targetDistance;
   }
 
   /**
    * Advances the camera by one rendered frame.
    * @param seconds real time since the last frame (camera smoothing is fps-independent)
+   * @param groundY ground height under the character (the camera stays above it)
    * @param look turning and zoom from Input since the last frame
-   * @param dragging true while the player is turning the camera
+   * @param turning true while the player is turning the camera (no automatic turning then)
    * @param sensitivity camera sensitivity setting (1 = 100%)
    */
   update(
@@ -65,39 +69,43 @@ export class CameraOrbit {
     heading: number,
     walking: boolean,
     look: LookDelta,
-    dragging: boolean,
+    turning: boolean,
     sensitivity: number,
   ): void {
     const cfg = this.cfg;
     // Turning right looks further clockwise from above: yaw goes down (see Movement.screenToWorld).
     this.yaw = angleDelta(0, this.yaw - look.yaw * sensitivity);
     this.pitch += look.pitch * sensitivity;
-
-    if (walking && !dragging) {
-      this.walkingSeconds += seconds;
-      if (this.walkingSeconds >= cfg.returnDelaySeconds) {
-        const t = damp(cfg.returnSharpness, seconds);
-        this.yaw = angleDelta(0, this.yaw + angleDelta(this.yaw, heading) * t);
-        this.pitch += (cfg.pitchDegrees * DEG - this.pitch) * t;
-      }
-    } else {
-      this.walkingSeconds = 0;
-    }
     this.pitch = Math.min(
       cfg.maxPitchDegrees * DEG,
       Math.max(cfg.minPitchDegrees * DEG, this.pitch),
     );
 
+    if (walking && !turning) {
+      // Sideways walking pulls the camera along a little; straight ahead or back does nothing.
+      const side = Math.sin(angleDelta(this.yaw, heading));
+      this.yaw = angleDelta(0, this.yaw + side * cfg.strafeFollowDegreesPerSecond * DEG * seconds);
+    }
+
     this.targetDistance = Math.min(
       cfg.maxDistance,
       Math.max(cfg.minDistance, this.targetDistance * look.zoom),
     );
-    this.distance += (this.targetDistance - this.distance) * damp(cfg.zoomSharpness, seconds);
+    this.zoomDistance +=
+      (this.targetDistance - this.zoomDistance) * damp(cfg.zoomSharpness, seconds);
 
     const follow = damp(cfg.followSharpness, seconds);
     this.x += (goalX - this.x) * follow;
     this.y += (goalY + cfg.targetHeight - this.y) * follow;
     this.z += (goalZ - this.z) * follow;
+
+    // Looking up, come closer rather than sinking into the ground.
+    this.distance = this.zoomDistance;
+    if (this.pitch < 0) {
+      const room = this.y - (goalY + cfg.minHeightAboveGround);
+      const maxDistance = room / Math.sin(-this.pitch);
+      if (maxDistance < this.distance) this.distance = Math.max(0.5, maxDistance);
+    }
   }
 }
 

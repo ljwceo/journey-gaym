@@ -340,12 +340,12 @@
 
 /*
  * Safe zones for touch controls. The joystick appears where the thumb goes down in the lower
- * left (left 50% of the width, below the top 35% — keep in sync with Input.ts); the action
+ * left (left 45% of the width, lower half — keep in sync with Input.ts); the action
  * buttons sit in the lower right. HUD elements must stay out of both zones.
  */
 :root {
-  --joystick-zone-width: 50vw;
-  --joystick-zone-top: 35vh;
+  --joystick-zone-width: 45vw;
+  --joystick-zone-top: 50vh;
   --button-zone-width: 168px;
   --button-zone-height: 168px;
 }
@@ -355,6 +355,27 @@
   position: absolute;
   inset: 0;
   touch-action: none;
+}
+
+/* Mouse only: shown until the player clicks to capture the mouse. */
+.ui-look-hint {
+  position: absolute;
+  left: 50%;
+  bottom: max(24px, env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  padding: 6px 14px;
+  font-size: 15px;
+  color: var(--gh-tekst);
+  background: color-mix(in srgb, var(--gh-panel) 70%, transparent);
+  border: 1px solid var(--gh-koper);
+  border-radius: 999px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+
+.ui-look-hint-visible {
+  opacity: 1;
 }
 
 .ui-touch-controls {
