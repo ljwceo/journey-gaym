@@ -268,5 +268,21 @@
   "controls": {
     "dash": "Dash",
     "clickToLook": "Click to look around · Esc for the menu"
+  },
+  "cheats": {
+    "title": "Cheats (debug)",
+    "note": "Only in debug mode, never saved.",
+    "speed": "Speed",
+    "fly": "Fly",
+    "on": "On",
+    "off": "Off",
+    "flyHintKeys": "Space = up · Shift = down · through walls",
+    "flyHintTouch": "▲ / ▼ buttons = up and down · through walls",
+    "teleport": "Teleport",
+    "chunkLines": "Chunk borders",
+    "close": "Close",
+    "open": "Cheats",
+    "flyUp": "Fly up",
+    "flyDown": "Fly down"
   }
 }

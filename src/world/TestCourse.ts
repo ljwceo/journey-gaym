@@ -11,8 +11,9 @@ import { boxColliderAt, circleCollider, type Collider } from './Colliders';
 
 /**
  * TEMPORARY test obstacles around the spawn point, to try walking, sliding along walls,
- * corners and dashing against a thin wall (step 1.6). Not game content: step 1.7/1.8 replace
- * this with zones, chunks and the placeholder buildings from data.
+ * corners and dashing against a thin wall (step 1.6). Not game content: step 1.8 replaces
+ * this with the placeholder buildings from data. Each obstacle stands on the terrain
+ * (sunk in a little, so it never floats on a slope).
  * Positions are offsets in meters from the spawn point; +z is where the character first faces.
  */
 const BOXES: readonly (readonly [
@@ -34,6 +35,9 @@ const BOXES: readonly (readonly [
   [-4, 26, 8, 6, 5],
 ];
 
+/** How deep (m) obstacles reach into the ground. */
+const SINK = 1.5;
+
 const PILLARS: readonly (readonly [dx: number, dz: number, radius: number, height: number])[] = [
   [5, 5, 0.6, 3],
   [8, 8, 0.6, 3],
@@ -47,6 +51,7 @@ export function buildTestCourse(
   centerZ: number,
   wallColor: number,
   pillarColor: number,
+  heightAt: (x: number, z: number) => number = () => 0,
 ): { colliders: Collider[]; meshes: InstancedMesh[] } {
   const colliders: Collider[] = [];
   const matrix = new Matrix4();
@@ -66,7 +71,11 @@ export function buildTestCourse(
     colliders.push(boxColliderAt(x, z, width, depth));
     boxes.setMatrixAt(
       i,
-      matrix.compose(position.set(x, 0, z), rotation, scale.set(width, height, depth)),
+      matrix.compose(
+        position.set(x, heightAt(x, z) - SINK, z),
+        rotation,
+        scale.set(width, height + SINK, depth),
+      ),
     );
   });
 
@@ -82,7 +91,11 @@ export function buildTestCourse(
     colliders.push(circleCollider(x, z, radius));
     pillars.setMatrixAt(
       i,
-      matrix.compose(position.set(x, 0, z), rotation, scale.set(radius, height, radius)),
+      matrix.compose(
+        position.set(x, heightAt(x, z) - SINK, z),
+        rotation,
+        scale.set(radius, height + SINK, radius),
+      ),
     );
   });
 

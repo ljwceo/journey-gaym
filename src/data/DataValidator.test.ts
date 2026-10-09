@@ -83,7 +83,9 @@ describe('validateGameData catches broken data', () => {
     raw.npcs.npcs[0].role = 'dragon_tamer';
     raw.quests.quests[2].rewards.items[0].item = 'golden_spoon';
     raw.monsters.monsters[0].drops[0].item = 'nothing';
+    raw.zones.zones[1].scatter[0].prop = 'palm_tree';
     const found = messages(raw);
+    expect(found).toContainEqual(expect.stringContaining('unknown prop "palm_tree"'));
     expect(found).toContainEqual(expect.stringContaining('unknown role "dragon_tamer"'));
     expect(found).toContainEqual(expect.stringContaining('unknown item "golden_spoon"'));
     expect(found).toContainEqual(expect.stringContaining('unknown item "nothing"'));

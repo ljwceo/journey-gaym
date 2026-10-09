@@ -592,3 +592,88 @@
   outline: 2px solid var(--gh-zonlicht);
   outline-offset: 2px;
 }
+
+/* ------------------------------------------------------------ cheat menu (debug only) */
+
+/* Above the debug overlay (z-index 100), which covers much of a phone screen. */
+.ui-cheats-layer {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 102;
+  font-family: var(--gh-font-tekst);
+  color: var(--gh-tekst);
+}
+
+.ui-cheats-layer > *,
+.ui-fly-buttons > * {
+  pointer-events: auto;
+}
+
+.ui-cheats-button {
+  position: absolute;
+  top: max(12px, env(safe-area-inset-top));
+  right: calc(max(12px, env(safe-area-inset-right)) + 52px);
+  height: 44px;
+  padding: 0 12px;
+  font: 600 14px var(--gh-font-stats);
+  color: var(--gh-zonlicht);
+  background: color-mix(in srgb, var(--gh-panel) 70%, transparent);
+  border: 1px dashed var(--gh-koper);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.ui-cheats {
+  position: absolute;
+  top: calc(max(12px, env(safe-area-inset-top)) + 56px);
+  right: max(12px, env(safe-area-inset-right));
+  width: min(300px, calc(100vw - 32px));
+  max-height: calc(100vh - var(--button-zone-height) - 96px);
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ui-cheats .ui-heading {
+  margin: 0;
+  font-size: 22px;
+}
+
+.ui-cheats .ui-note {
+  margin: 0;
+}
+
+.ui-cheats-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ui-cheats-section .ui-label {
+  margin: 0;
+}
+
+.ui-cheats .ui-chip {
+  min-height: 36px;
+  padding: 4px 10px;
+  font-size: 15px;
+}
+
+/* Fly up / down: left of the dash button, inside the button safe zone. */
+.ui-fly-button {
+  width: 52px;
+  height: 52px;
+  font-size: 18px;
+  right: calc(max(28px, calc(env(safe-area-inset-right) + 12px)) + 84px);
+}
+
+.ui-fly-up {
+  bottom: calc(max(36px, calc(env(safe-area-inset-bottom) + 16px)) + 60px);
+}
+
+.ui-fly-down {
+  bottom: max(36px, calc(env(safe-area-inset-bottom) + 16px));
+}

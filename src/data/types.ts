@@ -1,4 +1,4 @@
-import type { z } from 'zod';
+import type { z } from 'zod/mini';
 import type { dataSchemas, DataFileName, shapeSchema } from './schemas';
 
 /** Parsed contents of every data file, e.g. `GameData['zones']`. */

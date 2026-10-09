@@ -1,4 +1,4 @@
-import type { z } from 'zod';
+import type { z } from 'zod/mini';
 import { boxContains, emptyBox, pointInShape, shapeBounds } from '../world/Shapes';
 import { DEFAULT_CAMERA_SENSITIVITY } from '../save/SaveData';
 import { dataFileNames, dataSchemas, type DataFileName } from './schemas';
@@ -41,7 +41,7 @@ export function validateGameData(
   const parsed: Partial<Record<DataFileName, unknown>> = {};
 
   for (const name of dataFileNames) {
-    const schema: z.ZodType = dataSchemas[name];
+    const schema: z.ZodMiniType = dataSchemas[name];
     const result = schema.safeParse(raw[name]);
     if (result.success) {
       parsed[name] = result.data;
@@ -156,6 +156,7 @@ class CrossChecker {
   private collectIds(): void {
     const d = this.data;
     this.unique('zone', 'zones', 'zones', d.zones.zones);
+    this.unique('prop', 'zones', 'world.props', d.zones.world.props);
     d.zones.zones.forEach((zone, i) => {
       this.unique(`spawn:${zone.id}`, 'zones', `zones[${i}].spawnPoints`, zone.spawnPoints);
       this.unique('area', 'zones', `zones[${i}].areas`, zone.areas);
@@ -202,6 +203,11 @@ class CrossChecker {
     this.color(f, 'world.outsideZoneColor', world.outsideZoneColor);
     this.color(f, 'world.outsideZoneFog', world.outsideZoneFog);
     this.ref('zone', f, 'startZone', startZone);
+    const terrain = world.terrain;
+    this.range(f, 'world.terrain.seaFloor', terrain.seaFloor, terrain.seaLevel);
+    if (terrain.lodSegments[1] > terrain.lodSegments[0]) {
+      this.issue(f, 'world.terrain.lodSegments', 'far chunks need fewer segments than near ones');
+    }
     const byId = new Map(zones.map((zone) => [zone.id, zone]));
 
     zones.forEach((zone, i) => {
@@ -243,6 +249,10 @@ class CrossChecker {
         }
       });
       zone.npcs.forEach((npcId, n) => this.ref('npc', f, `${p}.npcs[${n}]`, npcId));
+      zone.scatter?.forEach((rule, n) => {
+        this.ref('prop', f, `${p}.scatter[${n}].prop`, rule.prop);
+        this.range(f, `${p}.scatter[${n}]`, rule.minScale, rule.maxScale);
+      });
     });
   }
 

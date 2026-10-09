@@ -2,6 +2,7 @@ import { PerspectiveCamera } from 'three';
 import type { LookDelta } from '../core/Input';
 import type { PlayerConfig } from '../data/types';
 import { angleDelta } from '../systems/Movement';
+import type { Ground } from '../world/Ground';
 
 const DEG = Math.PI / 180;
 
@@ -119,15 +120,19 @@ export class CameraRig {
     this.orbit = new CameraOrbit(cfg);
   }
 
-  /** Moves the camera to the orbit's current state. Allocation-free. */
-  apply(): void {
+  /**
+   * Moves the camera to the orbit's current state. Allocation-free.
+   * @param originX render origin (FloatingOrigin): the camera is placed relative to it
+   * @param ground optional ground: the camera never goes below it (hills behind the player)
+   */
+  apply(originX = 0, originZ = 0, ground?: Ground, minAboveGround = 0.4): void {
     const o = this.orbit;
     const horizontal = Math.cos(o.pitch) * o.distance;
-    this.camera.position.set(
-      o.x - Math.sin(o.yaw) * horizontal,
-      o.y + Math.sin(o.pitch) * o.distance,
-      o.z - Math.cos(o.yaw) * horizontal,
-    );
-    this.camera.lookAt(o.x, o.y, o.z);
+    const x = o.x - Math.sin(o.yaw) * horizontal;
+    const z = o.z - Math.cos(o.yaw) * horizontal;
+    let y = o.y + Math.sin(o.pitch) * o.distance;
+    if (ground) y = Math.max(y, ground.heightAt(x, z) + minAboveGround);
+    this.camera.position.set(x - originX, y, z - originZ);
+    this.camera.lookAt(o.x - originX, o.y, o.z - originZ);
   }
 }
