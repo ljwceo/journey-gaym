@@ -1,0 +1,197 @@
+import type { PlayerConfig } from '../data/types';
+import type { PointXZ } from '../world/Colliders';
+
+const DEG = Math.PI / 180;
+const EPSILON = 1e-4;
+
+/** Movement numbers from player.json, converted to radians where needed. */
+export interface MovementConfig {
+  walkSpeed: number;
+  radius: number;
+  /** Radians per second. */
+  turnSpeed: number;
+  maxEnergy: number;
+  energyPerSecond: number;
+  energyDelaySeconds: number;
+  dashEnergyCost: number;
+  dashCooldownSeconds: number;
+  dashDistance: number;
+  dashDurationSeconds: number;
+}
+
+export function movementConfig(player: PlayerConfig): MovementConfig {
+  return {
+    walkSpeed: player.movement.walkSpeed,
+    radius: player.movement.radius,
+    turnSpeed: player.movement.turnSpeedDegrees * DEG,
+    maxEnergy: player.base.energy,
+    energyPerSecond: player.regen.energyPerSecond,
+    energyDelaySeconds: player.regen.energyDelaySeconds,
+    dashEnergyCost: player.dash.energyCost,
+    dashCooldownSeconds: player.dash.cooldownSeconds,
+    dashDistance: player.dash.distance,
+    dashDurationSeconds: player.dash.durationSeconds,
+  };
+}
+
+/** Anything that can move a circle through the world (CollisionWorld, or a stub in tests). */
+export interface Mover {
+  moveCircle(p: PointXZ, radius: number, dx: number, dz: number): void;
+}
+
+/** What the player wants this step: a world-space direction (length 0–1) and a dash press. */
+export interface MoveCommand {
+  x: number;
+  z: number;
+  dash: boolean;
+}
+
+/**
+ * Simulation state of a walking character. Heading 0 faces +z; heading h faces
+ * (sin h, cos h), which matches `object.rotation.y = h` in Three.js.
+ */
+export class MoverState implements PointXZ {
+  x = 0;
+  z = 0;
+  heading = 0;
+  energy = 0;
+  /** Seconds since energy was last spent; energy refills after `energyDelaySeconds`. */
+  sinceEnergySpent = 0;
+  dashCooldown = 0;
+  /** Seconds of dash left (0 = not dashing). */
+  dashTime = 0;
+  dashDirX = 0;
+  dashDirZ = 1;
+  /** True while walking or dashing this step (the camera turns back behind the character). */
+  moving = false;
+
+  get dashing(): boolean {
+    return this.dashTime > 0;
+  }
+}
+
+/** Shortest signed angle from `from` to `to`, in (-π, π]. */
+export function angleDelta(from: number, to: number): number {
+  let d = (to - from) % (Math.PI * 2);
+  if (d > Math.PI) d -= Math.PI * 2;
+  else if (d <= -Math.PI) d += Math.PI * 2;
+  return d;
+}
+
+/**
+ * Advances a character by one fixed step: energy refill, dash, walking and turning.
+ * Speeds are per second and `dt` is the fixed step, so 60 and 120 fps play the same.
+ */
+export function stepMovement(
+  s: MoverState,
+  cmd: MoveCommand,
+  cfg: MovementConfig,
+  dt: number,
+  world: Mover,
+): void {
+  s.dashCooldown = Math.max(0, s.dashCooldown - dt);
+  s.sinceEnergySpent += dt;
+  if (s.sinceEnergySpent >= cfg.energyDelaySeconds) {
+    s.energy = Math.min(cfg.maxEnergy, s.energy + cfg.energyPerSecond * dt);
+  }
+
+  let length = Math.sqrt(cmd.x * cmd.x + cmd.z * cmd.z);
+
+  if (cmd.dash && s.dashTime <= 0 && s.dashCooldown <= 0 && s.energy >= cfg.dashEnergyCost) {
+    s.energy -= cfg.dashEnergyCost;
+    s.sinceEnergySpent = 0;
+    s.dashCooldown = cfg.dashCooldownSeconds;
+    s.dashTime = cfg.dashDurationSeconds;
+    // Dash where you walk; standing still, dash where you face.
+    if (length > EPSILON) {
+      s.dashDirX = cmd.x / length;
+      s.dashDirZ = cmd.z / length;
+    } else {
+      s.dashDirX = Math.sin(s.heading);
+      s.dashDirZ = Math.cos(s.heading);
+    }
+    s.heading = Math.atan2(s.dashDirX, s.dashDirZ);
+  }
+
+  if (s.dashTime > 0) {
+    // The last step only covers the time that is left, so a dash is always exactly `distance`.
+    const time = Math.min(dt, s.dashTime);
+    const distance = (cfg.dashDistance / cfg.dashDurationSeconds) * time;
+    world.moveCircle(s, cfg.radius, s.dashDirX * distance, s.dashDirZ * distance);
+    s.dashTime = Math.max(0, s.dashTime - dt);
+    s.moving = true;
+    return;
+  }
+
+  if (length <= EPSILON) {
+    s.moving = false;
+    return;
+  }
+  // Keyboard diagonals and a stick pushed past its edge never walk faster than walkSpeed.
+  const scale = length > 1 ? 1 / length : 1;
+  if (length > 1) length = 1;
+  const step = cfg.walkSpeed * dt * scale;
+  world.moveCircle(s, cfg.radius, cmd.x * step, cmd.z * step);
+  s.moving = true;
+
+  const target = Math.atan2(cmd.x, cmd.z);
+  const delta = angleDelta(s.heading, target);
+  const maxTurn = cfg.turnSpeed * dt;
+  s.heading = Math.abs(delta) <= maxTurn ? target : s.heading + Math.sign(delta) * maxTurn;
+  s.heading = angleDelta(0, s.heading);
+}
+
+/**
+ * Turns screen input (x = right, y = forward/up on screen) into a world direction for a camera
+ * looking along `yaw` (forward = (sin yaw, cos yaw)). Writes into `out`.
+ */
+export function screenToWorld(inputX: number, inputY: number, yaw: number, out: PointXZ): void {
+  const sin = Math.sin(yaw);
+  const cos = Math.cos(yaw);
+  // Right of forward (sin, cos) is (-cos, sin) in Three.js' right-handed coordinates.
+  out.x = sin * inputY - cos * inputX;
+  out.z = cos * inputY + sin * inputX;
+}
+
+/**
+ * Which camera direction walking is relative to. While the stick or keys keep pointing the
+ * same way, the direction stays what it was when walking started, so the camera can turn back
+ * behind the character without bending its path. Releasing, turning the input by more than
+ * `retargetRadians`, or dragging the camera reads the camera again.
+ */
+export class MoveReference {
+  yaw = 0;
+  private active = false;
+  private inputX = 0;
+  private inputY = 0;
+
+  /** Returns the yaw to use for this step's input. */
+  update(
+    inputX: number,
+    inputY: number,
+    cameraYaw: number,
+    followCamera: boolean,
+    retargetRadians: number,
+  ): number {
+    const length = Math.sqrt(inputX * inputX + inputY * inputY);
+    if (length <= EPSILON) {
+      this.active = false;
+      this.yaw = cameraYaw;
+      return this.yaw;
+    }
+    const nx = inputX / length;
+    const ny = inputY / length;
+    const turned = nx * this.inputX + ny * this.inputY < Math.cos(retargetRadians);
+    if (!this.active || followCamera || turned) {
+      this.active = true;
+      this.yaw = cameraYaw;
+      this.inputX = nx;
+      this.inputY = ny;
+    }
+    return this.yaw;
+  }
+
+  reset(): void {
+    this.active = false;
+  }
+}
