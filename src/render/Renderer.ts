@@ -24,6 +24,11 @@ export class Renderer {
     this.resize();
   }
 
+  /** Clears the canvas to the background color (for scenes that draw only HTML). */
+  clear(): void {
+    this.three.clear();
+  }
+
   render(scene: Scene, camera: Camera): void {
     this.three.render(scene, camera);
   }

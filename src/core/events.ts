@@ -11,6 +11,10 @@ export interface GameEvents {
   placeFirstVisited: { triggerId: string };
   npcTalked: { npcId: string };
   checkpointSet: { checkpointId: string };
+  /** The UI language changed; screens rebuild their text. */
+  languageChanged: { language: string };
+  /** A setting in the save changed (applied by main.ts). */
+  settingsChanged: Record<string, never>;
 }
 
 export type GameEventBus = EventBus<GameEvents>;
