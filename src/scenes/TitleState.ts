@@ -4,7 +4,7 @@ import { button, el } from '../ui/dom';
 import { confirmPanel } from '../ui/menus/ConfirmPanel';
 import { settingsPanel } from '../ui/menus/SettingsPanel';
 import { Screen } from '../ui/Screen';
-import { canContinue, startNewGame } from './flow';
+import { canContinue } from './flow';
 
 /** Title screen: Continue (when there is progress), New Game and Settings. */
 export class TitleState implements GameState {
@@ -26,12 +26,8 @@ export class TitleState implements GameState {
 
   private newGame(): void {
     const { ctx } = this;
-    const begin = (): void => {
-      ctx.session = startNewGame(ctx.session, ctx.i18n.language);
-      ctx.persist();
-      // Step 1.5 puts the character creator between here and the intro.
-      ctx.goto('intro');
-    };
+    // The creator makes the new save when the character is done, so Back keeps the old one.
+    const begin = (): void => ctx.goto('create');
     if (canContinue(ctx.session))
       ctx.overlays.open(confirmPanel(ctx, 'title.overwriteQuestion', begin));
     else begin();
