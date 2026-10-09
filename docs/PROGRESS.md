@@ -7,9 +7,9 @@
 | | |
 |---|---|
 | **Huidige fase** | Fase 1 – Basis + open wereld + character creator |
-| **Status** | Plan goedgekeurd (2026-10-09) |
-| **Volgende stap** | Stap 1.1: projectopzet (Vite + TypeScript + Three.js, deploy naar GitHub Pages) |
-| **Laatste sessie** | 2026-10-09: eerste opdracht (§0) uitgevoerd |
+| **Status** | Stap 1.1 klaar (projectopzet) |
+| **Volgende stap** | Stap 1.2: kern (GameLoop met vaste tijdstap, EventBus, StateMachine, Random, debug-overlay) |
+| **Laatste sessie** | 2026-10-09: stap 1.1 projectopzet |
 
 ---
 
@@ -49,9 +49,12 @@ Elke stap is één branch + pull request. Na elke stap start de game zonder fout
 ## Fase-log
 
 ### Fase 1 – Basis + open wereld + character creator
-**Status:** plan goedgekeurd, bouwen begint met stap 1.1.
-**Gebouwd:** nog niets.
-**Bekende problemen:** –
+**Status:** bezig, stap 1.1 klaar.
+**Gebouwd:**
+- 1.1 Projectopzet: Vite 8 + TypeScript 6 (strict), Three.js r186, ESLint + Prettier, Vitest. Leeg 3D-scherm met een draaiende kubus in stijlgidskleuren (draait per seconde, niet per frame). GitHub Actions controleert elke pull request (lint, opmaak, typecheck, tests, build) en zet `main` op GitHub Pages.
+
+**Bekende problemen:**
+- De game-bundel is ±530 kB (vooral Three.js). Waarschuwingsgrens op 800 kB gezet; opsplitsen als de game groeit.
 **Gemeten fps:**
 
 | Apparaat | Low | Mid | High |
@@ -70,6 +73,10 @@ Elke stap is één branch + pull request. Na elke stap start de game zonder fout
 | 2026-10-09 | Oude spelgids, fase-tracker en `prompt.md` naar `docs/archive/` | Horen bij Arcane Oath (2D) |
 | 2026-10-09 | Claude mag pull requests zelf samenvoegen in `main` | Op verzoek van Bo en Lucas |
 | 2026-10-09 | Spelconcept lezen via de Google Drive-connector | Concept staat in Google Docs, niet in de repo |
+| 2026-10-09 | GitHub Pages deployt via GitHub Actions (ingesteld door Bo/Lucas) | Vite bouwt naar `dist/`, Actions zet dat online |
+| 2026-10-09 | De build kopieert de PerfTest (en de twee token-bestanden die hij nodig heeft) mee naar Pages | Zo blijft `…/experiments/perftest/` werken |
+| 2026-10-09 | TypeScript 6.0 in plaats van 7.0 | typescript-eslint ondersteunt 7.0 nog niet |
+| 2026-10-09 | Kleuren in code komen uit `docs/art-style/tokens.json` via `src/render/palette.ts` | Stijlgids-regel: geen losse kleurcodes |
 | 2026-10-09 | PerfTest verplaatst naar `experiments/perftest/` | Oude test-code hoort in `/experiments` (§5). Er was geen PeerJS-netwerktest in de repo, dus `experiments/net-test/` bestaat (nog) niet |
 
 ## Sessielog
@@ -78,3 +85,4 @@ Elke stap is één branch + pull request. Na elke stap start de game zonder fout
 - Eerste opdracht (§0): nieuwe master prompt opgeslagen als `CLAUDE.md`, oude bewaard in `docs/archive/`, PerfTest naar `experiments/perftest/`, deze PROGRESS.md met het plan voor fase 1 gemaakt.
 - Plan goedgekeurd. Oude 2D-plannen gearchiveerd, GitHub-werkwijze en spelconcept-link in `CLAUDE.md`.
 - Volgende stap: stap 1.1 (projectopzet).
+- Stap 1.1 gebouwd: Vite + TypeScript + Three.js, lint/format/tests, deploy-workflow, draaiende kubus. Getest in headless Chromium (kubus zichtbaar, geen fouten). Volgende stap: 1.2 (kern).
