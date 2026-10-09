@@ -1,16 +1,83 @@
 {
+  "settings": {
+    "interactRange": 2.6,
+    "petRange": 1.5,
+    "showRadius": 160,
+    "hideMargin": 20,
+    "simulateRadius": 60,
+    "noticeRadius": 5,
+    "turnDegreesPerSecond": 300,
+    "wanderPauseSeconds": [2, 7],
+    "followTeleportDistance": 30,
+    "petHopSeconds": 0.6
+  },
   "roles": [
-    { "id": "priest", "color": "steengrijs" },
-    { "id": "merchant", "color": "lantaarnamber" },
-    { "id": "smith", "color": "zonsondergang" },
-    { "id": "alchemist", "color": "spreukviolet" },
-    { "id": "herbalist", "color": "mosgroen" },
-    { "id": "innkeeper", "color": "zonlicht" },
-    { "id": "teacher", "color": "magieblauw" },
-    { "id": "dark_teacher", "color": "schemerviolet" },
-    { "id": "swordmaster", "color": "ornamentgoud" },
-    { "id": "companion", "color": "zonsondergang" },
-    { "id": "creature", "color": "bosgroen" }
+    {
+      "id": "priest",
+      "color": "steengrijs",
+      "model": "placeholder:npc_humanoid",
+      "radius": 0.45
+    },
+    {
+      "id": "merchant",
+      "color": "lantaarnamber",
+      "model": "placeholder:npc_humanoid",
+      "radius": 0.45
+    },
+    {
+      "id": "smith",
+      "color": "zonsondergang",
+      "model": "placeholder:npc_humanoid",
+      "radius": 0.45
+    },
+    {
+      "id": "alchemist",
+      "color": "spreukviolet",
+      "model": "placeholder:npc_humanoid",
+      "radius": 0.45
+    },
+    {
+      "id": "herbalist",
+      "color": "mosgroen",
+      "model": "placeholder:npc_humanoid",
+      "radius": 0.45
+    },
+    {
+      "id": "innkeeper",
+      "color": "zonlicht",
+      "model": "placeholder:npc_humanoid",
+      "radius": 0.45
+    },
+    {
+      "id": "teacher",
+      "color": "magieblauw",
+      "model": "placeholder:npc_humanoid",
+      "radius": 0.45
+    },
+    {
+      "id": "dark_teacher",
+      "color": "schemerviolet",
+      "model": "placeholder:npc_humanoid",
+      "radius": 0.45
+    },
+    {
+      "id": "swordmaster",
+      "color": "ornamentgoud",
+      "model": "placeholder:npc_humanoid",
+      "radius": 0.45
+    },
+    {
+      "id": "companion",
+      "color": "zonsondergang",
+      "model": "placeholder:cat",
+      "radius": 0
+    },
+    {
+      "id": "creature",
+      "color": "bosgroen",
+      "model": "placeholder:treewarden",
+      "radius": 1.1
+    }
   ],
   "npcs": [
     {
@@ -18,7 +85,10 @@
       "name": "Brother Ansel",
       "role": "priest",
       "zone": "greyhaven",
-      "position": { "x": -1865, "z": -131 },
+      "position": {
+        "x": -1865,
+        "z": -131
+      },
       "interaction": "talk",
       "behavior": "static",
       "dialogue": ["npc.brother_ansel.1", "npc.brother_ansel.2", "npc.brother_ansel.3"]
@@ -28,7 +98,10 @@
       "name": "Marco the Merchant",
       "role": "merchant",
       "zone": "greyhaven",
-      "position": { "x": -1815, "z": 124 },
+      "position": {
+        "x": -1815,
+        "z": 124
+      },
       "interaction": "talk",
       "behavior": "static",
       "dialogue": ["npc.marco.1", "npc.marco.2"]
@@ -38,7 +111,10 @@
       "name": "Hilda Ironhand",
       "role": "smith",
       "zone": "greyhaven",
-      "position": { "x": -1843, "z": 147 },
+      "position": {
+        "x": -1843,
+        "z": 147
+      },
       "interaction": "talk",
       "behavior": "static",
       "dialogue": ["npc.hilda.1", "npc.hilda.2"]
@@ -48,7 +124,10 @@
       "name": "Professor Fizzwick",
       "role": "alchemist",
       "zone": "greyhaven",
-      "position": { "x": -1797, "z": 106 },
+      "position": {
+        "x": -1797,
+        "z": 106
+      },
       "interaction": "talk",
       "behavior": "static",
       "dialogue": ["npc.fizzwick.1", "npc.fizzwick.2"]
@@ -58,7 +137,10 @@
       "name": "Rose the Herbalist",
       "role": "herbalist",
       "zone": "greyhaven",
-      "position": { "x": -1780, "z": 197 },
+      "position": {
+        "x": -1780,
+        "z": 197
+      },
       "interaction": "talk",
       "behavior": "static",
       "dialogue": ["npc.rose.1", "npc.rose.2"]
@@ -68,7 +150,10 @@
       "name": "Old Bertha",
       "role": "innkeeper",
       "zone": "greyhaven",
-      "position": { "x": -1832, "z": 98 },
+      "position": {
+        "x": -1832,
+        "z": 98
+      },
       "interaction": "talk",
       "behavior": "static",
       "dialogue": ["npc.bertha.1", "npc.bertha.2", "npc.bertha.3"]
@@ -78,17 +163,29 @@
       "name": "Master Brink",
       "role": "teacher",
       "zone": "greyhaven",
-      "position": { "x": -1712, "z": 12 },
+      "position": {
+        "x": -1712,
+        "z": 12
+      },
       "interaction": "talk",
       "behavior": "static",
-      "dialogue": ["npc.master_brink.1", "npc.master_brink.2"]
+      "dialogue": ["npc.master_brink.1", "npc.master_brink.2"],
+      "dialogueWhen": [
+        {
+          "condition": "readyToChoosePath",
+          "lines": ["npc.master_brink.ready"]
+        }
+      ]
     },
     {
       "id": "wizard_sam",
       "name": "Wizard Sam",
       "role": "dark_teacher",
       "zone": "greyhaven",
-      "position": { "x": -1735, "z": 28 },
+      "position": {
+        "x": -1735,
+        "z": 28
+      },
       "interaction": "talk",
       "behavior": "static",
       "dialogue": ["npc.wizard_sam.1", "npc.wizard_sam.2"]
@@ -98,7 +195,10 @@
       "name": "Sir Garrick",
       "role": "swordmaster",
       "zone": "greyhaven",
-      "position": { "x": -1688, "z": 62 },
+      "position": {
+        "x": -1688,
+        "z": 62
+      },
       "interaction": "talk",
       "behavior": "static",
       "dialogue": ["npc.sir_garrick.1", "npc.sir_garrick.2"]
@@ -108,10 +208,16 @@
       "name": "Pringle",
       "role": "companion",
       "zone": "greyhaven",
-      "position": { "x": -1864, "z": -118 },
+      "position": {
+        "x": -1864,
+        "z": -118
+      },
       "interaction": "pet",
       "behavior": "follow",
-      "follow": { "distance": 1.8, "speed": 4.5 },
+      "follow": {
+        "distance": 1.8,
+        "speed": 4.5
+      },
       "petText": "npc.pringle.pet",
       "dialogue": []
     },
@@ -120,10 +226,16 @@
       "name": "Treewarden",
       "role": "creature",
       "zone": "greenwood",
-      "position": { "x": -1080, "z": -610 },
+      "position": {
+        "x": -1080,
+        "z": -610
+      },
       "interaction": "none",
       "behavior": "wander",
-      "wander": { "radius": 40, "speed": 0.8 },
+      "wander": {
+        "radius": 40,
+        "speed": 0.8
+      },
       "monster": "treewarden",
       "safeAreas": ["elven_city"],
       "dialogue": []
@@ -133,10 +245,16 @@
       "name": "Treewarden",
       "role": "creature",
       "zone": "greenwood",
-      "position": { "x": -1320, "z": -820 },
+      "position": {
+        "x": -1320,
+        "z": -820
+      },
       "interaction": "none",
       "behavior": "wander",
-      "wander": { "radius": 60, "speed": 0.8 },
+      "wander": {
+        "radius": 60,
+        "speed": 0.8
+      },
       "monster": "treewarden",
       "safeAreas": ["elven_city"],
       "dialogue": []
@@ -146,10 +264,16 @@
       "name": "Treewarden",
       "role": "creature",
       "zone": "greenwood",
-      "position": { "x": -880, "z": -380 },
+      "position": {
+        "x": -880,
+        "z": -380
+      },
       "interaction": "none",
       "behavior": "wander",
-      "wander": { "radius": 60, "speed": 0.8 },
+      "wander": {
+        "radius": 60,
+        "speed": 0.8
+      },
       "monster": "treewarden",
       "safeAreas": ["elven_city"],
       "dialogue": []

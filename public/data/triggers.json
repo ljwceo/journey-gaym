@@ -1,5 +1,10 @@
 {
   "conditions": {
+    "readyToChoosePath": {
+      "type": "level",
+      "min": 5,
+      "note": "Master Brink talks about choosing your path from level 5 (main quest Your Resolve, phase 3)."
+    },
     "canLeaveCity": {
       "type": "always",
       "note": "Concept: only after defeating Sultan and reaching level 5. Always true in phase 1 so the other zones can be tested."

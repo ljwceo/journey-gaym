@@ -2,11 +2,11 @@ import type { GameEventBus } from '../core/events';
 import type { SaveData } from './SaveData';
 import type { SaveManager } from './SaveManager';
 
-export type AutoSaveReason = 'zone' | 'checkpoint' | 'place' | 'hidden' | 'manual';
+export type AutoSaveReason = 'zone' | 'checkpoint' | 'place' | 'npc' | 'hidden' | 'manual';
 
 /**
- * Saves automatically on a new zone, a new checkpoint, a place visited for the first time, and
- * when the page is hidden or closed.
+ * Saves automatically on a new zone, a new checkpoint, a place visited for the first time, an NPC
+ * met for the first time, and when the page is hidden or closed.
  * iPhone Safari does not fire `beforeunload` reliably, so `visibilitychange` and `pagehide`
  * are used instead.
  */
@@ -27,6 +27,7 @@ export class AutoSave {
       events.on('zoneEntered', () => this.saveNow('zone')),
       events.on('checkpointSet', () => this.saveNow('checkpoint')),
       events.on('placeFirstVisited', () => this.saveNow('place')),
+      events.on('npcMet', () => this.saveNow('npc')),
     );
     document.addEventListener('visibilitychange', this.onVisibilityChange);
     window.addEventListener('pagehide', this.onPageHide);

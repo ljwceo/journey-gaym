@@ -295,6 +295,11 @@ class CrossChecker {
     const f = 'npcs';
     const zones = new Map(this.data.zones.zones.map((zone) => [zone.id, zone]));
     this.data.npcs.roles.forEach((role, i) => this.color(f, `roles[${i}].color`, role.color));
+    const settings = this.data.npcs.settings;
+    const [pauseMin, pauseMax] = settings.wanderPauseSeconds;
+    if (pauseMin > pauseMax) {
+      this.issue(f, 'settings.wanderPauseSeconds', 'the first number (min) must not exceed max');
+    }
 
     this.data.npcs.npcs.forEach((npc, i) => {
       const p = `npcs[${i}]`;
@@ -304,6 +309,10 @@ class CrossChecker {
       this.ref('season', f, `${p}.season`, npc.season);
       npc.dialogue.forEach((key, d) => this.text(f, `${p}.dialogue[${d}]`, key));
       this.text(f, `${p}.petText`, npc.petText);
+      npc.dialogueWhen?.forEach((entry, w) => {
+        this.ref('condition', f, `${p}.dialogueWhen[${w}].condition`, entry.condition);
+        entry.lines.forEach((key, l) => this.text(f, `${p}.dialogueWhen[${w}].lines[${l}]`, key));
+      });
       npc.safeAreas?.forEach((area, a) => this.ref('area', f, `${p}.safeAreas[${a}]`, area));
 
       if (npc.interaction === 'talk' && npc.dialogue.length === 0) {
@@ -314,6 +323,9 @@ class CrossChecker {
       }
       if (npc.behavior === 'follow' && !npc.follow) {
         this.issue(f, `${p}.follow`, 'behavior "follow" needs follow settings');
+      }
+      if (npc.follow && npc.interaction === 'pet' && npc.follow.distance <= settings.petRange) {
+        this.issue(f, `${p}.follow.distance`, 'must be larger than settings.petRange');
       }
       if (npc.behavior === 'wander' && !npc.wander) {
         this.issue(f, `${p}.wander`, 'behavior "wander" needs wander settings');

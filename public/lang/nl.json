@@ -162,7 +162,13 @@
     "qualityLowered": "Graphics verlaagd naar {quality} zodat het spel vloeiend blijft.",
     "interact": "Gebruiken",
     "dash": "Dash",
-    "rest": "Rusten"
+    "rest": "Rusten",
+    "talkTo": "Praat met {name}",
+    "pet": "Aai {name}"
+  },
+  "dialog": {
+    "next": "Verder",
+    "close": "Sluiten"
   },
   "place": {
     "monastery": "Het Monastery is je checkpoint. Val je, dan word je hier wakker. Rust uit in je bed om bij te komen.",
@@ -212,7 +218,8 @@
     },
     "master_brink": {
       "1": "Welkom in de Academy. Magie beloont wie geduld heeft.",
-      "2": "Kom terug als je klaar bent om je pad te kiezen."
+      "2": "Kom terug als je klaar bent om je pad te kiezen.",
+      "ready": "Je bent sterk geworden. Het is tijd om je pad te kiezen. Wil je bij mij in de leer?"
     },
     "wizard_sam": {
       "1": "Hm. Niet veel bezoekers vinden de weg naar mij.",

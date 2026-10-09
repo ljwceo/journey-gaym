@@ -10,6 +10,8 @@ export interface GameEvents {
   triggerEntered: { triggerId: string };
   placeFirstVisited: { triggerId: string };
   npcTalked: { npcId: string };
+  /** The first time the player talks to (or pets) this NPC. */
+  npcMet: { npcId: string };
   checkpointSet: { checkpointId: string };
   /** The UI language changed; screens rebuild their text. */
   languageChanged: { language: string };

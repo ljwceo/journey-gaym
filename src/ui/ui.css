@@ -613,6 +613,68 @@
   padding-left: 8px;
 }
 
+/* Dialogue window: bottom center, above the touch buttons on phones; tap or E to continue. */
+.ui-layer > .ui-dialog {
+  position: absolute;
+  left: 50%;
+  bottom: max(28px, calc(env(safe-area-inset-bottom) + 16px));
+  width: min(560px, calc(100vw - 32px));
+  box-sizing: border-box;
+  padding: 14px 18px 10px;
+  color: var(--gh-tekst);
+  background: color-mix(in srgb, var(--gh-panel) 92%, transparent);
+  border: 1px solid var(--gh-koper);
+  border-radius: 6px;
+  box-shadow: 0 8px 32px color-mix(in srgb, var(--gh-nachtinkt) 70%, transparent);
+  transform: translate(-50%, 12px);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  touch-action: none;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  transition:
+    opacity 0.25s ease,
+    transform 0.25s ease,
+    visibility 0s linear 0.25s;
+}
+
+.ui-layer > .ui-dialog.ui-dialog-open {
+  transform: translate(-50%, 0);
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transition:
+    opacity 0.25s ease,
+    transform 0.25s ease,
+    visibility 0s;
+}
+
+@media (pointer: coarse) {
+  .ui-layer > .ui-dialog {
+    bottom: calc(var(--button-zone-height) + max(8px, env(safe-area-inset-bottom)));
+  }
+}
+
+.ui-dialog-name {
+  font-family: var(--gh-font-titel);
+  font-size: 20px;
+  color: var(--gh-ornamentgoud);
+}
+
+.ui-dialog-text {
+  margin: 6px 0 8px;
+  font-size: 17px;
+  line-height: 1.45;
+}
+
+.ui-dialog-more {
+  font: 13px var(--gh-font-stats);
+  text-align: right;
+  color: var(--gh-zonlicht);
+}
+
 /* Debug only: names above the placeholder buildings. */
 .ui-layer > .ui-structure-labels {
   position: absolute;
