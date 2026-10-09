@@ -1,7 +1,7 @@
 /** Game actions, independent of key, button or (later) gamepad. */
 /** `down` only matters while flying (debug cheat): Shift or C. */
 /** `confirm`: Enter, or a left click while the mouse is captured (e.g. next dialogue line). */
-export type Action = 'dash' | 'interact' | 'down' | 'confirm';
+export type Action = 'dash' | 'interact' | 'down' | 'confirm' | 'attack' | 'heavy';
 
 /** Turning and zoom gathered since the camera last read them. */
 export interface LookDelta {
@@ -223,6 +223,12 @@ export class Input {
     this.held.delete(action);
   }
 
+  /** A press that is released at once (a click): read with `consumePressed`. */
+  tap(action: Action): void {
+    this.press(action);
+    this.release(action);
+  }
+
   /** True while a finger or the right mouse button is held to turn the camera. */
   get turningCamera(): boolean {
     return this.lookPointer !== null;
@@ -282,10 +288,13 @@ export class Input {
     const id = event.pointerId;
     if (event.pointerType === 'mouse') {
       if (this.pointerLocked) {
-        // A click is a single press; nothing stays held.
+        // A click is a single press; nothing stays held. Left = fast hit (and "next" in a
+        // conversation), right = heavy hit.
         if (event.button === 0) {
-          this.press('confirm');
-          this.release('confirm');
+          this.tap('confirm');
+          this.tap('attack');
+        } else if (event.button === 2) {
+          this.tap('heavy');
         }
         return;
       }

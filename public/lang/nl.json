@@ -281,7 +281,9 @@
   },
   "controls": {
     "dash": "Dash",
-    "clickToLook": "Klik om rond te kijken · Esc voor het menu"
+    "clickToLook": "Klik om rond te kijken · Esc voor het menu",
+    "attack": "Slaan",
+    "heavy": "Zwaar"
   },
   "cheats": {
     "title": "Cheats (debug)",

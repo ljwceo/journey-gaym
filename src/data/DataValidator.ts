@@ -165,6 +165,13 @@ class CrossChecker {
       this.unique('structure', 'zones', `zones[${i}].structures`, zone.structures ?? []);
       if (zone.checkpoint) this.unique('checkpoint', 'zones', `zones[${i}]`, [zone.checkpoint]);
     });
+    // Monster spawn ids are unique across all zones (later quests and saves refer to them).
+    this.unique(
+      'monsterSpawn',
+      'zones',
+      'zones[].spawns',
+      d.zones.zones.flatMap((zone) => zone.spawns ?? []),
+    );
     this.unique('role', 'npcs', 'roles', d.npcs.roles);
     this.unique('npc', 'npcs', 'npcs', d.npcs.npcs);
     this.unique('monster', 'monsters', 'monsters', d.monsters.monsters);
@@ -252,6 +259,13 @@ class CrossChecker {
       });
       zone.npcs.forEach((npcId, n) => this.ref('npc', f, `${p}.npcs[${n}]`, npcId));
       this.checkStructures(zone, p);
+      zone.spawns?.forEach((spawn, n) => {
+        const sp = `${p}.spawns[${n}]`;
+        this.ref('monster', f, `${sp}.monster`, spawn.monster);
+        if (!pointInShape(zone.bounds, spawn.x, spawn.z)) {
+          this.issue(f, sp, 'monster spawn lies outside the zone');
+        }
+      });
       zone.scatter?.forEach((rule, n) => {
         this.ref('prop', f, `${p}.scatter[${n}].prop`, rule.prop);
         this.range(f, `${p}.scatter[${n}]`, rule.minScale, rule.maxScale);

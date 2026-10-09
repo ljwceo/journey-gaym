@@ -125,6 +125,8 @@ const zoneSchema = z.strictObject({
   areas: z.array(z.strictObject({ id, shape: shapeSchema, noScatter: optional(z.boolean()) })),
   /** Placeholder buildings and landmarks (later real models), loaded with the chunks they touch. */
   structures: optional(z.array(structureSchema)),
+  /** Where monsters (monsters.json) stand or roam in this zone. */
+  spawns: optional(z.array(z.strictObject({ id, monster: id, x: coord, z: coord }))),
   instances: z.array(z.strictObject({ id, name, entrance: pointSchema, enabled: z.boolean() })),
   /** Props (trees, rocks) scattered over the zone; `perHectare` before the quality density. */
   scatter: optional(
@@ -335,6 +337,27 @@ export const playerFileSchema = z.strictObject({
     }),
     comboEveryNthHit: z.int().check(z.minimum(2)),
     comboBonus: max(nonNegative, 5),
+    /** Fast hits within this many seconds of each other count as one combo. */
+    comboWindowSeconds: max(positive, 5),
+    /** Reach of a swing (m, from the player's center) and the width of its arc. */
+    range: max(positive, 10),
+    arcDegrees: range(1, 360),
+    /** How long a fast swing is drawn (s); the hit itself lands at once. */
+    fastSwingSeconds: max(positive, 2),
+    /** After a heavy hit lands you cannot attack for this long. */
+    heavyRecoverySeconds: max(nonNegative, 5),
+    /** Without enough energy fast hits still work, this many times slower. */
+    noEnergySlowdown: range(1, 10),
+    /** A press while you cannot attack yet is remembered this long (s), then done. */
+    inputBufferSeconds: max(nonNegative, 2),
+    /** Walking speed factor while winding up a heavy hit. */
+    heavyMoveFactor: fraction,
+    /** Attacks turn you towards the nearest enemy within this range and angle. */
+    aimAssist: z.strictObject({ range: max(nonNegative, 20), arcDegrees: range(0, 360) }),
+  }),
+  combat: z.strictObject({
+    /** You count as "in a fight" until this long after the last hit given or taken. */
+    lingerSeconds: max(positive, 60),
   }),
   death: z.strictObject({ goldLossFraction: fraction }),
   lowHpThreshold: fraction,
@@ -384,7 +407,14 @@ const monsterSchema = z.strictObject({
   damage: z.strictObject({ min: nonNegative, max: nonNegative }),
   speed: name,
   xp: nonNegInt,
-  behavior: z.enum(['melee', 'ranged']),
+  /** `static`: does not move or attack (e.g. a training dummy). */
+  behavior: z.enum(['melee', 'ranged', 'static']),
+  /** Placeholder model (EnemyFactory); later a glTF file. */
+  model: optional(name),
+  /** Body radius (m): what you hit and what you cannot walk through. */
+  radius: optional(max(positive, 10)),
+  /** A defeated dummy stands up again (full HP) after this many seconds. */
+  resetSeconds: optional(max(positive, 600)),
   range: optional(positive),
   rank: optional(z.enum(['miniboss', 'boss'])),
   neutral: optional(z.boolean()),

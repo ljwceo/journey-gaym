@@ -346,8 +346,11 @@
 :root {
   --joystick-zone-width: 45vw;
   --joystick-zone-top: 50vh;
-  --button-zone-width: 168px;
-  --button-zone-height: 168px;
+  --button-zone-width: 240px;
+  --button-zone-height: 200px;
+  /* Corner the action buttons are placed from (the attack button sits right in it). */
+  --button-right: max(28px, calc(env(safe-area-inset-right) + 12px));
+  --button-bottom: max(36px, calc(env(safe-area-inset-bottom) + 16px));
 }
 
 /* Full-screen surface under the world HUD that receives drags, pinches and the mouse wheel. */
@@ -432,9 +435,29 @@
   background: color-mix(in srgb, var(--gh-lantaarnamber) 45%, transparent);
 }
 
+/* Attack (big, in the corner), heavy hit to its left, dash above it. */
+.ui-attack-button {
+  width: 84px;
+  height: 84px;
+  right: var(--button-right);
+  bottom: var(--button-bottom);
+}
+
+.ui-heavy-button,
 .ui-dash-button {
-  right: max(28px, calc(env(safe-area-inset-right) + 12px));
-  bottom: max(36px, calc(env(safe-area-inset-bottom) + 16px));
+  width: 62px;
+  height: 62px;
+  font-size: 13px;
+}
+
+.ui-heavy-button {
+  right: calc(var(--button-right) + 96px);
+  bottom: calc(var(--button-bottom) + 4px);
+}
+
+.ui-dash-button {
+  right: calc(var(--button-right) + 11px);
+  bottom: calc(var(--button-bottom) + 96px);
 }
 
 /* ------------------------------------------------------------ HUD (subtle, fades in and out) */
@@ -941,18 +964,56 @@
   border-radius: 6px;
 }
 
-/* Fly up / down: left of the dash button, inside the button safe zone. */
+/* Fly up / down: left of the heavy-hit button, inside the button safe zone. */
 .ui-fly-button {
   width: 52px;
   height: 52px;
   font-size: 18px;
-  right: calc(max(28px, calc(env(safe-area-inset-right) + 12px)) + 84px);
+  right: calc(var(--button-right) + 170px);
 }
 
 .ui-fly-up {
-  bottom: calc(max(36px, calc(env(safe-area-inset-bottom) + 16px)) + 60px);
+  bottom: calc(var(--button-bottom) + 60px);
 }
 
 .ui-fly-down {
-  bottom: max(36px, calc(env(safe-area-inset-bottom) + 16px));
+  bottom: var(--button-bottom);
+}
+
+/* ------------------------------------------------------------ damage numbers */
+
+.ui-damage-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.ui-damage {
+  position: absolute;
+  left: 0;
+  top: 0;
+  font: 700 20px var(--gh-font-stats);
+  color: var(--gh-tekst);
+  text-shadow:
+    0 1px 2px var(--gh-nachtinkt),
+    0 0 6px color-mix(in srgb, var(--gh-nachtinkt) 80%, transparent);
+  white-space: nowrap;
+  will-change: transform, opacity;
+}
+
+/* Every 3rd hit of a combo: bigger and golden. */
+.ui-damage-combo {
+  font-size: 26px;
+  color: var(--gh-ornamentgoud);
+}
+
+.ui-damage-heavy {
+  font-size: 30px;
+  color: var(--gh-lantaarnamber);
+}
+
+/* Damage you take (phase 2.3: monsters hit back). */
+.ui-damage-player {
+  color: var(--gh-zonsondergang);
 }

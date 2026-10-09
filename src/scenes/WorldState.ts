@@ -24,6 +24,20 @@ import { CameraRig } from '../render/CameraRig';
 import { NpcRenderer } from '../render/NpcRenderer';
 import { colorTokens, palette, resolveColorToken } from '../render/palette';
 import { Cheats, stepFlying } from '../systems/Cheats';
+import {
+  applyLevel,
+  assistedHeading,
+  inSwingArc,
+  regenOutOfCombat,
+  type SwordConfig,
+  type SwordInput,
+  type SwordResult,
+  stepSword,
+  swordConfig,
+} from '../systems/Combat';
+import { Enemies } from '../systems/Enemies';
+import { EnemyRenderer } from '../render/EnemyRenderer';
+import { DamageNumbers } from '../ui/DamageNumbers';
 import { type Bounds, CollisionWorld } from '../systems/Collision';
 import {
   type MoveCommand,
@@ -71,6 +85,7 @@ const DEBUG_KEYS = [
   'places',
   'npcs',
   'energy',
+  'combat',
   'camera',
   'cheats',
 ] as const;
@@ -78,6 +93,8 @@ const DEBUG_KEYS = [
 const SUN_DIRECTION = new Vector3(-2, 3, 1.5).normalize();
 /** The shadow camera sits this far (m) from the player towards the sun. */
 const SUN_DISTANCE = 150;
+/** No attack this step (while a dash finishes). */
+const NO_SWORD_INPUT: SwordInput = { fast: false, heavy: false };
 /** Seconds over which fog and sky change color after entering another zone. */
 const FOG_SHARPNESS = 1.5;
 /** The interaction icon stays this far (CSS px) from the screen edges. */
@@ -125,6 +142,12 @@ export class WorldState implements GameState, InstanceHost {
   private npcs: Npcs | null = null;
   private npcRenderer: NpcRenderer | null = null;
   private npcWorld: NpcWorld | null = null;
+  private enemies: Enemies | null = null;
+  private enemyRenderer: EnemyRenderer | null = null;
+  private damageNumbers: DamageNumbers | null = null;
+  private sword: SwordConfig | null = null;
+  /** Whether the HUD currently shows the fight bars (changes only on transitions). */
+  private hudInCombat = false;
   private dialog: Dialog | null = null;
   /** The NPC in the open dialogue window, or null. */
   private talkingTo: Npc | null = null;
@@ -168,6 +191,8 @@ export class WorldState implements GameState, InstanceHost {
   private readonly moveInput = { x: 0, y: 0 };
   private readonly moveWorld = { x: 0, z: 0 };
   private readonly command: MoveCommand = { x: 0, z: 0, dash: false };
+  private readonly swordInput: SwordInput = { fast: false, heavy: false };
+  private readonly swordResult: SwordResult = { landed: 'none', damage: 0, combo: false };
   private readonly look: LookDelta = { yaw: 0, pitch: 0, zoom: 1 };
   private readonly stats: StreamerStats = {
     near: 0,
@@ -217,7 +242,7 @@ export class WorldState implements GameState, InstanceHost {
       if (this.dialog?.isOpen) this.dialog.close();
       else this.pause();
     };
-    this.touch = new TouchControls(this.input, t('controls.dash'), controls.joystickRadiusPx);
+    this.touch = new TouchControls(this.input, this.touchLabels(), controls.joystickRadiusPx);
     ctx.ui.append(this.touch.root);
 
     this.buildScene(data);
@@ -228,6 +253,9 @@ export class WorldState implements GameState, InstanceHost {
     ctx.ui.append(this.hud.root);
     this.dialog = new Dialog((key) => ctx.i18n.t(key));
     ctx.ui.append(this.dialog.root);
+    this.damageNumbers = new DamageNumbers();
+    ctx.ui.append(this.damageNumbers.root);
+    this.hudInCombat = false;
     this.talkingTo = null;
     this.targetNpc = null;
     this.iconLabelFor = null;
@@ -266,8 +294,7 @@ export class WorldState implements GameState, InstanceHost {
     document.addEventListener('visibilitychange', this.onVisibilityChange);
     this.unsubscribe.push(
       ctx.events.on('languageChanged', () => {
-        const label = ctx.i18n.t('controls.dash');
-        this.touch?.setDashLabel(label);
+        this.touch?.setLabels(this.touchLabels());
         this.pauseButton?.setAttribute('aria-label', ctx.i18n.t('pause.title'));
         if (this.lookHint) this.lookHint.textContent = ctx.i18n.t('controls.clickToLook');
         this.cheatPanel?.updateTexts();
@@ -325,6 +352,8 @@ export class WorldState implements GameState, InstanceHost {
     this.hud = null;
     this.dialog?.dispose();
     this.dialog = null;
+    this.damageNumbers?.dispose();
+    this.damageNumbers = null;
     this.talkingTo = null;
     this.targetNpc = null;
     this.labels?.dispose();
@@ -350,11 +379,19 @@ export class WorldState implements GameState, InstanceHost {
       this.command.z = 0;
       const next = input.consumePressed('interact');
       const dash = input.consumePressed('dash');
+      // A click both confirms and attacks; while talking it only shows the next line.
+      input.consumePressed('attack');
+      input.consumePressed('heavy');
       if (input.consumePressed('confirm') || next || dash) this.dialog.advance();
+      this.swordInput.fast = false;
+      this.swordInput.heavy = false;
     } else {
       input.consumePressed('confirm');
       // Interaction: E (or tapping the icon): talk to / pet an NPC, or rest at a checkpoint.
       if (input.consumePressed('interact')) this.interact();
+      // Fast hit: left mouse button or the attack button (held = keeps attacking).
+      this.swordInput.fast = input.consumePressed('attack') || input.isPressed('attack');
+      this.swordInput.heavy = input.consumePressed('heavy');
     }
 
     player.beginStep();
@@ -377,9 +414,10 @@ export class WorldState implements GameState, InstanceHost {
       );
     } else {
       this.command.dash = input.consumePressed('dash');
-      stepMovement(s, this.command, movement, dt, mover);
-      // You cannot walk through people (or Treewardens).
+      this.stepSwordAndMove(dt);
+      // You cannot walk through people (or Treewardens, or monsters).
       if (this.npcs?.pushOut(s, movement.radius)) this.collision?.resolve(s, movement.radius);
+      if (this.enemies?.pushOut(s, movement.radius)) this.collision?.resolve(s, movement.radius);
       this.checkGate(fromX, fromZ);
       s.y = streamer.heightAt(s.x, s.z);
     }
@@ -391,8 +429,109 @@ export class WorldState implements GameState, InstanceHost {
       this.checkpoints?.update(s.x, s.z, session.world);
     }
     this.updateNpcs(dt);
+    this.enemies?.step(dt, s.x, s.z, this.groundHeight);
+    this.updateCombatHud();
     this.hud?.rules.setEnergyFraction(s.energy / movement.maxEnergy);
     this.hud?.setBar('energy', s.energy / movement.maxEnergy);
+  }
+
+  /**
+   * The sword and walking for one step. While a heavy hit winds up you walk slowly and cannot
+   * dash. Starting an attack turns you towards the nearest enemy in front (aim assist). A hit
+   * that lands damages every enemy in the swing arc.
+   */
+  private stepSwordAndMove(dt: number): void {
+    const { player, movement, mover, sword, enemies } = this;
+    const data = this.ctx.data;
+    if (!player || !movement || !mover || !sword || !data) return;
+    const s = player.state;
+    const c = player.combat;
+    const input = this.swordInput;
+    const wants = input.fast || input.heavy || c.bufferedFast > 0 || c.bufferedHeavy > 0;
+    const starting = wants && c.attackCooldown <= 0 && c.heavyWindup <= 0;
+    if (starting && enemies && s.dashTime <= 0) {
+      s.heading = assistedHeading(
+        s.x,
+        s.z,
+        s.heading,
+        enemies.shown,
+        sword.aimRange,
+        sword.aimHalfArc,
+      );
+    }
+    // A dash in progress finishes first; attacks wait for it.
+    const result =
+      s.dashTime > 0
+        ? stepSword(c, s, NO_SWORD_INPUT, sword, dt, this.swordResult)
+        : stepSword(c, s, input, sword, dt, this.swordResult);
+    if (result.landed !== 'none' && enemies) this.landHit(result);
+
+    const windingUp = c.heavyWindup > 0;
+    if (windingUp) this.command.dash = false;
+    movement.walkSpeed =
+      this.baseWalkSpeed * this.cheats.speed * (windingUp ? sword.heavyMoveFactor : 1);
+    stepMovement(s, this.command, movement, dt, mover);
+    regenOutOfCombat(c, data.player.regen.hpPerSecondOutOfCombat, dt);
+  }
+
+  /** Applies a landed swing to every enemy in its arc, with damage numbers. */
+  private landHit(result: SwordResult): void {
+    const { player, sword, enemies, enemyRenderer } = this;
+    if (!player || !sword || !enemies) return;
+    const s = player.state;
+    let hitAny = false;
+    for (let i = 0; i < enemies.shown.length; i++) {
+      const e = enemies.shown[i];
+      if (!e || !e.hittable) continue;
+      if (!inSwingArc(s.x, s.z, s.heading, e.x, e.z, e.radius, sword.range, sword.halfArc)) {
+        continue;
+      }
+      enemies.hit(e, result.damage);
+      hitAny = true;
+      const top = e.y + (enemyRenderer?.heightOf(e) ?? 1.5);
+      const kind = result.landed === 'heavy' ? 'heavy' : result.combo ? 'combo' : 'normal';
+      this.damageNumbers?.spawn(e.x, top, e.z, result.damage, kind);
+    }
+    if (hitAny) player.combat.sinceCombat = 0;
+  }
+
+  /** HP and mana bars, the "in a fight" rule and the low-HP rule (HUD rules from the concept). */
+  private updateCombatHud(): void {
+    const c = this.player?.combat;
+    const hud = this.hud;
+    if (!c || !hud) return;
+    const fighting = c.inCombat;
+    if (fighting !== this.hudInCombat) {
+      this.hudInCombat = fighting;
+      hud.rules.setCombat(fighting);
+    }
+    hud.setBar('hp', c.maxHp > 0 ? c.hp / c.maxHp : 0);
+    hud.setBar('mana', c.maxMana > 0 ? c.mana / c.maxMana : 0);
+    hud.rules.setHpFraction(c.maxHp > 0 ? c.hp / c.maxHp : 1);
+  }
+
+  /** Draws the sword where the swing is (not interpolated: a swing is short and fast). */
+  private updateSwordPose(): void {
+    const { player, sword } = this;
+    if (!player || !sword) return;
+    const c = player.combat;
+    const model = player.model;
+    if (c.heavyWindup > 0) {
+      model.setSwordPose('windup', 1 - c.heavyWindup / sword.heavyWindupSeconds);
+    } else if (c.swingTime > 0 && c.swing !== 'none') {
+      model.setSwordPose(c.swing, 1 - c.swingTime / sword.fastSwingSeconds);
+    } else {
+      model.setSwordPose('rest', 0);
+    }
+  }
+
+  private touchLabels(): { attack: string; heavy: string; dash: string } {
+    const t = this.ctx.i18n;
+    return {
+      attack: t.t('controls.attack'),
+      heavy: t.t('controls.heavy'),
+      dash: t.t('controls.dash'),
+    };
   }
 
   /** The closed city gate (condition false) holds the player back like a wall. */
@@ -504,7 +643,9 @@ export class WorldState implements GameState, InstanceHost {
     worldRoot.position.set(-origin.x, 0, -origin.z);
 
     player.syncModel(a);
+    this.updateSwordPose();
     this.npcRenderer?.update(a, this.ctx.data?.npcs.settings.petHopSeconds ?? 1);
+    this.enemyRenderer?.update(a);
     input.consumeLook(this.look);
     const look = this.look;
     const turning = input.turningCamera || look.yaw !== 0 || look.pitch !== 0;
@@ -539,6 +680,14 @@ export class WorldState implements GameState, InstanceHost {
       s.z,
     );
     this.hud?.update(frameSeconds);
+    this.damageNumbers?.update(
+      this.paused ? 0 : frameSeconds,
+      rig.camera,
+      origin.x,
+      origin.z,
+      window.innerWidth,
+      window.innerHeight,
+    );
     this.ctx.renderer.render(scene, rig.camera);
   }
 
@@ -703,6 +852,7 @@ export class WorldState implements GameState, InstanceHost {
     origin.reset(player.state.x, player.state.z);
     rig.orbit.snap(player.state.x, player.state.y, player.state.z, rig.orbit.yaw);
     this.dialog?.close();
+    this.damageNumbers?.clear();
     if (this.npcWorld) {
       const s = player.state;
       this.npcs?.snapCompanions(s.x, s.z, s.heading, this.npcWorld);
@@ -856,6 +1006,13 @@ export class WorldState implements GameState, InstanceHost {
     );
     player.state.energy = data.player.base.energy;
     player.state.sinceEnergySpent = data.player.regen.energyDelaySeconds;
+    this.sword = swordConfig(data.player);
+    const combat = player.combat;
+    combat.lingerSeconds = this.sword.combatLingerSeconds;
+    // Levels and saved HP come with XP in step 2.4; for now you start full at level 1.
+    applyLevel(combat, data.player, 1);
+    combat.hp = combat.maxHp;
+    combat.mana = combat.maxMana;
     player.model.root.traverse((object) => {
       object.castShadow = true;
     });
@@ -870,6 +1027,12 @@ export class WorldState implements GameState, InstanceHost {
     };
     this.npcs = new Npcs(data.npcs, this.ctx.seasons?.currentId() ?? '', resolveColorToken);
     this.npcRenderer = new NpcRenderer(this.npcs.list, worldRoot);
+    // Monsters appear at the same distance as NPCs, on every graphics preset.
+    this.enemies = new Enemies(data.zones.zones, data.monsters, {
+      showRadius: data.npcs.settings.showRadius,
+      hideMargin: data.npcs.settings.hideMargin,
+    });
+    this.enemyRenderer = new EnemyRenderer(this.enemies.list, worldRoot);
     this.safeAreas = new Map(
       data.zones.zones.flatMap((entry) => entry.areas.map((area) => [area.id, area.shape])),
     );
@@ -965,6 +1128,10 @@ export class WorldState implements GameState, InstanceHost {
     this.player = null;
     this.npcRenderer?.dispose();
     this.npcRenderer = null;
+    this.enemyRenderer?.dispose();
+    this.enemyRenderer = null;
+    this.enemies = null;
+    this.sword = null;
     this.npcs = null;
     this.npcWorld = null;
     this.safeAreas = null;
@@ -1033,6 +1200,13 @@ export class WorldState implements GameState, InstanceHost {
     );
     debug.lines.set('npcs', this.npcDebugLine(s.x, s.z));
     debug.lines.set('energy', `${Math.round(s.energy)} · dash cd ${s.dashCooldown.toFixed(2)} s`);
+    const c = player.combat;
+    debug.lines.set(
+      'combat',
+      `hp ${Math.ceil(c.hp)}/${c.maxHp} · mana ${Math.round(c.mana)} · lvl ${c.level} · ` +
+        `${c.heavyWindup > 0 ? 'heavy windup' : c.swing} · combo ${c.comboCount} · ` +
+        `${c.inCombat ? 'in fight' : 'calm'} · enemies ${this.enemies?.shown.length ?? 0}/${this.enemies?.list.length ?? 0}`,
+    );
     debug.lines.set(
       'camera',
       `yaw ${Math.round(o.yaw / DEG)}° pitch ${Math.round(o.pitch / DEG)}° dist ${o.distance.toFixed(1)} m · sens ${Math.round((this.ctx.session?.settings.cameraSensitivity ?? 1) * 100)}%`,
