@@ -8,6 +8,7 @@ import { Renderer } from './render/Renderer';
 import { AutoSave } from './save/AutoSave';
 import { browserStorage, SaveManager } from './save/SaveManager';
 import { BootState } from './scenes/BootState';
+import { CharacterCreateState } from './scenes/CharacterCreateState';
 import { frameCapFor, type StateId } from './scenes/flow';
 import { IntroState } from './scenes/IntroState';
 import { LanguageSelectState } from './scenes/LanguageSelectState';
@@ -83,6 +84,7 @@ states
   .register('boot', new BootState(ctx))
   .register('language', new LanguageSelectState(ctx))
   .register('title', new TitleState(ctx))
+  .register('create', new CharacterCreateState(ctx))
   .register('intro', new IntroState(ctx))
   .register('world', new WorldState(ctx));
 

@@ -324,3 +324,159 @@
   border-radius: 50%;
   cursor: pointer;
 }
+
+/* ------------------------------------------------------------ character creator */
+
+/* The 3D figure is drawn on the canvas below; this screen only adds the panel. */
+.ui-creator {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) min(420px, 46%);
+  grid-template-rows: minmax(0, 1fr);
+  align-items: center;
+  gap: 16px;
+  background: none;
+  overflow: hidden;
+}
+
+/* Portrait phones: figure on top, panel below (never over each other). */
+@media (max-aspect-ratio: 1/1) {
+  .ui-creator {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(180px, 38%) minmax(0, 1fr);
+    gap: 8px;
+  }
+}
+
+.ui-creator-stage {
+  position: relative;
+  align-self: stretch;
+  min-height: 0;
+  touch-action: none;
+  cursor: grab;
+}
+
+.ui-creator-stage-dragging {
+  cursor: grabbing;
+}
+
+.ui-creator-hint {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 4px;
+  pointer-events: none;
+}
+
+.ui-creator-panel {
+  width: 100%;
+  max-height: 100%;
+  align-self: center;
+  justify-self: center;
+  overscroll-behavior: contain;
+}
+
+@media (max-aspect-ratio: 1/1) {
+  .ui-creator-panel {
+    align-self: stretch;
+    width: min(480px, 100%);
+  }
+}
+
+.ui-creator-options {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ui-creator-begin {
+  width: 100%;
+}
+
+.ui-label-value {
+  color: var(--gh-tekst);
+}
+
+/* Text field. 16px or more, or iPhone Safari zooms in on focus (and stays zoomed). */
+.ui-input {
+  min-height: 44px;
+  padding: 8px 12px;
+  box-sizing: border-box;
+  font: 18px var(--gh-font-tekst);
+  color: var(--gh-tekst);
+  background: var(--gh-nachtinkt);
+  border: 1px solid var(--gh-koper);
+  border-radius: 4px;
+  /* The page blocks text selection; a text field needs it, or Safari will not let you type. */
+  user-select: text;
+  -webkit-user-select: text;
+  touch-action: manipulation;
+}
+
+.ui-input:focus {
+  border-color: var(--gh-ornamentgoud);
+  outline: none;
+}
+
+.ui-input::placeholder {
+  color: var(--gh-tekst-zacht);
+}
+
+.ui-field-error {
+  margin: 0;
+  min-height: 1.2em;
+  font-size: 15px;
+  color: var(--gh-zonlicht);
+}
+
+.ui-field-error:empty {
+  min-height: 0;
+}
+
+.ui-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.ui-chip {
+  min-height: 40px;
+  padding: 6px 12px;
+  font: 16px var(--gh-font-tekst);
+  color: var(--gh-tekst-zacht);
+  background: transparent;
+  border: 1px solid var(--gh-rand);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.ui-chip-active {
+  color: var(--gh-nachtinkt);
+  background: var(--gh-ornamentgoud);
+  border-color: var(--gh-ornamentgoud);
+}
+
+.ui-swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+/* 36px dots with a gap: big enough to tap on a phone. */
+.ui-swatch {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 2px solid var(--gh-rand);
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.ui-swatch-active {
+  outline: 2px solid var(--gh-ornamentgoud);
+  outline-offset: 2px;
+}
+
+.ui-swatch:focus-visible {
+  outline: 2px solid var(--gh-zonlicht);
+  outline-offset: 2px;
+}

@@ -76,7 +76,11 @@
     "skinTone": "Huidskleur",
     "mantleColor": "Mantelkleur",
     "random": "Willekeurig",
-    "start": "Begin je reis"
+    "start": "Begin je reis",
+    "nameEmpty": "Kies eerst een naam.",
+    "back": "Terug",
+    "dragToTurn": "Sleep om te draaien",
+    "startItems": "Startspullen: {weapon} en {mantle} in je mantelkleur."
   },
   "appearance": {
     "body": {

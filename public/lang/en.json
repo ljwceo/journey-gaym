@@ -76,7 +76,11 @@
     "skinTone": "Skin tone",
     "mantleColor": "Mantle color",
     "random": "Random",
-    "start": "Begin your journey"
+    "start": "Begin your journey",
+    "nameEmpty": "Choose a name first.",
+    "back": "Back",
+    "dragToTurn": "Drag to turn",
+    "startItems": "Starting gear: {weapon} and {mantle} in your mantle color."
   },
   "appearance": {
     "body": {
