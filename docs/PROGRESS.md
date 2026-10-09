@@ -7,9 +7,9 @@
 | | |
 |---|---|
 | **Huidige fase** | Fase 1 – Basis + open wereld + character creator |
-| **Status** | Stap 1.6 klaar (speler en camera), camera omgebouwd naar over de schouder (zoals Genshin) |
-| **Volgende stap** | Stap 1.7: open wereld (zones uit data, chunks met ringen, terrein in een Web Worker, gebudgetteerd laden, floating origin, mist, InstancedMesh, debug-kleuren voor chunks) |
-| **Laatste sessie** | 2026-10-09: camera over de schouder (Genshin-stijl) |
+| **Status** | Stap 1.7 klaar (open wereld: terrein, zones, chunks, worker, floating origin) |
+| **Volgende stap** | Stap 1.8: inhoud (gebouwen in Greyhaven, Old Tjikko, riviertjes, elfenstad, heiligdom, Mournfen-klooster), triggers, eerste-bezoek-teksten, stadspoort, checkpoints, zonenaam in beeld, HUD-systeem met faden |
+| **Laatste sessie** | 2026-10-09: stap 1.7 (open wereld) |
 
 ---
 
@@ -49,7 +49,7 @@ Elke stap is één branch + pull request. Na elke stap start de game zonder fout
 ## Fase-log
 
 ### Fase 1 – Basis + open wereld + character creator
-**Status:** bezig, stap 1.1 t/m 1.6 klaar.
+**Status:** bezig, stap 1.1 t/m 1.7 klaar.
 **Gebouwd:**
 - 1.1 Projectopzet: Vite 8 + TypeScript 6 (strict), Three.js r186, ESLint + Prettier, Vitest. Leeg 3D-scherm met een draaiende kubus in stijlgidskleuren (draait per seconde, niet per frame). GitHub Actions controleert elke pull request (lint, opmaak, typecheck, tests, build) en zet `main` op GitHub Pages.
 - 1.2 Kern: `FixedStep` + `GameLoop` (simulatie altijd 60 Hz met accumulator, tekenen interpoleert, max 8 inhaalstappen per frame, frames > 0,25 s worden afgekapt, `?fps=N` om de framerate te beperken), getypte `EventBus` (geen allocaties bij `emit`), `StateMachine` (wissel gebeurt pas vóór de volgende update), `Random` (sfc32 met vaste seed) + `hashSeed` voor per-chunk seeds, `Renderer`, `DebugOverlay` (F3 / drie vingers / `?debug=1`: fps, frametijd, cpu-tijd, draw calls, triangles, geometries/textures, heap, resolutie, simulatiestappen, huidige state). Demo-scène: kubus die rondjes draait op de simulatie en vloeiend getekend wordt. 29 tests.
@@ -86,20 +86,36 @@ Elke stap is één branch + pull request. Na elke stap start de game zonder fout
   - **Invoer** (`src/core/Input.ts`): WASD/pijltjes, spatie = dash, E = interactie (doet nog niets tot stap 1.9). Muis: zie hierboven, scrollwiel = zoomen. Touch: joystick verschijnt waar je duim neerkomt linksonder (linker 45%, onderste helft), één vinger ergens anders = camera draaien, twee vingers knijpen = zoomen, **Dash**-knop rechtsonder (`src/ui/TouchControls.ts`). Vaste veilige zones voor joystick en knoppen staan in `ui.css` (`--joystick-zone-*`, `--button-zone-*`).
   - **Wereld** (`src/scenes/WorldState.ts`): je poppetje uit de creator (eigen kleuren) staat op een vlakke testvloer in Greyhaven met een raster van 4 m (1 hokje = 1 seconde lopen) en een **tijdelijke testbaan** (`src/world/TestCourse.ts`: muur met opening, hoek, dunne muur voor de dash, pilaren, een "gebouw"). Mist- en grondkleur uit de zone, kijkafstand uit de grafische stand. Positie en kijkrichting gaan mee in de save, dus Continue zet je terug waar je was. Pauze laat alle toetsen los.
   - Debug-overlay: positie, kijkrichting, lopen/dash, energie, dash-cooldown, camerahoek, zoom en gevoeligheid. 142 tests.
+- 1.7 Open wereld:
+  - **Terrein** (`src/world/TerrainField.ts`, `Noise.ts`): de hoogte en kleur van de grond zijn een vaste formule van (x, z) met een vaste seed. Elke zone heeft eigen heuvels (`baseHeight`, `amplitude`, `scale` in `zones.json`). Bij zonegrenzen lopen hoogte en kleur over 80 m zacht in elkaar over: geen trap, geen naad. Buiten alle zones ligt de zeebodem, dus de rand van de wereld is een kust met zee (`world.terrain` in `zones.json`). De Black Citadel ligt met hogere `priority` bovenop Morvath.
+  - **Chunks** (`src/world/ChunkPlanner.ts`): blokken van 64 × 64 m. Rondom de speler een **actieve ring** (colliders), een **preload-ring** (geladen en getekend) en een **unload-ring** (pas daarbuiten weggegooid: heen en weer lopen over een chunkrand laadt niets opnieuw). Dichtbij en in je looprichting laadt eerst. Ringen per stand in `quality.json`: Low 1/3/4, Mid 1/4/5, High 1/6/7.
+  - **Web Worker** (`src/workers/terrain.worker.ts`, `src/world/TerrainWorkers.ts`): de worker maakt per chunk de hoogtes, normalen, kleuren en de plekken van bomen/rotsen/struiken. De buffers gaan heen en weer zonder te kopiëren (transferable) en worden hergebruikt. Werkt de worker niet, dan bouwt de game op de main thread (1 chunk per frame) met een melding in debug.
+  - **Gebudgetteerd laden** (`src/world/WorldStreamer.ts`): per frame maximaal 2 chunks of 2 ms in de wereld zetten (`streaming` in `quality.json`). Geometrieën, buffers, colliders en props worden hergebruikt (pools): na lang lopen groeit het geheugen niet (test: 2× heen en terug door de hele wereld eindigt exact gelijk).
+  - **Terrein-LOD:** dichtbij een fijn raster (Mid/High 32 × 32 hokjes per chunk = 2 m), verder weg grof (8 × 8). Een "rok" langs de chunkranden verbergt kieren tussen fijn en grof.
+  - **Props** (`PropLayer.ts`, `PropModels.ts`): bomen, rotsen en struiken per zone uit data (`scatter` per zone, `props` in `zones.json`), altijd op dezelfde plek (vaste seed per chunk). Elke soort is één **InstancedMesh** voor de hele wereld (1 draw call), compact gehouden zodat alleen echte props getekend worden. Bomen en rotsen hebben colliders; struiken zijn decoratie en worden op Low dunner. De stad Greyhaven blijft vrij (`scatterExclude`). De Greenwood is een echt bos.
+  - **Nog niet geladen:** een vlakke tegel in de zonekleur, zodat er nooit een gat is. Bij binnenkomen (en na wisselen van stand) wordt de actieve ring meteen gebouwd: je staat nooit op een tegel.
+  - **Lopen op terrein** (`src/systems/Collision.ts`): je volgt de hoogte van de grond, hellingen steiler dan 40° kun je niet op (wel af, en je glijdt langs), diep water (dieper dan 0,8 m) houdt je tegen; ondiep water kun je in. Je raakt nooit vast: uit het water omhoog lopen mag altijd.
+  - **Floating origin** (`src/world/FloatingOrigin.ts`): alles wat getekend wordt staat ten opzichte van een oorsprong die meeschuift zodra je verder dan 1000 m loopt. Simulatie en save gebruiken gewone wereldcoördinaten.
+  - **Zones:** naadloos lopen, de mist en lucht kleuren rustig mee naar de nieuwe zone, en bij een nieuwe zone volgt een autosave (`zoneEntered`). De zonenaam in beeld komt met de HUD (stap 1.8).
+  - **Zee** als vlak in `zeewater`, de camera gaat niet meer onder de grond, en de testvloer + testbaan zijn weg.
+  - **Grafische stand** werkt nu voor kijkafstand en streaming; wisselen in Settings past het meteen aan.
+  - **Debug:** chunkranden in kleur (blauw = actief, goud = geladen, amber = laden, violet = alleen bewaard), aantallen chunks/tegels/props/colliders, worker of main thread, langste laadtijd per frame, huidige zone, grondhoogte, oorsprong. 183 tests.
 
 **Bekende problemen:**
 - De game-bundel is ±666 kB (Three.js ±530 kB, zod ±130 kB). Waarschuwingsgrens op 800 kB gezet; opsplitsen als de game groeit. Wordt zod te zwaar, dan kan het naar `zod/mini` (veel kleiner, zelfde werking).
-- De grafische stand wordt al opgeslagen maar doet nog niets; de QualityManager komt in stap 1.10.
+- De grafische stand regelt nu kijkafstand, chunk-ringen en terreindetail. Resolutie, schaduwen, antialias, benchmark en automatisch omlaag komen met de QualityManager in stap 1.10.
 - De pauzeknop is nu het teken "II"; volgens de stijlgids (U3) wordt dat later een geschilderd icoontje.
 - Kapsels en lichaamstypes zijn ruwe vormen (het vrouwelijke lijf is alleen iets smaller).
-- De testvloer en testbaan zijn tijdelijk; stap 1.7/1.8 vervangen ze door terrein, zones en gebouwen uit data. De grond is nog vlak, dus de helling-limiet (40°) doet nog niets.
-- De camera gaat nog door muren heen als je hem erachter draait. Camera-botsing komt met de echte gebouwen en heuvels (stap 1.7/1.8).
+- De camera blijft nu boven de grond, maar gaat nog door bomen (en straks gebouwen) heen als je hem erachter draait. Camera-botsing met objecten komt met de gebouwen (stap 1.8).
 - Het poppetje kost ±16 draw calls (losse onderdelen). Prima nu; later samenvoegen of vervangen door één model.
 - Touch: twee vingers knijpen in het joystick-gebied (linksonder) maakt de eerste vinger een joystick. Knijp boven of rechts in beeld. Tikken met drie vingers zet nog steeds de debug-overlay aan of uit.
 - Op een iPhone-scherm bedekt de debug-overlay een groot deel van het beeld (alleen in debug).
 - Joystick, rondkijken en knijpen zijn getest met nagebootste vingers in de headless browser; graag op een echte iPhone testen of het lekker voelt.
 - Of het toetsenbord op een echte iPhone netjes dichtgaat, kan ik in de headless browser niet zien. Graag testen op de telefoon.
-- Bundel nu ±730 kB (grens 800 kB).
+- Bundel nu ±768 kB (grens 800 kB). Bij de volgende stap opsplitsen of zod → `zod/mini`.
+- Het terrein is nog vrij glad en de kust is een rechte lijn langs de wereldrand. Haven, baai, eilandfort, riviertjes en Old Tjikko komen met de inhoud in stap 1.8.
+- Alles (grond, bomen) ziet er door het warme schemerlicht bruinig uit; kleuren en licht zijn placeholders tot de art-pass.
+- Echte fps en haperingen kon ik niet meten: de headless browser tekent zonder GPU (±8 fps). De hoofdthread besteedt wel maar ±1 ms per frame aan chunks laden (max 1,4 ms gezien). Graag meten op pc en iPhone (zie testinstructies in de pull request).
 - Veel getallen die niet in het concept staan zijn een **voorstel** (zie besluiten): spell-, combo- en skillwaarden, Sultans waarschuwingstijden, dash-afstand, vijandsnelheden in m/s. Ze staan in data en zijn makkelijk aan te passen.
 **Gemeten fps:**
 
@@ -156,6 +172,16 @@ Elke stap is één branch + pull request. Na elke stap start de game zonder fout
 | 2026-10-09 | Joystick-gebied: linker 45% van het scherm, onderste helft | Kleiner dan eerst (was linker helft, onder 35%), zodat je op de telefoon makkelijker de camera kunt draaien |
 | 2026-10-09 | Tijdelijke testbaan staat in code (`TestCourse.ts`), niet in data | Het is ontwikkel-gereedschap voor deze stap, geen spelinhoud; verdwijnt in 1.7/1.8 |
 | 2026-10-09 | PerfTest verplaatst naar `experiments/perftest/` | Oude test-code hoort in `/experiments` (§5). Er was geen PeerJS-netwerktest in de repo, dus `experiments/net-test/` bestaat (nog) niet |
+| 2026-10-09 | "Camera schuin van boven" overal weggehaald: uit `CLAUDE.md`, `PROGRESS.md` en het spelconcept in Google Docs (Kern en besluiten → Thema en Wereld). Overal staat nu: over de schouder, zoals Genshin Impact | Op verzoek van Bo/Lucas bij stap 1.7 |
+| 2026-10-09 | Floating origin alleen voor tekenen; simulatie, colliders en save houden wereldcoördinaten | JavaScript rekent met 64-bit getallen; alleen de GPU (32-bit) heeft het nodig. Houdt save en collision simpel |
+| 2026-10-09 | Lopen (helling, water) gebruikt de terreinformule, niet het getekende raster | Zo is gameplay op Low, Mid en High precies gelijk (eis 3), ook al verschilt het raster |
+| 2026-10-09 | Actieve ring (colliders) is op elke stand 1; de validator bewaakt dat | Gameplay gelijk op elke stand. Was eerst 2 op Mid/High |
+| 2026-10-09 | Kijkafstand per stand: Low 180 m, Mid 250 m, High 380 m; preload-ring 3/4/6 chunks. Validator: mist mag niet verder reiken dan de geladen chunks | Mid was 280 m en High 400 m, maar dan zag je voorbij de geladen chunks |
+| 2026-10-09 | `lodBias` in `quality.json` vervangen door `lodRing` en `terrainSegments` | Duidelijker: welke ring fijn terrein krijgt en hoe fijn |
+| 2026-10-09 | Bomen en rotsen hebben colliders en zijn op elke stand gelijk; alleen struiken (decor) worden dunner op Low | Wat je tegenhoudt mag niet per stand verschillen |
+| 2026-10-09 | Buiten alle zones ligt zee; diep water (> 0,8 m) houdt je tegen, ondiep water niet | "Wereldranden en diep water blokkeren" (§7); de westkust van Greyhaven wordt zo vanzelf kust |
+| 2026-10-09 | Zones vloeien over 80 m in elkaar over (`blendWidth`) | Geen zichtbare naad of trap op de grens; aan te passen in `zones.json` |
+| 2026-10-09 | Placeholder-props: boom = stam + 2 kegels (lavasteen/bosgroen), rots (steengrijs), struik (bosgroen). Dichtheid per zone in `zones.json` (voorstel, bijv. Greenwood 44 bomen per chunk) | Concept noemt geen aantallen; makkelijk aan te passen |
 
 ## Sessielog
 
@@ -171,3 +197,4 @@ Elke stap is één branch + pull request. Na elke stap start de game zonder fout
 - Op verzoek: `docs/art-style/models.md` beschrijft wat Bo en Lucas moeten aanleveren voor het echte personage (15 .glb-bestanden of tekeningen, maten, materiaalnamen, animaties, eerst een proef). PR #9 samengevoegd.
 - Stap 1.6 gebouwd: lopen, dash met energie, collision met spatial hash, camera die volgt, zoomt en vrij rondkijkt, toetsenbord/muis/touch-invoer, joystick en dashknop, testvloer met testbaan. Op verzoek: camerasnelheid 30–100% in Settings (save v2 + migratie). Getest in headless Chromium (pc 1280×800 en iPhone 13 met nagebootste vingers): 2 s lopen = 8 m, dash = 4 m en stopt tegen de muur, rondkijken laat het poppetje stil, knijpen zoomt, dashknop werkt, oude v1-save wordt v2 met 70%, 4× wereld in en uit: geometrie terug naar 0. Geen fouten. Tijdelijke namen: geen nieuwe. Volgende stap: 1.7 (open wereld).
 - PR #10 (stap 1.6) samengevoegd. Feedback van Bo/Lucas: de camera moet zoals Genshin Impact zijn (over de schouder), en vrij draaien lukte niet goed. Camera omgebouwd: over de schouder, vrij draaien, W loopt waar de camera kijkt, muis vangen op pc, kleiner joystick-gebied. `CLAUDE.md` aangepast. Getest in headless Chromium (pc + iPhone 13): klik vangt de muis, muis bewegen draait de camera, W loopt waar de camera kijkt, Escape = pauze en muis vrij, Verder = muis weer gevangen, joystick/draaien/knijpen/dash op touch. Geen fouten. Volgende stap: 1.7 (open wereld).
+- Stap 1.7 gebouwd (op verzoek eerst "camera van bovenaf" weggehaald uit alle bestanden en het spelconcept): terrein als formule per zone met zachte overgangen en kust, chunks met actieve/preload/unload-ring, terrein en props in een Web Worker, gebudgetteerd laden met pools, terrein-LOD met rokken, bomen/rotsen/struiken als InstancedMesh, stand-in tegels, helling-limiet en diep water, floating origin, mist per zone, zee, debug-kleuren voor chunks. Testvloer en testbaan verwijderd. Getest in headless Chromium (pc 1280×800 en iPhone 13-formaat, dev én productie-build): Greyhaven → Greenwood naadloos (zone wisselt, autosave), Mournfen en de kust, Low/Mid/High, geen fouten in de console, laden kost ±1 ms per frame. In Node: 2× de hele wereld heen en terug = exact dezelfde aantallen geometrieën en colliders (geen lek), floating origin schuift en alles blijft op zijn plek. 183 tests. Tijdelijke namen: geen nieuwe (De Wortelgrotten en de elfenstad staan al in `zones.json`, maar worden nog niet getoond). Volgende stap: 1.8 (inhoud, triggers, checkpoints, HUD).
