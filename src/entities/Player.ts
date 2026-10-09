@@ -1,6 +1,6 @@
 import type { AppearanceFile } from '../data/types';
 import type { Appearance } from '../scenes/creator';
-import { CombatState } from '../systems/Combat';
+import { CombatState, type SwordConfig } from '../systems/Combat';
 import { angleDelta, MoverState } from '../systems/Movement';
 import { CharacterModel } from './PlaceholderFactory';
 
@@ -62,6 +62,18 @@ export class Player {
       this.interpolatedZ(alpha),
     );
     root.rotation.y = this.prevHeading + angleDelta(this.prevHeading, this.state.heading) * alpha;
+  }
+
+  /** Draws the sword where the swing is (not interpolated: a swing is short and fast). */
+  showSword(sword: SwordConfig): void {
+    const c = this.combat;
+    if (c.heavyWindup > 0) {
+      this.model.setSwordPose('windup', 1 - c.heavyWindup / sword.heavyWindupSeconds);
+    } else if (c.swingTime > 0 && c.swing !== 'none') {
+      this.model.setSwordPose(c.swing, 1 - c.swingTime / sword.fastSwingSeconds);
+    } else {
+      this.model.setSwordPose('rest', 0);
+    }
   }
 
   dispose(): void {

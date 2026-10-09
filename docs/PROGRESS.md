@@ -7,9 +7,9 @@
 | | |
 |---|---|
 | **Huidige fase** | Fase 2 – Solo-gevecht en de eerste dag (plan goedgekeurd) |
-| **Status** | Stap 2.1 klaar (gevechtskern: zwaardaanvallen, energie, combo, trainingspoppen, schadegetallen, HUD in gevecht) |
-| **Volgende stap** | Stap 2.2: het speelbare intro-gevecht tegen Lucael en Baelor |
-| **Laatste sessie** | 2026-10-09: stap 2.1 gevechtskern |
+| **Status** | Stap 2.2 klaar (speelbaar intro-gevecht tegen Lucael en Baelor) |
+| **Volgende stap** | Stap 2.3: vijanden in de Greenwood (slimes, goblins, Treewarden) met AI en spawngebieden |
+| **Laatste sessie** | 2026-10-09: stap 2.2 intro-gevecht |
 
 ---
 
@@ -248,7 +248,7 @@ Doel: het spel begint met een speelbaar, episch (en komisch) gevecht tegen Lucae
 ---
 
 ### Fase 2 – Solo-gevecht en de eerste dag
-**Status:** bezig, stap 2.1 klaar.
+**Status:** bezig, stap 2.1 en 2.2 klaar.
 **Gebouwd:**
 - 2.1 Gevechtskern:
   - **Zwaard** (`src/systems/Combat.ts`, puur en getest): fast hit met de **linkermuisknop** (10 schade, 10 energie, max 3 per seconde, elke 3e slag op rij +50% en goud gekleurd), heavy hit met de **rechtermuisknop** (25 energie vooraf, 0,9 s uithalen, dan 25 schade, daarna 0,35 s herstel). Zonder genoeg energie: fast hits nog wel, maar half zo snel; geen heavy hit. Per level +2 (fast) en +5 (heavy) schade. Alles op de vaste tijdstap: 60 en 120 Hz geven dezelfde slagen (test).
@@ -261,6 +261,13 @@ Doel: het spel begint met een speelbaar, episch (en komisch) gevecht tegen Lucae
   - **Telefoon:** knoppen Slaan (vasthouden = blijven slaan), Zwaar en Dash rechtsonder.
   - **Debug:** regel `combat` (HP, mana, level, zwaai, combo, in gevecht, vijanden in beeld).
   - Getest in headless Chromium (pc 1100×700 en telefoon 844×390): klikken en tikken bij de trainingspop, schadegetallen 10 / 15 (combo) / 25 (heavy), energie klopt (6 fast + 1 heavy = 85), balken verschijnen. Geen fouten. 251 tests.
+- 2.2 Intro-gevecht tegen Lucael en Baelor:
+  - Paneel 4 van de intro is nu **speelbaar** (`src/scenes/IntroFightState.ts`): een ronde arena op de dode, paarse grond aan de rand van Morvath, met kristalpieken in de mist. Je kunt lopen, dashen en slaan (zelfde besturing als in de wereld, ook de telefoonknoppen), maar elke slag doet **0** schade.
+  - **Lucael** (3,44 m, violet, zweeft speels) en **Baelor** (3,55 m, nachtzwart met goud, staat stil) als placeholder-modellen met kroon en gloeiende ogen (`src/entities/LordFactory.ts`). Ze kijken je steeds aan.
+  - **Het script** (`fights` in `cutscenes.json`, afgespeeld door `src/systems/FightScript.ts`): een beat wacht op een aantal slagen óf een aantal seconden (wat eerst komt) en voert dan acties uit: `say` (ondertitel met naam), `hint`, `teleportBehind`, `teleportHome`, `freezeTime` (alles violet en grijs, je kunt niets), `levitate` (je wordt opgetild en rondgedraaid), `spell` (een bol groeit in zijn hand, witte flits, zwart). Volgorde nu: "Oh look, Brother. A visitor!" → (na 3 slagen) "Did something just… touch me?" → Lucael teleporteert achter je: "Psst. Over here." → Baelor zet de tijd stil → Lucael laat je ronddraaien: "Look, Brother, it spins!" → de twee zinnen uit het concept → Baelors spell. Alle teksten in het Engels en Nederlands; **de grappen en de volgorde zijn alleen data**.
+  - Daarna gaat de intro verder met paneel 5 en 6 en word je wakker in het Monastery. **Overslaan** (knop of Escape) slaat alleen het gevecht over; Skip op de tekstkaarten slaat de hele intro over.
+  - Het gevecht duurt zonder slaan ±45 s (test: altijd korter dan een minuut). Laadt als apart bestand (13 kB) en wordt al vanaf het titelscherm opgehaald.
+  - Getest in headless Chromium: hele intro → gevecht → alle grappen in volgorde → "0" bij een slag → paneel 5 en 6 → wereld. Gevonden en opgelost: na het teleporteren bleef Lucael pal achter je staan en blokkeerde hij het beeld (nu teleporteert hij terug), en bij de spell keek de camera niet naar Baelor (nu wel). Geen fouten. 255 tests.
 
 ## Besluiten
 
@@ -351,6 +358,9 @@ Doel: het spel begint met een speelbaar, episch (en komisch) gevecht tegen Lucae
 | 2026-10-09 | Telefoon: grote **Slaan**-knop in de hoek, **Zwaar** links ervan, **Dash** erboven; vasthouden van Slaan = blijven slaan | Duim hoeft weinig te bewegen; knoppenzone is iets groter geworden (240 × 200 px) |
 | 2026-10-09 | Rechtermuisknop: zonder gevangen muis nog steeds slepen = camera draaien; met gevangen muis = heavy hit | Rondkijken zonder klikken blijft werken zoals in fase 1 |
 | 2026-10-09 | Tijdens het uithalen van een heavy hit loop je op 35% snelheid en kun je niet dashen | "Je moet goed timen" (concept); getal in `player.json` (`heavyMoveFactor`) |
+| 2026-10-09 | Intro-gevecht: je slagen doen **0** schade (met een "0" boven hun hoofd) | Komisch en duidelijk: je bent een insect voor ze |
+| 2026-10-09 | De grappen in het intro-gevecht zijn een **voorstel** (teksten in `lang`, volgorde in `cutscenes.json`) | Het concept noemt alleen de twee zinnen en "één krachtige spell"; zeg het als het anders moet |
+| 2026-10-09 | Overslaan in het gevecht slaat alleen het gevecht over (paneel 5 en 6 volgen nog) | Zo mis je het verhaal niet; Skip op de tekstkaarten slaat de hele intro over |
 | 2026-10-09 | PerfTest verplaatst naar `experiments/perftest/` | Oude test-code hoort in `/experiments` (§5). Er was geen PeerJS-netwerktest in de repo, dus `experiments/net-test/` bestaat (nog) niet |
 
 ## Sessielog

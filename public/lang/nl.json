@@ -145,7 +145,17 @@
     "baelor": "Je bent het niet eens waard om te doden, klein insect. Kom terug als je sterker bent.",
     "panel_5": "Weinigen stonden tegenover de Lords of Morvath en leefden nog.",
     "panel_6": "Je wordt wakker in het Monastery van Greyhaven. Hier begint je reis.",
-    "tapToContinue": "Tik of druk op spatie om verder te gaan"
+    "tapToContinue": "Tik of druk op spatie om verder te gaan",
+    "fight": {
+      "arrive": "Kijk eens, broer. Bezoek!",
+      "hint": "Val ze aan! Linkermuisknop = slaan, rechtermuisknop = zware slag.",
+      "hintTouch": "Val ze aan! Tik op Slaan of Zwaar.",
+      "tickle": "Raakte er nou iets… mij aan?",
+      "behind": "Psst. Hier.",
+      "freeze": "De tijd buigt voor ons. Niet voor jou.",
+      "spin": "Kijk, broer, hij draait!",
+      "skip": "Overslaan"
+    }
   },
   "cutscene": {
     "skip": "Overslaan",

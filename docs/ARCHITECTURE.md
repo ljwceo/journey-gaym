@@ -147,4 +147,4 @@ Alleen data in `public/data/zones.json`:
 - **Tekenen** (`src/render/EnemyRenderer.ts`, modellen in `src/entities/EnemyFactory.ts`): één InstancedMesh per modeldeel, rood oplichten en wiebelen bij een treffer, liggen als ze verslagen zijn.
 - **Schadegetallen** (`src/ui/DamageNumbers.ts`): vaste pool DOM-elementen boven de 3D-wereld.
 - **Een nieuwe vijand toevoegen:** zet hem in `monsters.json` (met `model`) en een `spawn` in de zone; een nieuw placeholder-model komt in `EnemyFactory.ts`. De validator controleert de verwijzingen, een test controleert dat elk model bestaat.
-
+- **Gescripte gevechten** (intro): `fights` in `cutscenes.json` (arena, tegenstanders, beats met acties). `src/systems/FightScript.ts` speelt de beats af op de vaste tijdstap (wachten op slagen of seconden), `src/scenes/IntroFightState.ts` maakt er effecten van. Een paneel met `"fight": "<id>"` in een cutscene wordt zo'n gevecht; daarna gaat de intro verder (`ctx.introPanel`). Een nieuwe grap = een nieuwe beat of actie in de data.

@@ -38,6 +38,8 @@ export interface GameContext {
   seasons: SeasonService | null;
   /** The current save; null before the language choice and after deleting the save. */
   session: SaveData | null;
+  /** Intro panel to show next (the playable fight panel hands back to the panel after it). */
+  introPanel: number;
 
   /** Switches to another scene (applied before the next update). */
   goto(state: StateId): void;

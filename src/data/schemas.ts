@@ -749,6 +749,72 @@ export const cutscenesFileSchema = z.strictObject({
             narration: optional(textKey),
             lines: optional(z.array(z.strictObject({ speaker: name, text: textKey }))),
             shake: optional(z.boolean()),
+            /** This panel is played as a fight (an id in `fights`) instead of shown as a card. */
+            fight: optional(id),
+          }),
+        ),
+      ),
+    }),
+  ),
+  /**
+   * Scripted, playable fights inside a cutscene (the intro against Lucael and Baelor). The
+   * beats play one after the other; each waits for a number of hits by the player or a number
+   * of seconds (whichever comes first; neither = at once), then runs its actions.
+   */
+  fights: z.array(
+    z.strictObject({
+      id,
+      arena: z.strictObject({
+        radius: max(positive, 200),
+        groundColor: colorToken,
+        fogColor: colorToken,
+        /** Dead crystal spikes scattered around the edge (decoration). */
+        spikes: intRange(0, 200),
+      }),
+      player: z.strictObject({ x: coord, z: coord }),
+      foes: atLeast(
+        z.array(
+          z.strictObject({
+            id,
+            name,
+            x: coord,
+            z: coord,
+            /** Height in meters (Lucael 3.44, Baelor 3.55 in the concept). */
+            height: range(1, 10),
+            color: colorToken,
+            accent: colorToken,
+            radius: max(positive, 5),
+          }),
+        ),
+      ),
+      beats: atLeast(
+        z.array(
+          z.strictObject({
+            id,
+            startAfterHits: optional(posInt),
+            startAfterSeconds: optional(max(nonNegative, 120)),
+            actions: atLeast(
+              z.array(
+                z.strictObject({
+                  type: z.enum([
+                    'say',
+                    'hint',
+                    'teleportBehind',
+                    'teleportHome',
+                    'freezeTime',
+                    'levitate',
+                    'spell',
+                  ]),
+                  /** Who does it (an id in `foes`); not for `hint`. */
+                  foe: optional(id),
+                  text: optional(textKey),
+                  /** Seconds after the beat starts. */
+                  delay: optional(max(nonNegative, 60)),
+                  /** How long it lasts (seconds). */
+                  seconds: optional(max(positive, 60)),
+                }),
+              ),
+            ),
           }),
         ),
       ),
