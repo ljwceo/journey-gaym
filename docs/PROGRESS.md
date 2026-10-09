@@ -7,9 +7,9 @@
 | | |
 |---|---|
 | **Huidige fase** | Fase 1 – Basis + open wereld + character creator |
-| **Status** | Stap 1.4 klaar (schermen) |
-| **Volgende stap** | Stap 1.5: character creator (naam, lichaamstype, kapsel, haar-, huid- en mantelkleur, random, draaiend poppetje) |
-| **Laatste sessie** | 2026-10-09: stap 1.4 schermen |
+| **Status** | Stap 1.5 klaar (character creator) |
+| **Volgende stap** | Stap 1.6: speler en camera (WASD + joystick, 4 m/s, dash met energie, camera die volgt en draait, collision) |
+| **Laatste sessie** | 2026-10-09: stap 1.5 character creator |
 
 ---
 
@@ -49,7 +49,7 @@ Elke stap is één branch + pull request. Na elke stap start de game zonder fout
 ## Fase-log
 
 ### Fase 1 – Basis + open wereld + character creator
-**Status:** bezig, stap 1.1 t/m 1.4 klaar.
+**Status:** bezig, stap 1.1 t/m 1.5 klaar.
 **Gebouwd:**
 - 1.1 Projectopzet: Vite 8 + TypeScript 6 (strict), Three.js r186, ESLint + Prettier, Vitest. Leeg 3D-scherm met een draaiende kubus in stijlgidskleuren (draait per seconde, niet per frame). GitHub Actions controleert elke pull request (lint, opmaak, typecheck, tests, build) en zet `main` op GitHub Pages.
 - 1.2 Kern: `FixedStep` + `GameLoop` (simulatie altijd 60 Hz met accumulator, tekenen interpoleert, max 8 inhaalstappen per frame, frames > 0,25 s worden afgekapt, `?fps=N` om de framerate te beperken), getypte `EventBus` (geen allocaties bij `emit`), `StateMachine` (wissel gebeurt pas vóór de volgende update), `Random` (sfc32 met vaste seed) + `hashSeed` voor per-chunk seeds, `Renderer`, `DebugOverlay` (F3 / drie vingers / `?debug=1`: fps, frametijd, cpu-tijd, draw calls, triangles, geometries/textures, heap, resolutie, simulatiestappen, huidige state). Demo-scène: kubus die rondjes draait op de simulatie en vloeiend getekend wordt. 29 tests.
@@ -69,12 +69,22 @@ Elke stap is één branch + pull request. Na elke stap start de game zonder fout
   - **World** (voorlopig de draaiende kubus): een nieuw spel begint bij het spawnpunt in het Monastery van Greyhaven met dat checkpoint (autosave), speeltijd telt mee, **pauze** met Escape, de knop rechtsboven, of vanzelf als de app naar de achtergrond gaat.
   - **Pause** (verder, instellingen, terug naar titel) en **Settings** (taal live wisselen, Auto/Low/Mid/High, Auto/60/120 fps, volume, debugmodus, save verwijderen met 2× bevestigen → terug naar de taalkeuze, waarschuwing over browsergegevens) als overlay-panelen. Alles wordt meteen opgeslagen; fps-cap en debugmodus werken meteen.
   - Stijl volgens de stijlgids: panelen als uithangborden (donker, koperen rand, gouden kopjes), amber hoofdknoppen, fonts IM Fell English (SC) / Alegreya Sans / IBM Plex Mono via Google Fonts. Alle teksten via de taalbestanden. 101 tests.
+- 1.5 Character creator:
+  - **Flow:** New Game → (overschrijven-vraag) → **character creator** → intro → wereld. De nieuwe save wordt pas gemaakt bij "Begin je reis"; **Terug** (of Escape) gaat naar het titelscherm en laat de oude save heel.
+  - **Keuzes** uit `appearance.json`: naam (max 16, alleen letters en cijfers; verkeerde tekens kunnen er niet eens in), man/vrouw, 5 kapsels per lichaamstype, 19 haarkleuren, 6 huidskleuren, 6 mantelkleuren met gouden rand, **Willekeurig**-knop (alles behalve de naam). Wissel je van man naar vrouw, dan blijft het kapsel zo veel mogelijk hetzelfde (paardenstaart blijft paardenstaart). Achter elk kopje staat de gekozen kleur in tekst.
+  - **Poppetje** (`src/entities/PlaceholderFactory.ts`): capsule-lijf, bolhoofd met oogjes (zodat je ziet waar voren is), 8 simpele haarvormen, reismantel met gouden zoom, kraag en ster op de rug, en het oude zwaard op de heup. Kleuren veranderen live; welk model bij een keuze hoort staat in de data (`placeholder:hair_bob`). Echte modellen vervangen later alleen deze fabriek.
+  - Het poppetje draait langzaam rond (op de vaste tijdstap) en is met muis of vinger te draaien; 2 s na loslaten draait hij weer vanzelf. Op pc staat hij links van het paneel, op een staande telefoon erboven; de camera past zich aan zodat hij altijd past.
+  - **Toetsenbord (iPhone):** Gereed/Enter/Escape sluit het toetsenbord, tikken ergens anders ook (Safari doet dat zelf niet bij knoppen), bij weggaan altijd dicht, en daarna wordt de pagina teruggezet. Naamveld 18 px (onder 16 px zoomt Safari in), geen autocorrectie of automatische hoofdletter (`src/ui/keyboard.ts`, herbruikbaar voor latere tekstvelden).
+  - Save: naam, uiterlijk, 0 gold, startspullen `old_sword` + `travel_mantle` (uit `player.json`) en die als uitrusting. 116 tests.
 
 **Bekende problemen:**
 - De game-bundel is ±666 kB (Three.js ±530 kB, zod ±130 kB). Waarschuwingsgrens op 800 kB gezet; opsplitsen als de game groeit. Wordt zod te zwaar, dan kan het naar `zod/mini` (veel kleiner, zelfde werking).
 - De grafische stand wordt al opgeslagen maar doet nog niets; de QualityManager komt in stap 1.10.
 - De pauzeknop is nu het teken "II"; volgens de stijlgids (U3) wordt dat later een geschilderd icoontje.
 - De wereld is nog de testkubus; op een staand iPhone-scherm staat die erg groot in beeld. Speler en camera komen in stap 1.6.
+- Kapsels en lichaamstypes zijn ruwe vormen (het vrouwelijke lijf is alleen iets smaller). Het poppetje staat nog niet in de wereld; dat komt in stap 1.6.
+- Of het toetsenbord op een echte iPhone netjes dichtgaat, kan ik in de headless browser niet zien. Graag testen op de telefoon.
+- Bundel nu ±705 kB (grens 800 kB).
 - Veel getallen die niet in het concept staan zijn een **voorstel** (zie besluiten): spell-, combo- en skillwaarden, Sultans waarschuwingstijden, dash-afstand, vijandsnelheden in m/s. Ze staan in data en zijn makkelijk aan te passen.
 **Gemeten fps:**
 
@@ -118,6 +128,10 @@ Elke stap is één branch + pull request. Na elke stap start de game zonder fout
 | 2026-10-09 | New Game houdt taal en instellingen; de rest begint opnieuw. Save verwijderen in Settings wist alles (ook taal) | Instellingen horen bij de speler, niet bij een spel; "verwijderen = helemaal opnieuw" volgens het concept |
 | 2026-10-09 | De game pauzeert vanzelf als de app naar de achtergrond gaat | Op de iPhone wil je bij terugkomen niet midden in een gevecht zitten |
 | 2026-10-09 | Schermen en panelen zijn HTML/CSS boven de 3D-canvas | Scherpe tekst, toegankelijk, makkelijk op te maken volgens de stijlgids (zoals §5 voorschrijft voor de UI) |
+| 2026-10-09 | Namen mogen letters uit alle talen bevatten (é, ö, ...), geen spaties of leestekens | "Letters en cijfers" uit het concept; het patroon staat in `appearance.json` en is aan te passen |
+| 2026-10-09 | De save wordt pas gemaakt als je personage klaar is; Terug laat de oude save heel | Anders ben je je save al kwijt als je in de creator van gedachten verandert |
+| 2026-10-09 | Willekeurig kiest geen naam | De naam is iets persoonlijks; zeg het als je ook willekeurige namen wilt |
+| 2026-10-09 | "Travel Mantle" is een voorlopige naam (niet uit het concept) | Concept zegt "eenvoudige reismantel" |
 | 2026-10-09 | PerfTest verplaatst naar `experiments/perftest/` | Oude test-code hoort in `/experiments` (§5). Er was geen PeerJS-netwerktest in de repo, dus `experiments/net-test/` bestaat (nog) niet |
 
 ## Sessielog
@@ -130,3 +144,4 @@ Elke stap is één branch + pull request. Na elke stap start de game zonder fout
 - Stap 1.2 gebouwd: vaste tijdstap + interpolatie, EventBus, StateMachine, Random, Renderer, debug-overlay, demo-scène. Getest in headless Chromium (overlay, F3, `?fps=30`, geen fouten). Volgende stap: 1.3 (data, taal, opslaan, seizoen).
 - Stap 1.3 gebouwd: 14 databestanden + schema's + validator, taal (en/nl), save met migraties en autosave, seizoenen, terreinkleuren in de stijlgids. 91 tests (ook seizoen-tests in 3 tijdzones). Getest in headless Chromium: data OK, `?lang=nl`, `?season=winter`, foutlijst bij een kapot databestand en bij een kapotte save (reservekopie bewaard). Tijdelijke namen gebruikt (alleen in data): Brother Ansel, Marco the Merchant, Hilda Ironhand, Professor Fizzwick, Old Bertha, Sir Garrick, Treewarden, De Wortelgrotten, de elfenstad (`elven_city`), Gold. Nieuwe voorlopige namen: aanvallen "Big Swing" (Goblin Chief) en "Heavy Slam" (Treewarden), quest "Defeat Sultan". Volgende stap: 1.4 (schermen).
 - Stap 1.4 gebouwd: Boot met laadbalk, taalkeuze, titelscherm, intro-stub, world-stub met pauze, Settings en Pause als overlays. Hele flow getest in headless Chromium (pc en iPhone 13-formaat): taal kiezen, instellingen wijzigen (ook taal live), New Game → intro → wereld, pauze, terug naar titel, Continue, overschrijven-vraag, herladen, save verwijderen (2×) → terug naar de taalkeuze. Geen fouten. Volgende stap: 1.5 (character creator).
+- Stap 1.5 gebouwd: character creator met draaiend placeholder-poppetje, alle keuzes uit `appearance.json`, Willekeurig, naamcontrole, toetsenbord-afhandeling voor de iPhone. Getest in headless Chromium (pc 1280×800, 900×500 en iPhone 13): verkeerde tekens worden weggefilterd, lege naam geeft een melding, tikken op een kleur sluit het toetsenbord, Enter sluit het toetsenbord en de pagina blijft op zijn plek, Terug laat de save heel, Begin maakt de save met naam, uiterlijk en startspullen, intro en wereld starten. 5× heen en weer tussen titel en creator: geometrie gaat elke keer terug naar 0. Geen fouten. Tijdelijke namen: Travel Mantle (nieuw, voorlopig). Volgende stap: 1.6 (speler en camera).
