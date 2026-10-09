@@ -1,0 +1,30 @@
+import type { z } from 'zod';
+import type { dataSchemas, DataFileName, shapeSchema } from './schemas';
+
+/** Parsed contents of every data file, e.g. `GameData['zones']`. */
+export type GameData = { [K in DataFileName]: z.infer<(typeof dataSchemas)[K]> };
+
+export type ZonesFile = GameData['zones'];
+export type Zone = ZonesFile['zones'][number];
+export type NpcsFile = GameData['npcs'];
+export type NpcDef = NpcsFile['npcs'][number];
+export type PlayerConfig = GameData['player'];
+export type MonstersFile = GameData['monsters'];
+export type MonsterDef = MonstersFile['monsters'][number];
+export type ItemsFile = GameData['items'];
+export type ItemDef = ItemsFile['items'][number];
+export type AppearanceFile = GameData['appearance'];
+export type QualityFile = GameData['quality'];
+export type QualityPreset = QualityFile['presets'][number];
+export type SeasonsFile = GameData['seasons'];
+export type SeasonDef = SeasonsFile['seasons'][number];
+export type TriggersFile = GameData['triggers'];
+export type TriggerDef = TriggersFile['triggers'][number];
+export type QuestsFile = GameData['quests'];
+export type QuestDef = QuestsFile['quests'][number];
+export type SpellsFile = GameData['spells'];
+export type SkillsFile = GameData['skills'];
+export type CombosFile = GameData['combos'];
+export type CutscenesFile = GameData['cutscenes'];
+export type Shape = z.infer<typeof shapeSchema>;
+export type { Condition } from './schemas';

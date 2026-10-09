@@ -7,9 +7,9 @@
 | | |
 |---|---|
 | **Huidige fase** | Fase 1 – Basis + open wereld + character creator |
-| **Status** | Stap 1.2 klaar (kern) |
-| **Volgende stap** | Stap 1.3: data, taal, opslaan, seizoen (JSON-bestanden, DataLoader + DataValidator, I18n, SaveManager, SeasonService) |
-| **Laatste sessie** | 2026-10-09: stap 1.2 kern |
+| **Status** | Stap 1.3 klaar (data, taal, opslaan, seizoen) |
+| **Volgende stap** | Stap 1.4: schermen (Boot met laadbalk → LanguageSelect → Title → Intro-stub → World, plus Pause en Settings) |
+| **Laatste sessie** | 2026-10-09: stap 1.3 data, taal, opslaan, seizoen |
 
 ---
 
@@ -49,13 +49,24 @@ Elke stap is één branch + pull request. Na elke stap start de game zonder fout
 ## Fase-log
 
 ### Fase 1 – Basis + open wereld + character creator
-**Status:** bezig, stap 1.1 en 1.2 klaar.
+**Status:** bezig, stap 1.1 t/m 1.3 klaar.
 **Gebouwd:**
 - 1.1 Projectopzet: Vite 8 + TypeScript 6 (strict), Three.js r186, ESLint + Prettier, Vitest. Leeg 3D-scherm met een draaiende kubus in stijlgidskleuren (draait per seconde, niet per frame). GitHub Actions controleert elke pull request (lint, opmaak, typecheck, tests, build) en zet `main` op GitHub Pages.
 - 1.2 Kern: `FixedStep` + `GameLoop` (simulatie altijd 60 Hz met accumulator, tekenen interpoleert, max 8 inhaalstappen per frame, frames > 0,25 s worden afgekapt, `?fps=N` om de framerate te beperken), getypte `EventBus` (geen allocaties bij `emit`), `StateMachine` (wissel gebeurt pas vóór de volgende update), `Random` (sfc32 met vaste seed) + `hashSeed` voor per-chunk seeds, `Renderer`, `DebugOverlay` (F3 / drie vingers / `?debug=1`: fps, frametijd, cpu-tijd, draw calls, triangles, geometries/textures, heap, resolutie, simulatiestappen, huidige state). Demo-scène: kubus die rondjes draait op de simulatie en vloeiend getekend wordt. 29 tests.
+- 1.3 Data, taal, opslaan, seizoen:
+  - **14 JSON-bestanden** in `public/data/` met een kleine, geldige voorbeeldset: alle 10 zones (grenzen, kleur, mist, buren, spawnpunten, checkpoint, gebieden zoals de elfenstad, de ingang van De Wortelgrotten), de 9 NPC's van Greyhaven + Pringle + 3 Treewardens, speler- en vijandgetallen uit het concept, alle opties van de character creator, Low/Mid/High, seizoenen, triggers (plekken in Greyhaven, stadspoort met voorwaarde `canLeaveCity` = nu altijd waar), 3 voorbeeldquests, items, Fireball, de hele skill tree, alle 10 combo's, en de intro + Pringle-cutscene.
+  - **Schema's + types** (`src/data/schemas.ts`, met zod): per bestand verplichte velden, types en grenzen; onbekende (verkeerd gespelde) velden geven een fout. De TypeScript-types komen uit dezelfde schema's.
+  - **DataLoader** (alles parallel, met voortgang voor de laadbalk) en **DataValidator**: unieke ids, verwijzingen tussen bestanden, posities binnen hun zone, wederzijdse buren, kleuren die echt in de stijlgids staan, tekst-keys die echt in `en.json` staan, chunk-ringen met hysterese, enz. In debug verschijnt een foutlijst onderin beeld; altijd ook in de console.
+  - **I18n** (`t('key', {params})`, terugval naar Engels, ontbrekende key = melding in debug) en `en.json` + `nl.json`. Test controleert dat beide dezelfde keys en dezelfde `{placeholders}` hebben.
+  - **SaveManager**: één save in localStorage, versienummer + migraties, kapotte save → reservekopie, save van een nieuwere versie wordt niet aangeraakt, export/import als tekstcode, werkt ook als opslaan geblokkeerd is. **AutoSave** bij nieuwe zone, checkpoint en `visibilitychange`/`pagehide`.
+  - **SeasonService**: ISO-week 1 = Summer, elke week verder; tijd tot het volgende seizoen; seizoen forceren.
+  - Debug-overlay toont nu ook taal, seizoen (+ aftelling), save en data-status. Test-parameters: `?lang=nl`, `?season=winter`, en **F4** (in debug) wisselt het seizoen.
+  - Stijlgids: groep **terreinkleuren** toegevoegd (zie besluiten). 91 tests.
 
 **Bekende problemen:**
-- De game-bundel is ±530 kB (vooral Three.js). Waarschuwingsgrens op 800 kB gezet; opsplitsen als de game groeit.
+- De game-bundel is ±666 kB (Three.js ±530 kB, zod ±130 kB). Waarschuwingsgrens op 800 kB gezet; opsplitsen als de game groeit. Wordt zod te zwaar, dan kan het naar `zod/mini` (veel kleiner, zelfde werking).
+- Er is nog geen scherm om een save te maken: dat komt in stap 1.4 (taalkeuze maakt de save). Tot dan staat "save none" in debug.
+- Veel getallen die niet in het concept staan zijn een **voorstel** (zie besluiten): spell-, combo- en skillwaarden, Sultans waarschuwingstijden, dash-afstand, vijandsnelheden in m/s. Ze staan in data en zijn makkelijk aan te passen.
 **Gemeten fps:**
 
 | Apparaat | Low | Mid | High |
@@ -81,6 +92,19 @@ Elke stap is één branch + pull request. Na elke stap start de game zonder fout
 | 2026-10-09 | Debug-overlay-labels (fps, calls, tris, …) staan in de code en niet in de taalbestanden | Technische afkortingen voor ontwikkelaars, geen tekst voor spelers. Zeg het als je dit anders wilt |
 | 2026-10-09 | Debug-overlay op de iPhone: tik met drie vingers (net als bij de PerfTest) | Een iPhone heeft geen F3 |
 | 2026-10-09 | Simulatie haalt maximaal 8 stappen per frame in; daarboven loopt het spel even trager in plaats van te haperen | Voorkomt dat een trage telefoon steeds verder achterloopt |
+| 2026-10-09 | **zod** voor de data-schema's; TypeScript-types komen uit dezelfde schema's | Eén plek voor structuur, validatie en types, minder code dan alles met de hand. Kost ±130 kB in de bundel |
+| 2026-10-09 | Stijlgids uitgebreid met **terreinkleuren** (`terrein` in `tokens.json`/`tokens.css`/`README.md`): mosgroen, bosgroen, moerasgroen, steppe, zandsteen, lavasteen, verdorven, sneeuw, zeewater | Zones hebben grondkleuren nodig (bijv. groen bos) die niet in het palet stonden. Gedempt, nooit verzadigd groen |
+| 2026-10-09 | Haar- en huidskleuren staan als hex in `appearance.json`; alle andere kleuren in data zijn stijlgids-tokens (gecontroleerd door de validator) | 19 haarkleuren en 6 huidtinten passen niet in het palet. Zwart haar = `#1E1C24` (regel K1: geen puur zwart) |
+| 2026-10-09 | Mantel "navy" = Nachtinkt. De 6 mantelkleuren: navy, paars (schemerviolet), mist, steen, zonsondergang, amber, altijd met ornamentgoud borduursel | Stijlgids heeft geen aparte navy |
+| 2026-10-09 | Kaart: x = oost, z = zuid, wereld van −2000 tot 2000 (x) en −1250 tot 1250 (z). Zones als rechthoeken op basis van de beschrijving in het concept; de Black Citadel ligt in Morvath met hogere `priority` | Concept heeft geen exacte coördinaten; alles staat in `zones.json` en is makkelijk te verschuiven |
+| 2026-10-09 | The Frozen Lake: level 15–22 (voorstel) | Concept noemt geen level |
+| 2026-10-09 | Seizoen in **week 53** loopt gewoon door: in een jaar met 53 weken (zoals 2026) duurt Summer twee weken rond oud en nieuw. Seizoen gaat op lokale tijd (maandag 00:00) | "Eerste week van het jaar is Summer" en "elke week wisselen" passen anders niet samen |
+| 2026-10-09 | Seizoensnamen worden vertaald (Zomer, Herfst, ...) | Seizoenen staan niet in de lijst van namen die Engels blijven. Zeg het als het Engels moet blijven |
+| 2026-10-09 | Vijandsnelheden: heel langzaam 1, langzaam 2, normaal 3, snel 4,5 m/s (`speedClasses` in `monsters.json`) | Concept zegt alleen "langzaam/snel" |
+| 2026-10-09 | Dash: 4 m in 0,18 s (voorstel) | Concept noemt alleen energie en cooldown |
+| 2026-10-09 | Automatisch omlaag bij gemiddeld < 58 fps (5 s), niet < 60 | Een 60 Hz-scherm meet vaak 59,x fps; anders gaat hij onterecht omlaag |
+| 2026-10-09 | "Slime" (altijd te vinden) en "Slime Gel" (drop) zijn hetzelfde item: `slime_gel` | Concept noemt beide |
+| 2026-10-09 | Verkeerd gespelde of onbekende velden in data geven een fout | Typfouten worden anders stil genegeerd |
 | 2026-10-09 | PerfTest verplaatst naar `experiments/perftest/` | Oude test-code hoort in `/experiments` (§5). Er was geen PeerJS-netwerktest in de repo, dus `experiments/net-test/` bestaat (nog) niet |
 
 ## Sessielog
@@ -91,3 +115,4 @@ Elke stap is één branch + pull request. Na elke stap start de game zonder fout
 - Volgende stap: stap 1.1 (projectopzet).
 - Stap 1.1 gebouwd: Vite + TypeScript + Three.js, lint/format/tests, deploy-workflow, draaiende kubus. Getest in headless Chromium (kubus zichtbaar, geen fouten). Volgende stap: 1.2 (kern).
 - Stap 1.2 gebouwd: vaste tijdstap + interpolatie, EventBus, StateMachine, Random, Renderer, debug-overlay, demo-scène. Getest in headless Chromium (overlay, F3, `?fps=30`, geen fouten). Volgende stap: 1.3 (data, taal, opslaan, seizoen).
+- Stap 1.3 gebouwd: 14 databestanden + schema's + validator, taal (en/nl), save met migraties en autosave, seizoenen, terreinkleuren in de stijlgids. 91 tests (ook seizoen-tests in 3 tijdzones). Getest in headless Chromium: data OK, `?lang=nl`, `?season=winter`, foutlijst bij een kapot databestand en bij een kapotte save (reservekopie bewaard). Tijdelijke namen gebruikt (alleen in data): Brother Ansel, Marco the Merchant, Hilda Ironhand, Professor Fizzwick, Old Bertha, Sir Garrick, Treewarden, De Wortelgrotten, de elfenstad (`elven_city`), Gold. Nieuwe voorlopige namen: aanvallen "Big Swing" (Goblin Chief) en "Heavy Slam" (Treewarden), quest "Defeat Sultan". Volgende stap: 1.4 (schermen).

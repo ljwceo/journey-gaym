@@ -1,0 +1,239 @@
+{
+  "language": {
+    "choose": "Choose your language",
+    "en": "English",
+    "nl": "Nederlands"
+  },
+  "common": {
+    "ok": "OK",
+    "cancel": "Cancel",
+    "back": "Back",
+    "yes": "Yes",
+    "no": "No",
+    "next": "Next",
+    "close": "Close",
+    "on": "On",
+    "off": "Off",
+    "auto": "Auto"
+  },
+  "boot": {
+    "loading": "Loading… {percent}%",
+    "error": "Something went wrong while loading. Please reload the page.",
+    "dataErrors": "{count} problems found in the game data."
+  },
+  "title": {
+    "continue": "Continue",
+    "newGame": "New Game",
+    "settings": "Settings",
+    "overwriteQuestion": "Starting a new game will erase your current save. Are you sure?"
+  },
+  "pause": {
+    "title": "Paused",
+    "resume": "Resume",
+    "settings": "Settings",
+    "toTitle": "Back to title screen"
+  },
+  "settings": {
+    "title": "Settings",
+    "language": "Language",
+    "quality": "Graphics",
+    "qualityAuto": "Auto",
+    "qualityLow": "Low",
+    "qualityMid": "Mid",
+    "qualityHigh": "High",
+    "fpsCap": "Frame rate",
+    "fpsAuto": "Auto",
+    "fps60": "60 fps",
+    "fps120": "120 fps",
+    "volume": "Volume",
+    "debug": "Debug mode",
+    "deleteSave": "Delete save",
+    "deleteConfirm1": "Delete your save? You will start completely over.",
+    "deleteConfirm2": "Are you really sure? This cannot be undone.",
+    "deleted": "Your save has been deleted.",
+    "browserDataWarning": "Your game is saved in this browser. Clearing your browser data also deletes your save."
+  },
+  "save": {
+    "saved": "Game saved",
+    "newerVersion": "This save was made with a newer version of the game. Reload the page to update.",
+    "corrupt": "Your save could not be read. A backup copy was kept.",
+    "storageUnavailable": "Saving is not possible in this browser (private mode?). Your progress will not be kept.",
+    "exportTitle": "Export save",
+    "importTitle": "Import save",
+    "importInvalid": "This code is not a valid save."
+  },
+  "creator": {
+    "title": "Create your character",
+    "name": "Name",
+    "namePlaceholder": "Your name",
+    "nameInvalid": "Use up to {max} letters and numbers.",
+    "bodyType": "Body type",
+    "hairstyle": "Hairstyle",
+    "hairColor": "Hair color",
+    "skinTone": "Skin tone",
+    "mantleColor": "Mantle color",
+    "random": "Random",
+    "start": "Begin your journey"
+  },
+  "appearance": {
+    "body": {
+      "male": "Male",
+      "female": "Female"
+    },
+    "hairstyle": {
+      "short": "Short",
+      "swept": "Swept back",
+      "messy": "Messy",
+      "long": "Long",
+      "ponytail": "Ponytail",
+      "bob": "Bob",
+      "braid": "Braid",
+      "bun": "Bun"
+    },
+    "hairColor": {
+      "red_light": "Light red",
+      "red_dark": "Dark red",
+      "orange_light": "Light orange",
+      "orange_dark": "Dark orange",
+      "yellow_light": "Light blond",
+      "yellow_dark": "Dark blond",
+      "green_light": "Light green",
+      "green_dark": "Dark green",
+      "blue_light": "Light blue",
+      "blue_dark": "Dark blue",
+      "purple_light": "Light purple",
+      "purple_dark": "Dark purple",
+      "pink_light": "Light pink",
+      "pink_dark": "Dark pink",
+      "brown_light": "Light brown",
+      "brown_dark": "Dark brown",
+      "black": "Black",
+      "white": "White",
+      "grey": "Grey"
+    },
+    "skin": {
+      "tone_1": "Tone 1",
+      "tone_2": "Tone 2",
+      "tone_3": "Tone 3",
+      "tone_4": "Tone 4",
+      "tone_5": "Tone 5",
+      "tone_6": "Tone 6"
+    },
+    "mantle": {
+      "navy": "Navy",
+      "purple": "Purple",
+      "mist": "Mist",
+      "stone": "Stone",
+      "sunset": "Sunset",
+      "amber": "Amber"
+    }
+  },
+  "intro": {
+    "skip": "Skip",
+    "panel_1": "Five thousand years ago, two wizards slew a god.",
+    "panel_2": "Lucael and Baelor took his power. But they had lost all faith in humanity, and so they turned to darkness.",
+    "panel_3": "Ever since, as the Lords of Morvath, they have spread their corruption across the land.",
+    "lucael": "Is this all humanity has left?",
+    "baelor": "You're not even worth killing, little insect. Come back when you're stronger.",
+    "panel_5": "Few have faced the Lords of Morvath and lived.",
+    "panel_6": "You wake in the Monastery of Greyhaven. Your journey begins here."
+  },
+  "cutscene": {
+    "skip": "Skip",
+    "pringle": {
+      "1": "Meow.",
+      "2": "Did you really think you could just leave?",
+      "4": "I am Sultan. Show me you're ready for the world out there.",
+      "5": "Try to keep up!"
+    }
+  },
+  "hud": {
+    "checkpointSet": "Checkpoint set",
+    "rested": "You rest for a while.",
+    "qualityLowered": "Graphics lowered to {quality} to keep the game smooth.",
+    "interact": "Interact",
+    "dash": "Dash"
+  },
+  "place": {
+    "monastery": "The Monastery is your checkpoint. If you fall, you wake up here. Rest in your bed to recover.",
+    "market_square": "The Market Square: buy and sell goods. The stalls change all the time.",
+    "forge": "You can trade gold for upgrades or new items.",
+    "alchemy_lab": "In the Alchemy Lab you brew potions and learn new recipes.",
+    "golden_kettle": "The Golden Kettle: everyone comes here for stories, rumors and hints.",
+    "garden": "In the Garden you can grow your own herbs. They keep growing while you are away.",
+    "academy": "The Academy, where mages are trained. Your path will be chosen here.",
+    "training_field": "The training field. Sword fighters sharpen their skills here.",
+    "harbor": "The harbor of Greyhaven. Ships come and go across the bay.",
+    "city_gate_blocked": "You are not ready to leave the city yet.",
+    "old_tjikko": "Old Tjikko, the ancient tree. The elves draw their magic from it.",
+    "elven_city": "The city of the elves, high in the branches. Treewardens are never attacked here."
+  },
+  "npc": {
+    "brother_ansel": {
+      "1": "Ah, you're awake. I found you unconscious by the road and brought you here.",
+      "2": "This Monastery is your checkpoint. Should you fall, you will wake up here again.",
+      "3": "Rest in your bed whenever you are tired. Now go, Greyhaven awaits."
+    },
+    "marco": {
+      "1": "Welcome, welcome! Everything here is special, just for you.",
+      "2": "Come back soon. My stock changes every day!"
+    },
+    "hilda": {
+      "1": "HA! A new face! Bring me gold and materials and I'll make that sword sing.",
+      "2": "I can also break old gear down into materials."
+    },
+    "fizzwick": {
+      "1": "Oh! Mind the smoke. My eyebrows will grow back, I'm sure of it.",
+      "2": "Bring me ingredients and I'll teach you a recipe or two."
+    },
+    "rose": {
+      "1": "Hello, dear. The Garden is a quiet place. Plants need patience.",
+      "2": "Fresh herbs dry by themselves after a few days. Dried ones still have their uses."
+    },
+    "bertha": {
+      "1": "Come in, come in! Sit by the fire. What can I get you?",
+      "2": "They say the Lords of Morvath slew a god, long ago. Brr.",
+      "3": "If you're ever stuck, come and ask me. I hear everything."
+    },
+    "master_brink": {
+      "1": "Welcome to the Academy. Magic rewards those who are patient.",
+      "2": "Come back when you are ready to choose your path."
+    },
+    "wizard_sam": {
+      "1": "Hm. Not many visitors find their way to me.",
+      "2": "Dark magic is strong, quickly. Remember that it is a dark road."
+    },
+    "sir_garrick": {
+      "1": "A sword fighter stands in front and takes the blows for the team.",
+      "2": "Train hard, and steel will never let you down."
+    },
+    "pringle": {
+      "pet": "Pringle purrs happily."
+    }
+  },
+  "item": {
+    "gold": { "desc": "Shiny coins. Used to buy, sell and upgrade." },
+    "old_sword": { "desc": "An old but trusty sword." },
+    "travel_mantle": { "desc": "A simple travel mantle with golden embroidery." },
+    "mage_staff": { "desc": "A neutral staff. It only works with a crystal." },
+    "wizard_crystal": { "desc": "A crystal with a random element: Water, Fire, Nature or Wind." },
+    "dark_crystal": { "desc": "A crystal of dark magic." },
+    "slime_gel": { "desc": "Sticky gel left behind by a slime." }
+  },
+  "quest": {
+    "defeat_sultan": { "desc": "Defeat Sultan at the city gate." },
+    "your_resolve": { "desc": "Go to the Academy and choose your path." },
+    "first_harvest": { "desc": "Bring Rose 5 Blossom from the Garden." }
+  },
+  "season": {
+    "summer": "Summer",
+    "autumn": "Autumn",
+    "winter": "Winter",
+    "spring": "Spring",
+    "summer_extra": "Fire Beetles appear.",
+    "autumn_extra": "Ghosts and Scarecrows roam the land.",
+    "winter_extra": "The Frozen Lake can be reached.",
+    "spring_extra": "Herbs grow faster.",
+    "nextIn": "Next season in {days} d {hours} h"
+  }
+}

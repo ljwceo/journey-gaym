@@ -1,0 +1,95 @@
+{
+  "conditions": {
+    "canLeaveCity": {
+      "type": "always",
+      "note": "Concept: only after defeating Sultan and reaching level 5. Always true in phase 1 so the other zones can be tested."
+    }
+  },
+  "triggers": [
+    {
+      "id": "monastery",
+      "zone": "greyhaven",
+      "kind": "place",
+      "shape": { "type": "circle", "x": -1760, "z": -145, "radius": 18 },
+      "firstVisitText": "place.monastery"
+    },
+    {
+      "id": "market_square",
+      "zone": "greyhaven",
+      "kind": "place",
+      "shape": { "type": "circle", "x": -1820, "z": 120, "radius": 22 },
+      "firstVisitText": "place.market_square"
+    },
+    {
+      "id": "forge",
+      "zone": "greyhaven",
+      "kind": "place",
+      "shape": { "type": "circle", "x": -1845, "z": 150, "radius": 10 },
+      "firstVisitText": "place.forge"
+    },
+    {
+      "id": "alchemy_lab",
+      "zone": "greyhaven",
+      "kind": "place",
+      "shape": { "type": "circle", "x": -1800, "z": 165, "radius": 10 },
+      "firstVisitText": "place.alchemy_lab"
+    },
+    {
+      "id": "golden_kettle",
+      "zone": "greyhaven",
+      "kind": "place",
+      "shape": { "type": "circle", "x": -1832, "z": 90, "radius": 10 },
+      "firstVisitText": "place.golden_kettle"
+    },
+    {
+      "id": "garden",
+      "zone": "greyhaven",
+      "kind": "place",
+      "shape": { "type": "circle", "x": -1780, "z": 208, "radius": 14 },
+      "firstVisitText": "place.garden"
+    },
+    {
+      "id": "academy",
+      "zone": "greyhaven",
+      "kind": "place",
+      "shape": { "type": "circle", "x": -1720, "z": 0, "radius": 30 },
+      "firstVisitText": "place.academy"
+    },
+    {
+      "id": "training_field",
+      "zone": "greyhaven",
+      "kind": "place",
+      "shape": { "type": "rect", "minX": -1700, "minZ": 50, "maxX": -1670, "maxZ": 80 },
+      "firstVisitText": "place.training_field"
+    },
+    {
+      "id": "harbor",
+      "zone": "greyhaven",
+      "kind": "place",
+      "shape": { "type": "circle", "x": -1900, "z": 150, "radius": 30 },
+      "firstVisitText": "place.harbor"
+    },
+    {
+      "id": "city_gate",
+      "zone": "greyhaven",
+      "kind": "gate",
+      "shape": { "type": "rect", "minX": -1530, "minZ": -12, "maxX": -1515, "maxZ": 12 },
+      "condition": "canLeaveCity",
+      "blockedText": "place.city_gate_blocked"
+    },
+    {
+      "id": "old_tjikko",
+      "zone": "greenwood",
+      "kind": "place",
+      "shape": { "type": "circle", "x": -1100, "z": -650, "radius": 40 },
+      "firstVisitText": "place.old_tjikko"
+    },
+    {
+      "id": "elven_city",
+      "zone": "greenwood",
+      "kind": "place",
+      "shape": { "type": "circle", "x": -1100, "z": -650, "radius": 160 },
+      "firstVisitText": "place.elven_city"
+    }
+  ]
+}

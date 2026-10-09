@@ -1,0 +1,111 @@
+{
+  "rules": {
+    "windowSeconds": 1,
+    "targetCooldownSeconds": 5,
+    "bossCrowdControlFactor": 0.5
+  },
+  "combos": [
+    {
+      "id": "steam",
+      "name": "Steam",
+      "elements": ["fire", "water"],
+      "role": "control",
+      "effect": "missChance",
+      "value": 0.5,
+      "durationSeconds": 3,
+      "radius": 4
+    },
+    {
+      "id": "plasma_burst",
+      "name": "Plasma Burst",
+      "elements": ["fire", "wind"],
+      "role": "damage",
+      "effect": "areaDamage",
+      "value": 40,
+      "durationSeconds": 0,
+      "radius": 5
+    },
+    {
+      "id": "wildfire",
+      "name": "Wildfire",
+      "elements": ["fire", "nature"],
+      "role": "damage",
+      "effect": "spreadingBurn",
+      "value": 6,
+      "durationSeconds": 4,
+      "radius": 4
+    },
+    {
+      "id": "hellfire",
+      "name": "Hellfire",
+      "elements": ["fire", "dark"],
+      "role": "damage",
+      "effect": "damageNoHeal",
+      "value": 50,
+      "durationSeconds": 5,
+      "radius": 0
+    },
+    {
+      "id": "thunderfrost",
+      "name": "Thunderfrost",
+      "elements": ["water", "wind"],
+      "role": "control",
+      "effect": "freeze",
+      "value": 1,
+      "durationSeconds": 1.5,
+      "radius": 0,
+      "crowdControl": true
+    },
+    {
+      "id": "frostvine",
+      "name": "Frostvine",
+      "elements": ["water", "nature"],
+      "role": "control",
+      "effect": "root",
+      "value": 1,
+      "durationSeconds": 2,
+      "radius": 3,
+      "crowdControl": true
+    },
+    {
+      "id": "soul_freeze",
+      "name": "Soul Freeze",
+      "elements": ["water", "dark"],
+      "role": "control",
+      "effect": "slowAndWeaken",
+      "value": 0.25,
+      "durationSeconds": 4,
+      "radius": 0
+    },
+    {
+      "id": "spring_storm",
+      "name": "Spring Storm",
+      "elements": ["wind", "nature"],
+      "role": "support",
+      "effect": "healZone",
+      "value": 8,
+      "durationSeconds": 5,
+      "radius": 5
+    },
+    {
+      "id": "dark_surge",
+      "name": "Dark Surge",
+      "elements": ["wind", "dark"],
+      "role": "support",
+      "effect": "restoreMana",
+      "value": 25,
+      "durationSeconds": 0,
+      "radius": 0
+    },
+    {
+      "id": "blight",
+      "name": "Blight",
+      "elements": ["nature", "dark"],
+      "role": "damage",
+      "effect": "spreadingPoison",
+      "value": 5,
+      "durationSeconds": 6,
+      "radius": 4
+    }
+  ]
+}

@@ -1,0 +1,241 @@
+{
+  "language": {
+    "choose": "Kies je taal",
+    "en": "English",
+    "nl": "Nederlands"
+  },
+  "common": {
+    "ok": "OK",
+    "cancel": "Annuleren",
+    "back": "Terug",
+    "yes": "Ja",
+    "no": "Nee",
+    "next": "Verder",
+    "close": "Sluiten",
+    "on": "Aan",
+    "off": "Uit",
+    "auto": "Auto"
+  },
+  "boot": {
+    "loading": "Laden… {percent}%",
+    "error": "Er ging iets mis bij het laden. Herlaad de pagina.",
+    "dataErrors": "{count} problemen gevonden in de speldata."
+  },
+  "title": {
+    "continue": "Verder spelen",
+    "newGame": "Nieuw spel",
+    "settings": "Instellingen",
+    "overwriteQuestion": "Een nieuw spel wist je huidige save. Weet je het zeker?"
+  },
+  "pause": {
+    "title": "Pauze",
+    "resume": "Verder",
+    "settings": "Instellingen",
+    "toTitle": "Terug naar het titelscherm"
+  },
+  "settings": {
+    "title": "Instellingen",
+    "language": "Taal",
+    "quality": "Graphics",
+    "qualityAuto": "Auto",
+    "qualityLow": "Low",
+    "qualityMid": "Mid",
+    "qualityHigh": "High",
+    "fpsCap": "Beeldsnelheid",
+    "fpsAuto": "Auto",
+    "fps60": "60 fps",
+    "fps120": "120 fps",
+    "volume": "Volume",
+    "debug": "Debugmodus",
+    "deleteSave": "Save verwijderen",
+    "deleteConfirm1": "Je save verwijderen? Je begint dan helemaal opnieuw.",
+    "deleteConfirm2": "Weet je het echt zeker? Dit kun je niet ongedaan maken.",
+    "deleted": "Je save is verwijderd.",
+    "browserDataWarning": "Je spel wordt in deze browser opgeslagen. Wis je je browsergegevens, dan is je save ook weg."
+  },
+  "save": {
+    "saved": "Spel opgeslagen",
+    "newerVersion": "Deze save is gemaakt met een nieuwere versie van het spel. Herlaad de pagina om bij te werken.",
+    "corrupt": "Je save kon niet gelezen worden. Er is een reservekopie bewaard.",
+    "storageUnavailable": "Opslaan kan niet in deze browser (privémodus?). Je voortgang wordt niet bewaard.",
+    "exportTitle": "Save exporteren",
+    "importTitle": "Save importeren",
+    "importInvalid": "Deze code is geen geldige save."
+  },
+  "creator": {
+    "title": "Maak je personage",
+    "name": "Naam",
+    "namePlaceholder": "Jouw naam",
+    "nameInvalid": "Gebruik maximaal {max} letters en cijfers.",
+    "bodyType": "Lichaamstype",
+    "hairstyle": "Kapsel",
+    "hairColor": "Haarkleur",
+    "skinTone": "Huidskleur",
+    "mantleColor": "Mantelkleur",
+    "random": "Willekeurig",
+    "start": "Begin je reis"
+  },
+  "appearance": {
+    "body": {
+      "male": "Man",
+      "female": "Vrouw"
+    },
+    "hairstyle": {
+      "short": "Kort",
+      "swept": "Naar achteren",
+      "messy": "Slordig",
+      "long": "Lang",
+      "ponytail": "Paardenstaart",
+      "bob": "Bob",
+      "braid": "Vlecht",
+      "bun": "Knot"
+    },
+    "hairColor": {
+      "red_light": "Lichtrood",
+      "red_dark": "Donkerrood",
+      "orange_light": "Lichtoranje",
+      "orange_dark": "Donkeroranje",
+      "yellow_light": "Lichtblond",
+      "yellow_dark": "Donkerblond",
+      "green_light": "Lichtgroen",
+      "green_dark": "Donkergroen",
+      "blue_light": "Lichtblauw",
+      "blue_dark": "Donkerblauw",
+      "purple_light": "Lichtpaars",
+      "purple_dark": "Donkerpaars",
+      "pink_light": "Lichtroze",
+      "pink_dark": "Donkerroze",
+      "brown_light": "Lichtbruin",
+      "brown_dark": "Donkerbruin",
+      "black": "Zwart",
+      "white": "Wit",
+      "grey": "Grijs"
+    },
+    "skin": {
+      "tone_1": "Tint 1",
+      "tone_2": "Tint 2",
+      "tone_3": "Tint 3",
+      "tone_4": "Tint 4",
+      "tone_5": "Tint 5",
+      "tone_6": "Tint 6"
+    },
+    "mantle": {
+      "navy": "Marineblauw",
+      "purple": "Paars",
+      "mist": "Mist",
+      "stone": "Steen",
+      "sunset": "Zonsondergang",
+      "amber": "Amber"
+    }
+  },
+  "intro": {
+    "skip": "Overslaan",
+    "panel_1": "Vijfduizend jaar geleden versloegen twee tovenaars een god.",
+    "panel_2": "Lucael en Baelor namen zijn kracht over. Maar ze geloofden niet meer in de mensheid, en dus kozen ze voor het duister.",
+    "panel_3": "Sindsdien verspreiden ze als de Lords of Morvath hun corruptie over het land.",
+    "lucael": "Is dit alles wat de mensheid nog heeft?",
+    "baelor": "Je bent het niet eens waard om te doden, klein insect. Kom terug als je sterker bent.",
+    "panel_5": "Weinigen stonden tegenover de Lords of Morvath en leefden nog.",
+    "panel_6": "Je wordt wakker in het Monastery van Greyhaven. Hier begint je reis."
+  },
+  "cutscene": {
+    "skip": "Overslaan",
+    "pringle": {
+      "1": "Miauw.",
+      "2": "Dacht je echt dat je zomaar kon vertrekken?",
+      "4": "Ik ben Sultan. Laat zien dat je klaar bent voor de wereld daarbuiten.",
+      "5": "Probeer me maar bij te houden!"
+    }
+  },
+  "hud": {
+    "checkpointSet": "Checkpoint ingesteld",
+    "rested": "Je rust even uit.",
+    "qualityLowered": "Graphics verlaagd naar {quality} zodat het spel vloeiend blijft.",
+    "interact": "Gebruiken",
+    "dash": "Dash"
+  },
+  "place": {
+    "monastery": "Het Monastery is je checkpoint. Val je, dan word je hier wakker. Rust uit in je bed om bij te komen.",
+    "market_square": "De Market Square: koop en verkoop spullen. De kraampjes wisselen steeds.",
+    "forge": "Hier ruil je gold voor upgrades of nieuwe items.",
+    "alchemy_lab": "In het Alchemy Lab brouw je drankjes en leer je nieuwe recepten.",
+    "golden_kettle": "The Golden Kettle: iedereen komt hier voor verhalen, roddels en tips.",
+    "garden": "In de Garden kweek je je eigen kruiden. Ze groeien door, ook als je er niet bent.",
+    "academy": "De Academy, waar mages worden opgeleid. Hier kies je straks je pad.",
+    "training_field": "Het trainingsveld. Hier oefenen zwaardvechters hun vaardigheden.",
+    "harbor": "De haven van Greyhaven. Schepen komen en gaan over de baai.",
+    "city_gate_blocked": "Je bent nog niet klaar om de stad te verlaten.",
+    "old_tjikko": "Old Tjikko, de eeuwenoude boom. De elven halen hun magie uit deze boom.",
+    "elven_city": "De stad van de elven, hoog in de takken. Hier worden Treewardens nooit aangevallen."
+  },
+  "npc": {
+    "brother_ansel": {
+      "1": "Ah, je bent wakker. Ik vond je bewusteloos langs de weg en bracht je hierheen.",
+      "2": "Dit Monastery is je checkpoint. Val je, dan word je hier weer wakker.",
+      "3": "Rust uit in je bed als je moe bent. Ga nu maar, Greyhaven wacht op je."
+    },
+    "marco": {
+      "1": "Welkom, welkom! Alles hier is speciaal, alleen voor jou.",
+      "2": "Kom snel terug. Mijn voorraad wisselt elke dag!"
+    },
+    "hilda": {
+      "1": "HA! Een nieuw gezicht! Breng me gold en materialen en ik laat dat zwaard zingen.",
+      "2": "Ik kan oude gear ook afbreken tot materialen."
+    },
+    "fizzwick": {
+      "1": "Oh! Pas op voor de rook. Mijn wenkbrauwen groeien heus wel terug.",
+      "2": "Breng me ingrediënten, dan leer ik je een recept of twee."
+    },
+    "rose": {
+      "1": "Hallo, lieverd. De Garden is een rustige plek. Planten hebben geduld nodig.",
+      "2": "Verse kruiden drogen vanzelf na een paar dagen. Gedroogde zijn ook nog nuttig."
+    },
+    "bertha": {
+      "1": "Kom binnen, kom binnen! Ga lekker bij het vuur zitten. Wat mag het zijn?",
+      "2": "Ze zeggen dat de Lords of Morvath lang geleden een god versloegen. Brr.",
+      "3": "Zit je ooit vast, vraag het mij maar. Ik hoor alles."
+    },
+    "master_brink": {
+      "1": "Welkom in de Academy. Magie beloont wie geduld heeft.",
+      "2": "Kom terug als je klaar bent om je pad te kiezen."
+    },
+    "wizard_sam": {
+      "1": "Hm. Niet veel bezoekers vinden de weg naar mij.",
+      "2": "Duistere magie is snel sterk. Onthoud wel dat het een duistere weg is."
+    },
+    "sir_garrick": {
+      "1": "Een zwaardvechter staat vooraan en vangt de klappen op voor het team.",
+      "2": "Train hard, dan laat staal je nooit in de steek."
+    },
+    "pringle": {
+      "pet": "Pringle spint tevreden."
+    }
+  },
+  "item": {
+    "gold": { "desc": "Glimmende munten. Om te kopen, verkopen en upgraden." },
+    "old_sword": { "desc": "Een oud maar trouw zwaard." },
+    "travel_mantle": { "desc": "Een eenvoudige reismantel met gouden borduursel." },
+    "mage_staff": { "desc": "Een neutrale staf. Werkt alleen met een kristal." },
+    "wizard_crystal": {
+      "desc": "Een kristal met een willekeurig element: Water, Fire, Nature of Wind."
+    },
+    "dark_crystal": { "desc": "Een kristal van duistere magie." },
+    "slime_gel": { "desc": "Kleverige gel die een slime achterlaat." }
+  },
+  "quest": {
+    "defeat_sultan": { "desc": "Versla Sultan bij de stadspoort." },
+    "your_resolve": { "desc": "Ga naar de Academy en kies je pad." },
+    "first_harvest": { "desc": "Breng Rose 5 Blossom uit de Garden." }
+  },
+  "season": {
+    "summer": "Zomer",
+    "autumn": "Herfst",
+    "winter": "Winter",
+    "spring": "Lente",
+    "summer_extra": "Fire Beetles verschijnen.",
+    "autumn_extra": "Ghosts en Scarecrows zwerven door het land.",
+    "winter_extra": "The Frozen Lake is te bereiken.",
+    "spring_extra": "Kruiden groeien sneller.",
+    "nextIn": "Volgend seizoen over {days} d {hours} u"
+  }
+}

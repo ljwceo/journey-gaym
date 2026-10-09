@@ -1,0 +1,34 @@
+{
+  "cutscenes": [
+    {
+      "id": "intro",
+      "skippable": true,
+      "panels": [
+        { "id": "map", "narration": "intro.panel_1" },
+        { "id": "fallen_god", "narration": "intro.panel_2" },
+        { "id": "corruption", "narration": "intro.panel_3" },
+        {
+          "id": "confrontation",
+          "lines": [
+            { "speaker": "Lucael", "text": "intro.lucael" },
+            { "speaker": "Baelor", "text": "intro.baelor" }
+          ]
+        },
+        { "id": "darkness", "narration": "intro.panel_5" },
+        { "id": "awakening", "narration": "intro.panel_6" }
+      ]
+    },
+    {
+      "id": "pringle",
+      "skippable": true,
+      "playOnce": true,
+      "panels": [
+        { "id": "gate", "lines": [{ "speaker": "Pringle", "text": "cutscene.pringle.1" }] },
+        { "id": "eyes", "lines": [{ "speaker": "Pringle", "text": "cutscene.pringle.2" }] },
+        { "id": "smoke", "shake": true },
+        { "id": "sultan", "lines": [{ "speaker": "Sultan", "text": "cutscene.pringle.4" }] },
+        { "id": "leap", "lines": [{ "speaker": "Sultan", "text": "cutscene.pringle.5" }] }
+      ]
+    }
+  ]
+}

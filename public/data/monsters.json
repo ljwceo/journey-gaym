@@ -1,0 +1,137 @@
+{
+  "speedClasses": {
+    "verySlow": 1,
+    "slow": 2,
+    "normal": 3,
+    "fast": 4.5
+  },
+  "monsters": [
+    {
+      "id": "green_slime",
+      "name": "Green Slime",
+      "levelRange": [1, 2],
+      "hp": 30,
+      "damage": { "min": 5, "max": 5 },
+      "speed": "slow",
+      "xp": 10,
+      "behavior": "melee",
+      "drops": [{ "item": "slime_gel", "chance": 0.5, "min": 1, "max": 1 }]
+    },
+    {
+      "id": "big_slime",
+      "name": "Big Slime",
+      "levelRange": [3, 4],
+      "hp": 80,
+      "damage": { "min": 10, "max": 10 },
+      "speed": "slow",
+      "xp": 30,
+      "behavior": "melee",
+      "splitsInto": { "monster": "green_slime", "count": 2 },
+      "drops": [{ "item": "slime_gel", "chance": 0.75, "min": 1, "max": 2 }]
+    },
+    {
+      "id": "goblin",
+      "name": "Goblin",
+      "levelRange": [3, 5],
+      "hp": 60,
+      "damage": { "min": 8, "max": 8 },
+      "speed": "fast",
+      "xp": 20,
+      "behavior": "melee",
+      "groupSize": { "min": 2, "max": 3 },
+      "drops": [{ "item": "gold", "chance": 1, "min": 2, "max": 5 }]
+    },
+    {
+      "id": "goblin_archer",
+      "name": "Goblin Archer",
+      "levelRange": [5, 7],
+      "hp": 45,
+      "damage": { "min": 12, "max": 12 },
+      "speed": "normal",
+      "xp": 30,
+      "behavior": "ranged",
+      "range": 12,
+      "drops": [{ "item": "gold", "chance": 1, "min": 2, "max": 5 }]
+    },
+    {
+      "id": "goblin_chief",
+      "name": "Goblin Chief",
+      "levelRange": [7, 8],
+      "hp": 400,
+      "damage": { "min": 20, "max": 20 },
+      "speed": "normal",
+      "xp": 150,
+      "behavior": "melee",
+      "rank": "miniboss",
+      "attacks": [
+        { "id": "big_swing", "name": "Big Swing", "damage": 20, "warningSeconds": 0.8, "hits": 1 }
+      ],
+      "drops": [{ "item": "gold", "chance": 1, "min": 15, "max": 30 }]
+    },
+    {
+      "id": "sultan",
+      "name": "Sultan",
+      "levelRange": [3, 3],
+      "hp": 800,
+      "damage": { "min": 12, "max": 15 },
+      "speed": "fast",
+      "xp": 200,
+      "behavior": "melee",
+      "rank": "boss",
+      "transformsFrom": "pringle",
+      "enrage": { "belowHpFraction": 0.5, "speedFactor": 1.25 },
+      "attacks": [
+        {
+          "id": "claw_combo",
+          "name": "Claw Combo",
+          "damage": 12,
+          "hits": 3,
+          "minHits": 2,
+          "warningSeconds": 0.4,
+          "recoverySeconds": 1
+        },
+        {
+          "id": "pounce",
+          "name": "Pounce",
+          "damage": 15,
+          "hits": 1,
+          "warningSeconds": 0.6,
+          "recoverySeconds": 1
+        },
+        {
+          "id": "dash_strike",
+          "name": "Dash Strike",
+          "damage": 15,
+          "hits": 1,
+          "warningSeconds": 0.7,
+          "recoverySeconds": 1
+        },
+        {
+          "id": "flurry",
+          "name": "Flurry",
+          "damage": 12,
+          "hits": 5,
+          "warningSeconds": 0.5,
+          "recoverySeconds": 2,
+          "onlyWhenEnraged": true
+        }
+      ],
+      "drops": []
+    },
+    {
+      "id": "treewarden",
+      "name": "Treewarden",
+      "levelRange": [8, 8],
+      "hp": 3000,
+      "damage": { "min": 40, "max": 40 },
+      "speed": "verySlow",
+      "xp": 400,
+      "behavior": "melee",
+      "neutral": true,
+      "attacks": [
+        { "id": "heavy_slam", "name": "Heavy Slam", "damage": 40, "warningSeconds": 1.2, "hits": 1 }
+      ],
+      "drops": [{ "item": "wood", "chance": 1, "min": 3, "max": 6 }]
+    }
+  ]
+}

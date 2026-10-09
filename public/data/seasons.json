@@ -1,0 +1,35 @@
+{
+  "order": ["summer", "autumn", "winter", "spring"],
+  "firstWeekSeason": "summer",
+  "alwaysAvailable": ["wood", "iron_ore", "slime_gel", "crystal_shard"],
+  "seasons": [
+    {
+      "id": "summer",
+      "label": "season.summer",
+      "bonus": { "element": "fire", "percent": 20 },
+      "resources": ["sunherb", "beetle_shell", "honey"],
+      "extra": "season.summer_extra"
+    },
+    {
+      "id": "autumn",
+      "label": "season.autumn",
+      "bonus": { "element": "wind", "percent": 20 },
+      "resources": ["mushroom", "ghost_dust", "storm_feather"],
+      "extra": "season.autumn_extra"
+    },
+    {
+      "id": "winter",
+      "label": "season.winter",
+      "bonus": { "element": "water", "percent": 20 },
+      "resources": ["frostbloom", "wolf_pelt", "frozen_crystal"],
+      "extra": "season.winter_extra"
+    },
+    {
+      "id": "spring",
+      "label": "season.spring",
+      "bonus": { "element": "nature", "percent": 20 },
+      "resources": ["blossom", "dewdrop", "pollen"],
+      "extra": "season.spring_extra"
+    }
+  ]
+}

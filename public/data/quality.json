@@ -1,0 +1,52 @@
+{
+  "presets": [
+    {
+      "id": "low",
+      "pixelRatio": { "min": 0.75, "max": 1 },
+      "shadows": "off",
+      "shadowMapSize": 0,
+      "antialias": "off",
+      "chunkRings": { "active": 1, "preload": 2, "unload": 3 },
+      "fogFar": 180,
+      "density": { "grass": 0.2, "props": 0.5, "effects": 0.4 },
+      "lodBias": 0.6,
+      "fpsTarget": 60
+    },
+    {
+      "id": "mid",
+      "pixelRatio": { "min": 1, "max": 1.5 },
+      "shadows": "simple",
+      "shadowMapSize": 1024,
+      "antialias": "fxaa",
+      "chunkRings": { "active": 2, "preload": 3, "unload": 4 },
+      "fogFar": 280,
+      "density": { "grass": 0.6, "props": 0.8, "effects": 0.7 },
+      "lodBias": 1,
+      "fpsTarget": 60
+    },
+    {
+      "id": "high",
+      "pixelRatio": { "min": 1, "max": 2 },
+      "shadows": "soft",
+      "shadowMapSize": 2048,
+      "antialias": "msaa",
+      "chunkRings": { "active": 2, "preload": 4, "unload": 5 },
+      "fogFar": 400,
+      "density": { "grass": 1, "props": 1, "effects": 1 },
+      "lodBias": 1.5,
+      "fpsTarget": 120
+    }
+  ],
+  "default": "mid",
+  "benchmark": {
+    "durationSeconds": 3,
+    "warmupSeconds": 0.5,
+    "highMaxFrameMs": 6,
+    "midMaxFrameMs": 12
+  },
+  "autoDowngrade": {
+    "belowFps": 58,
+    "windowSeconds": 5,
+    "graceSecondsAfterChange": 5
+  }
+}

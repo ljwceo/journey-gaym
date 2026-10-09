@@ -52,6 +52,26 @@ Handgeschilderde anime-fantasy uit de jaren '80 en '90: een magische stad in de 
 - **K2** Magieblauw is zeldzaam: alleen voor betovering (staven, runen, spreuken, zeldzame gear).
 - **K3** Goud hoort op donker: altijd op navy of violet, nooit op een lichte achtergrond.
 
+### Terreinkleuren
+
+Gedempte kleuren voor de grond van de zones (eerst als placeholder, later als basis voor textures). Altijd gedempt en schemerig, nooit verzadigd groen (zie *Wel / niet*). Tokens staan in `tokens.json` onder `terrein`.
+
+| Token | Hex | Gebruik |
+|---|---|---|
+| `--gh-terrein-mosgroen` | `#5E6B4A` | Bosgrond, gras in de schemering |
+| `--gh-terrein-bosgroen` | `#3E4B3C` | Diep bos, boomkruinen |
+| `--gh-terrein-moerasgroen` | `#55574A` | Moeras, nat terrein |
+| `--gh-terrein-steppe` | `#8A8457` | Hoogvlakte, droog gras |
+| `--gh-terrein-zandsteen` | `#A8916C` | Kust, ruïnes, paden |
+| `--gh-terrein-lavasteen` | `#3B302F` | Vulkaangebergte |
+| `--gh-terrein-verdorven` | `#3A2C45` | Corruptie van Morvath |
+| `--gh-terrein-sneeuw` | `#D6D3DE` | Sneeuw en ijs (koel, nooit puur wit) |
+| `--gh-terrein-zeewater` | `#3D4766` | Zee en diep water |
+
+### Kleuren buiten het palet
+
+Haar- en huidskleuren van de character creator (19 haarkleuren, 6 huidtinten) passen niet in dit palet. Die staan als hex-code in `public/data/appearance.json` (data, geen code). Alle andere kleuren in de data verwijzen naar een token uit deze gids. **Navy** (mantels) = Nachtinkt.
+
 ## Licht
 
 - **L1** Tijdstip is gouden uur of schemering. Geen fel middaglicht, geen pikdonkere nacht.

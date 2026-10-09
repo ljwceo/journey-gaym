@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { hexToNumber, palette, uiColors } from './palette';
+import {
+  colorTokens,
+  hexToNumber,
+  palette,
+  resolveColorToken,
+  terrainColors,
+  uiColors,
+} from './palette';
 
 describe('hexToNumber', () => {
   it('converts hex strings to numbers', () => {
@@ -23,6 +30,25 @@ describe('palette', () => {
   it('never contains pure black (style rule K1)', () => {
     for (const color of [...Object.values(palette), ...Object.values(uiColors)]) {
       expect(color).not.toBe(0x000000);
+    }
+  });
+});
+
+describe('color tokens', () => {
+  it('resolves palette and terrain names', () => {
+    expect(resolveColorToken('schemerviolet')).toBe(palette.schemerviolet);
+    expect(resolveColorToken('mosgroen')).toBe(terrainColors.mosgroen);
+    expect(() => resolveColorToken('neon')).toThrow();
+  });
+
+  it('keeps palette and terrain names unique', () => {
+    expect(colorTokens.size).toBe(Object.keys(palette).length + Object.keys(terrainColors).length);
+  });
+
+  it('never contains pure black or pure white terrain', () => {
+    for (const color of Object.values(terrainColors)) {
+      expect(color).not.toBe(0x000000);
+      expect(color).not.toBe(0xffffff);
     }
   });
 });

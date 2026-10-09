@@ -1,0 +1,37 @@
+{
+  "quests": [
+    {
+      "id": "defeat_sultan",
+      "name": "Defeat Sultan",
+      "kind": "main",
+      "description": "quest.defeat_sultan.desc",
+      "objectives": [{ "type": "boss", "monster": "sultan" }],
+      "requires": { "level": 3 },
+      "rewards": { "xp": 0, "gold": 0, "items": [] }
+    },
+    {
+      "id": "your_resolve",
+      "name": "Your Resolve",
+      "kind": "main",
+      "giver": "master_brink",
+      "description": "quest.your_resolve.desc",
+      "objectives": [{ "type": "talk", "npc": "master_brink" }],
+      "requires": { "quests": ["defeat_sultan"] },
+      "rewards": { "xp": 50, "gold": 0, "items": [] }
+    },
+    {
+      "id": "first_harvest",
+      "name": "First Harvest",
+      "kind": "side",
+      "giver": "rose",
+      "description": "quest.first_harvest.desc",
+      "objectives": [{ "type": "deliver", "item": "blossom", "count": 5, "npc": "rose" }],
+      "requires": {},
+      "rewards": {
+        "xp": 40,
+        "gold": 10,
+        "items": [{ "item": "recipe_greater_health_potion", "count": 1 }]
+      }
+    }
+  ]
+}

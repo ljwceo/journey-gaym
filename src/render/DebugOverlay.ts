@@ -19,6 +19,7 @@ interface MemoryInfo {
 export class DebugOverlay {
   readonly lines: DebugLines = new Map();
   private readonly element: HTMLPreElement;
+  private readonly errorElement: HTMLPreElement;
   private visible = false;
 
   private frames = 0;
@@ -36,6 +37,9 @@ export class DebugOverlay {
     this.element = document.createElement('pre');
     this.element.className = 'debug-overlay';
     parent.appendChild(this.element);
+    this.errorElement = document.createElement('pre');
+    this.errorElement.className = 'debug-errors';
+    parent.appendChild(this.errorElement);
 
     window.addEventListener('keydown', this.onKeyDown);
     window.addEventListener('touchstart', this.onTouchStart, { passive: true });
@@ -49,7 +53,19 @@ export class DebugOverlay {
   setVisible(visible: boolean): void {
     this.visible = visible;
     this.element.style.display = visible ? 'block' : 'none';
+    this.updateErrorVisibility();
     if (visible) this.reset();
+  }
+
+  /** Problems to show in red while debug mode is on (data validation, missing texts, ...). */
+  setErrors(errors: readonly string[]): void {
+    this.errorElement.textContent = errors.join('\n');
+    this.updateErrorVisibility();
+  }
+
+  private updateErrorVisibility(): void {
+    const show = this.visible && this.errorElement.textContent !== '';
+    this.errorElement.style.display = show ? 'block' : 'none';
   }
 
   /**
@@ -74,6 +90,7 @@ export class DebugOverlay {
     window.removeEventListener('keydown', this.onKeyDown);
     window.removeEventListener('touchstart', this.onTouchStart);
     this.element.remove();
+    this.errorElement.remove();
   }
 
   private reset(): void {

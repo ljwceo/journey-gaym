@@ -21,3 +21,26 @@ export const palette = Object.fromEntries(
 export const uiColors = Object.fromEntries(
   Object.entries(tokens.ui).map(([key, value]) => [key, hexToNumber(value)]),
 ) as Record<UiKey, number>;
+
+type TerrainKey = keyof typeof tokens.terrein;
+
+/** Muted terrain colors for zone placeholders, as numbers. */
+export const terrainColors = Object.fromEntries(
+  Object.entries(tokens.terrein).map(([key, value]) => [key, hexToNumber(value.hex)]),
+) as Record<TerrainKey, number>;
+
+/**
+ * Every color name data files may use (`"terrainColor": "mosgroen"`), mapped to its number.
+ * Palette and terrain tokens share one namespace; names must stay unique across both groups.
+ */
+export const colorTokens: ReadonlyMap<string, number> = new Map([
+  ...Object.entries(palette),
+  ...Object.entries(terrainColors),
+]);
+
+/** Resolves a color token name from data to a number, or throws for unknown names. */
+export function resolveColorToken(name: string): number {
+  const color = colorTokens.get(name);
+  if (color === undefined) throw new Error(`Unknown color token: ${name}`);
+  return color;
+}
