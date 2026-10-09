@@ -6,9 +6,9 @@
 
 | | |
 |---|---|
-| **Huidige fase** | Fase 1 – Basis + open wereld + character creator |
-| **Status** | Stap 1.11 klaar aan de kant van Claude: alles gebouwd en getest in de testbrowser. **Wacht op metingen op een echte pc en iPhone** (zie Definition of Done) |
-| **Volgende stap** | Bo en Lucas: pc Mid/High is gemeten en perfect. Nog: **iPhone** (alle standen) en **Low** op pc meten (README → "Fps meten"), en de open punten hieronder op de telefoon proberen. Daarna fase 1 afsluiten en fase 2 toevoegen aan `CLAUDE.md` |
+| **Huidige fase** | Fase 2 – Solo-gevecht (plan, wacht op akkoord) |
+| **Status** | Fase 1 afgesloten op de pc (2026-10-09). iPhone-metingen overgeslagen op verzoek van Bo/Lucas |
+| **Volgende stap** | Plan fase 2 goedkeuren en het fase 2-blok in `CLAUDE.md` zetten |
 | **Laatste sessie** | 2026-10-09: stap 1.11 afronden |
 
 ---
@@ -46,10 +46,35 @@ Elke stap is één branch + pull request. Na elke stap start de game zonder fout
 
 ---
 
+## Fase 2 – Plan (voorstel, wacht op akkoord)
+
+Doel: in Greyhaven je eerste dag spelen (kleine quest per basis-NPC, ±level 3), in de Greenwood vechten tegen slimes en goblins, en Sultan verslaan. Elke stap is één branch + pull request; getest op de pc (de telefoon krijgt wel knoppen, maar wordt niet gemeten).
+
+**Keuzes van Bo en Lucas (2026-10-09):**
+- Telefoon krijgt ook aanvalknoppen; testen doen we op de pc.
+- Gewone zwaardaanvallen op de muis (links = fast hit, rechts = heavy hit). Speciale aanvallen (skills en spells, vanaf fase 3–4) op toetsen op de pc en op eigen knoppen op de telefoon.
+- Sultan vecht je **vóór** de klassekeuze. De stadspoort gaat pas open **na** de klassekeuze (fase 3).
+- Marco en Hilda krijgen een simpele versie: Marco verkoopt een paar drankjes, Hilda upgradet je oude zwaard één keer.
+
+| Stap | Wat |
+|---|---|
+| 2.1 | **Gevechtskern:** HP, mana, energie met bijvullen (HP 1/s buiten gevecht); zwaard: fast hit (10 schade, 10 energie, tot 3 per seconde, elke 3e slag +50%), heavy hit (25 schade, 25 energie, ±1 s uithalen); energie op = alleen langzamere fast hits; raken in een boog vóór je (met een beetje richthulp naar de dichtstbijzijnde vijand); schadegetallen (pool); HUD-regels echt aan (balken alleen in gevecht, HP-balk blijft onder 30%). Telefoon: twee aanvalknoppen naast Dash. Een trainingspop op het trainingsveld om te testen. |
+| 2.2 | **Vijanden:** één pool voor alle vijanden, simpele AI (rondlopen, achtervolgen, aanvallen, terug naar huis), spawngebieden in `zones.json` (verschijnen opnieuw na een tijd). Green Slime (springt), Big Slime (splitst in 2), Goblins in groepjes van 2–3, Goblin Archer (houdt afstand, pijlen uit een pool), Goblin Chief in een goblinkamp (grote slag met rode waarschuwing), Treewarden valt alleen terug aan en is in de elfenstad niet aan te vallen. Op Low, Mid en High precies hetzelfde. |
+| 2.3 | **XP, levels, buit, doodgaan:** XP-curve uit `player.json`, level omhoog (+10 HP, +5 mana, fast +2 en heavy +5 schade) met melding en XP-balk; buit (gold, Slime Gel) en een simpele tas; drankje drinken (toets/knop); doodgaan = −10% gold en wakker worden bij je checkpoint; rusten in bed = vol HP en mana. Save naar versie 3 (met migratie). |
+| 2.4 | **Quests van de eerste dag:** questsysteem uit `quests.json` (praten, verzamelen, verslaan, inleveren); de NPC laat zien wat je nog mist ("2/3 Slime Gel"); beloning XP, gold of item. Quests: Brother Ansel (checkpoint en bed), Marco (je eerste drankjes kopen), Hilda (oude zwaard één keer upgraden voor Slime Gel), Rose (zaadjes en stukje grond in de Garden, nog zonder kweken), Old Bertha (verhaal over de Lords of Morvath). Samen ±level 3. |
+| 2.5 | **Sultan:** na de quests bij de poort de cutscene "Pringle" (5 stripplaatjes uit `cutscenes.json`, overslaanbaar; bij een herkansing meteen overslaan) en het gevecht (800 HP, Claw Combo, Pounce, Dash Strike, na elke aanval wegspringen en 1 s stil, onder 50% sneller met Flurry en daarna 2 s buiten adem; alle grote aanvallen met waarschuwing). Verlies = Monastery, terug naar de poort. Winst = Sultan wordt een NPC. De poortvoorwaarde wordt "Sultan verslagen + klasse gekozen", maar blijft tot fase 3 open zodat de Greenwood bereikbaar is. |
+| 2.6 | **Afronden:** balans testen, meten op de pc (Meet 20 s, ook met veel vijanden in beeld), geheugen, documentatie. |
+
+**Niet in fase 2:** klassekeuze, staf, spells en kristallen, gear en gewicht, ezel Biscuit (fase 3); echte Forge, markt en skill tree (fase 4); co-op en PeerJS (fase 5); de rematch met Sultan (Nine Lives), kruiden kweken en seizoenseffecten (later).
+
+**Risico's:** veel vijanden tegelijk (AI en botsing op de vaste tijdstap) moet goedkoop blijven; vandaar één pool en de spatial hash. Gevechten moeten later in raids door een host uitgerekend kunnen worden, dus alle gevechtslogica zit in de simulatie (niet in het tekenen).
+
+**Tijdelijke namen die hierin voorkomen** (nog niet definitief): Brother Ansel, Marco the Merchant, Hilda Ironhand, Old Bertha, Sir Garrick, Treewardens, de elfenstad, Gold.
+
 ## Fase-log
 
 ### Fase 1 – Basis + open wereld + character creator
-**Status:** stap 1.1 t/m 1.11 gebouwd; wacht op metingen op echte apparaten.
+**Status:** afgesloten op de pc (2026-10-09). De iPhone is niet gemeten (zie besluiten); touch-besturing zit erin maar is alleen in de testbrowser getest.
 **Gebouwd:**
 - 1.1 Projectopzet: Vite 8 + TypeScript 6 (strict), Three.js r186, ESLint + Prettier, Vitest. Leeg 3D-scherm met een draaiende kubus in stijlgidskleuren (draait per seconde, niet per frame). GitHub Actions controleert elke pull request (lint, opmaak, typecheck, tests, build) en zet `main` op GitHub Pages.
 - 1.2 Kern: `FixedStep` + `GameLoop` (simulatie altijd 60 Hz met accumulator, tekenen interpoleert, max 8 inhaalstappen per frame, frames > 0,25 s worden afgekapt, `?fps=N` om de framerate te beperken), getypte `EventBus` (geen allocaties bij `emit`), `StateMachine` (wissel gebeurt pas vóór de volgende update), `Random` (sfc32 met vaste seed) + `hashSeed` voor per-chunk seeds, `Renderer`, `DebugOverlay` (F3 / drie vingers / `?debug=1`: fps, frametijd, cpu-tijd, draw calls, triangles, geometries/textures, heap, resolutie, simulatiestappen, huidige state). Demo-scène: kubus die rondjes draait op de simulatie en vloeiend getekend wordt. 29 tests.
@@ -301,6 +326,7 @@ Elke stap is één branch + pull request. Na elke stap start de game zonder fout
 | 2026-10-09 | Save importeren gaat terug naar het titelscherm (Continue = geïmporteerde save) | Zo wordt de hele wereld netjes opnieuw opgebouwd vanuit de nieuwe save |
 | 2026-10-09 | Knop **Meet 20 s** in het cheatmenu (gemiddelde fps, 1% low, langste frame) | Claude kan niet op een echte iPhone of pc meten; zo kunnen Bo en Lucas de fps-tabel in een paar minuten invullen |
 | 2026-10-09 | Fase 1 is pas "af" als de fps op een echte pc en iPhone gemeten is | Harde eis §2.1 kan alleen op echte apparaten gecontroleerd worden |
+| 2026-10-09 | **Fase 1 afgesloten op de pc**; iPhone-metingen (en Low op de pc) overgeslagen | Bo/Lucas: "ga gewoon door met pc". Pc Mid 60 en High 120 fps zonder haperingen. De iPhone kan later alsnog gemeten worden met Meet 20 s |
 | 2026-10-09 | PerfTest verplaatst naar `experiments/perftest/` | Oude test-code hoort in `/experiments` (§5). Er was geen PeerJS-netwerktest in de repo, dus `experiments/net-test/` bestaat (nog) niet |
 
 ## Sessielog

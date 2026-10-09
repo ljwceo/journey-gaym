@@ -296,4 +296,21 @@ Definition of Done:
 ```
 
 ### Fase 1 – Basis + open wereld + character creator
-Status: gebouwd (stap 1.1–1.11); wacht op fps-metingen op een echte pc en iPhone. Details in `docs/PROGRESS.md`.
+Status: afgesloten op de pc (2026-10-09): Mid 60 fps en High 120 fps zonder haperingen. iPhone niet gemeten (overgeslagen op verzoek). Details in `docs/PROGRESS.md`.
+
+### Fase 2 – Solo-gevecht en de eerste dag
+Status: plan, wacht op akkoord (zie `docs/PROGRESS.md`).
+Doel: de eerste dag in Greyhaven spelen (kleine quest per basis-NPC, ±level 3), in de Greenwood vechten tegen slimes en goblins, en Sultan verslaan.
+Bouwen: HP/mana/energie, zwaardaanvallen (muis: links fast hit, rechts heavy hit; telefoon: knoppen), vijanden met AI en spawngebieden (Green Slime, Big Slime, Goblin, Goblin Archer, Goblin Chief, Treewarden), XP en levels, buit en een simpele tas, drankjes, doodgaan en rusten, HUD-regels aan, questsysteem met de quests van de eerste dag (Marco en Hilda in een simpele versie), cutscene-speler, baasgevecht Sultan.
+Data: `player.json` (aanvallen, regen, level-bonussen), `monsters.json` (gedrag, waarschuwingen, buit), `zones.json` (spawngebieden), `quests.json`, `npcs.json`, `items.json` (drankjes, Slime Gel), `cutscenes.json`, `triggers.json` (poortvoorwaarde), save versie 3.
+Niet doen: klassekeuze, staf, spells, kristallen, gear, Biscuit (fase 3); echte Forge, markt, skill tree (fase 4); co-op (fase 5). Speciale aanvallen komen later op eigen toetsen/knoppen.
+Afspraken: Sultan vecht je vóór de klassekeuze; de stadspoort gaat pas open na de klassekeuze (fase 3) en blijft tot dan open om te testen. Testen op de pc.
+Definition of Done:
+- [ ] Ik kan met de muis (en op de telefoon met knoppen) fast en heavy hits doen; energie, combo en schade kloppen met het concept.
+- [ ] In de Greenwood lopen slimes en goblins rond, vallen aan en verschijnen opnieuw; de Treewarden valt alleen terug aan en is in de elfenstad niet aan te vallen.
+- [ ] Ik krijg XP, ga levels omhoog (balken en XP volgens de HUD-regels), krijg buit en kan een drankje drinken.
+- [ ] Doodgaan kost 10% gold en ik word wakker bij mijn checkpoint; rusten in bed maakt HP en mana vol.
+- [ ] De vijf quests van de eerste dag werken in het Nederlands en Engels en brengen me rond level 3.
+- [ ] Sultan: de cutscene speelt (overslaanbaar), het gevecht werkt zoals in het concept, en verliezen of winnen werkt.
+- [ ] Alles blijft 60/120 fps op de pc, ook met veel vijanden, en is op elke grafische stand gelijk.
+- [ ] Tests (gevechtsformules, XP, quests, save-migratie) en de DataValidator slagen.
