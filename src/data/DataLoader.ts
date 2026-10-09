@@ -2,9 +2,13 @@ import { dataFileNames, type DataFileName } from './schemas';
 
 export type JsonFetcher = (url: string) => Promise<unknown>;
 
-/** Fetches a JSON file; throws with the URL in the message so a missing file is easy to find. */
+/**
+ * Fetches a JSON file; throws with the URL in the message so a missing file is easy to find.
+ * The build id in the URL and `no-cache` (always ask the server whether the file changed) make
+ * sure new code never runs with data files the browser cached from an older deploy.
+ */
 export const fetchJson: JsonFetcher = async (url) => {
-  const response = await fetch(url);
+  const response = await fetch(`${url}?v=${__BUILD_ID__}`, { cache: 'no-cache' });
   if (!response.ok) throw new Error(`Failed to load ${url} (HTTP ${response.status})`);
   return response.json() as Promise<unknown>;
 };

@@ -28,6 +28,11 @@ function copyPerfTest(): Plugin {
 }
 
 export default defineConfig({
+  // A new value per build: data and language files are fetched with it, so a browser never
+  // mixes new code with old (cached) JSON after a deploy.
+  define: {
+    __BUILD_ID__: JSON.stringify(process.env.GITHUB_SHA?.slice(0, 12) ?? String(Date.now())),
+  },
   // GitHub Pages serves the project at https://ljwceo.github.io/journey-gaym/
   base: '/journey-gaym/',
   build: {
