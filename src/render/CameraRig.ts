@@ -2,6 +2,7 @@ import { PerspectiveCamera } from 'three';
 import type { LookDelta } from '../core/Input';
 import type { PlayerConfig } from '../data/types';
 import { angleDelta } from '../systems/Movement';
+import type { Ground } from '../world/Ground';
 
 const DEG = Math.PI / 180;
 
@@ -114,20 +115,31 @@ export class CameraRig {
   readonly camera: PerspectiveCamera;
   readonly orbit: CameraOrbit;
 
-  constructor(cfg: CameraConfig, far: number) {
+  constructor(
+    private readonly cfg: CameraConfig,
+    far: number,
+  ) {
     this.camera = new PerspectiveCamera(cfg.fovDegrees, 1, 0.1, far);
     this.orbit = new CameraOrbit(cfg);
   }
 
-  /** Moves the camera to the orbit's current state. Allocation-free. */
-  apply(): void {
+  /**
+   * Moves the camera to the orbit's current state. Allocation-free.
+   * @param originX, originZ floating origin: the orbit works in world meters, the camera is
+   *   placed relative to the origin like everything else that is drawn
+   * @param ground when given, the camera never dips below the ground behind the player
+   */
+  apply(originX = 0, originZ = 0, ground: Ground | null = null): void {
     const o = this.orbit;
     const horizontal = Math.cos(o.pitch) * o.distance;
-    this.camera.position.set(
-      o.x - Math.sin(o.yaw) * horizontal,
-      o.y + Math.sin(o.pitch) * o.distance,
-      o.z - Math.cos(o.yaw) * horizontal,
-    );
-    this.camera.lookAt(o.x, o.y, o.z);
+    const x = o.x - Math.sin(o.yaw) * horizontal;
+    const z = o.z - Math.cos(o.yaw) * horizontal;
+    let y = o.y + Math.sin(o.pitch) * o.distance;
+    if (ground) {
+      const floor = ground.heightAt(x, z) + this.cfg.minHeightAboveGround;
+      if (y < floor) y = floor;
+    }
+    this.camera.position.set(x - originX, y, z - originZ);
+    this.camera.lookAt(o.x - originX, o.y, o.z - originZ);
   }
 }

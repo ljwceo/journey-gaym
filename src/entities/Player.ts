@@ -44,12 +44,15 @@ export class Player {
     return this.prevZ + (this.state.z - this.prevZ) * alpha;
   }
 
-  /** Moves the model to the interpolated position and heading. Allocation-free. */
-  syncModel(alpha: number, ground: Ground): void {
+  /**
+   * Moves the model to the interpolated position and heading. Allocation-free.
+   * @param originX, originZ floating origin (the model is drawn relative to it)
+   */
+  syncModel(alpha: number, ground: Ground, originX = 0, originZ = 0): void {
     const x = this.interpolatedX(alpha);
     const z = this.interpolatedZ(alpha);
     const root = this.model.root;
-    root.position.set(x, ground.heightAt(x, z), z);
+    root.position.set(x - originX, ground.heightAt(x, z), z - originZ);
     root.rotation.y = this.prevHeading + angleDelta(this.prevHeading, this.state.heading) * alpha;
   }
 

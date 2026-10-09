@@ -1,23 +1,11 @@
-import {
-  Color,
-  DirectionalLight,
-  Fog,
-  GridHelper,
-  HemisphereLight,
-  type InstancedMesh,
-  Mesh,
-  MeshLambertMaterial,
-  PlaneGeometry,
-  Scene,
-} from 'three';
+import { DirectionalLight, HemisphereLight, Scene } from 'three';
 import type { GameContext } from '../core/GameContext';
 import { Input, type LookDelta } from '../core/Input';
 import type { GameState } from '../core/StateMachine';
-import type { GameData } from '../data/types';
+import type { GameData, QualityPreset } from '../data/types';
 import { Player } from '../entities/Player';
 import { CameraRig } from '../render/CameraRig';
-import { palette, resolveColorToken, terrainColors } from '../render/palette';
-import { CollisionWorld } from '../systems/Collision';
+import { palette } from '../render/palette';
 import {
   type MoveCommand,
   type MovementConfig,
@@ -28,27 +16,25 @@ import {
 import { el } from '../ui/dom';
 import { pausePanel } from '../ui/menus/PausePanel';
 import { TouchControls } from '../ui/TouchControls';
-import { flatGround } from '../world/Ground';
-import { emptyBox, shapeBounds } from '../world/Shapes';
-import { SpatialHash } from '../world/SpatialHash';
-import { buildTestCourse } from '../world/TestCourse';
+import { World } from '../world/World';
 import { normalizeAppearance } from './creator';
 import { placeAtStart } from './flow';
 
 const DEG = Math.PI / 180;
-/** Size (m) of the 4 m grid around the spawn point: one cell per second of walking. */
-const GRID_SIZE = 240;
-const GRID_CELL = 4;
 const DEBUG_REFRESH_MS = 250;
 /** Debug overlay lines this scene owns (removed again on exit). */
-const DEBUG_KEYS = ['pos', 'energy', 'camera'] as const;
+const DEBUG_KEYS = ['pos', 'zone', 'energy', 'camera', 'chunks'] as const;
+/** The camera sees a little past the fog, so nothing pops at its far plane. */
+const CAMERA_FAR_MARGIN = 20;
 
 /**
- * The world (step 1.6): the player walks on a flat test floor in Greyhaven with a few test
- * obstacles, followed by the third-person camera. Zones, chunks and terrain arrive in step 1.7.
+ * The world: the player walks through the open world (terrain, zones, chunk streaming; see
+ * world/World.ts), followed by the third-person camera.
  *
- * Simulation (fixed 60 Hz): input → walking direction → Movement + collision → save position.
- * Rendering (every frame): interpolated player, camera smoothing, touch controls.
+ * Simulation (fixed 60 Hz): input → walking direction → Movement + collision (with slopes and
+ * deep water) → zone tracking → save position.
+ * Rendering (every frame): streaming and floating origin, interpolated player, camera
+ * smoothing, touch controls.
  * It also places a new game at the start point, counts play time, pauses (Escape, the pause
  * button, or when the app goes to the background) and saves.
  */
@@ -56,7 +42,8 @@ export class WorldState implements GameState {
   private scene: Scene | null = null;
   private rig: CameraRig | null = null;
   private player: Player | null = null;
-  private collision: CollisionWorld | null = null;
+  private world: World | null = null;
+  private qualityId: string | null = null;
   private input: Input | null = null;
   private touch: TouchControls | null = null;
   private surface: HTMLElement | null = null;
@@ -127,6 +114,7 @@ export class WorldState implements GameState {
     window.addEventListener('keydown', this.onKeyDown);
     document.addEventListener('visibilitychange', this.onVisibilityChange);
     this.unsubscribe.push(
+      ctx.events.on('settingsChanged', () => this.applyPreset()),
       ctx.events.on('languageChanged', () => {
         const label = ctx.i18n.t('controls.dash');
         this.touch?.setDashLabel(label);
@@ -162,8 +150,8 @@ export class WorldState implements GameState {
   }
 
   update(dt: number): void {
-    const { player, input, collision, movement, rig } = this;
-    if (this.paused || !player || !input || !collision || !movement || !rig) return;
+    const { player, input, world, movement, rig } = this;
+    if (this.paused || !player || !input || !world || !movement || !rig) return;
     const session = this.ctx.session;
     if (session) session.playTimeSeconds += dt;
 
@@ -177,33 +165,45 @@ export class WorldState implements GameState {
     input.consumePressed('interact');
 
     player.beginStep();
-    stepMovement(player.state, this.command, movement, dt, collision);
+    stepMovement(player.state, this.command, movement, dt, world.collision);
     this.syncSave();
+    const entered = world.trackZone(player.state.x, player.state.z);
+    if (entered) {
+      if (session) session.world.zone = entered;
+      // Autosave, and later the zone name, music and quests listen to this.
+      this.ctx.events.emit('zoneEntered', { zoneId: entered });
+    }
   }
 
   render(alpha: number, frameSeconds: number): void {
-    const { scene, rig, player, input } = this;
-    if (!scene || !rig || !player || !input) return;
+    const { scene, rig, player, input, world } = this;
+    if (!scene || !rig || !player || !input || !world) return;
     // While paused the simulation stands still, so draw the last state without interpolating.
     const a = this.paused ? 1 : alpha;
-    player.syncModel(a, flatGround);
+    const x = player.interpolatedX(a);
+    const z = player.interpolatedZ(a);
+    const s = player.state;
+    const dirX = s.moving ? Math.sin(s.heading) : 0;
+    const dirZ = s.moving ? Math.cos(s.heading) : 0;
+    world.frame(x, z, dirX, dirZ, frameSeconds, this.ctx.debug.isVisible);
+    const origin = world.origin;
+    player.syncModel(a, world.field, origin.x, origin.z);
 
     input.consumeLook(this.look);
     const look = this.look;
     const turning = input.turningCamera || look.yaw !== 0 || look.pitch !== 0;
-    const root = player.model.root;
     rig.orbit.update(
       this.paused ? 0 : frameSeconds,
-      root.position.x,
-      root.position.y,
-      root.position.z,
-      player.state.heading,
-      player.state.moving,
+      x,
+      player.model.root.position.y,
+      z,
+      s.heading,
+      s.moving,
       look,
       turning,
       this.ctx.session?.settings.cameraSensitivity ?? 1,
     );
-    rig.apply();
+    rig.apply(origin.x, origin.z, world.field);
     this.touch?.update();
     this.updateLookHint(input);
     this.ctx.renderer.render(scene, rig.camera);
@@ -222,12 +222,13 @@ export class WorldState implements GameState {
     const world = this.ctx.session?.world;
     const player = this.player;
     if (!world || !player) return;
+    const y = this.world?.field.heightAt(player.state.x, player.state.z) ?? 0;
     if (world.position) {
       world.position.x = player.state.x;
-      world.position.y = 0;
+      world.position.y = y;
       world.position.z = player.state.z;
     } else {
-      world.position = { x: player.state.x, y: 0, z: player.state.z };
+      world.position = { x: player.state.x, y, z: player.state.z };
     }
     world.heading = player.state.heading;
   }
@@ -252,56 +253,22 @@ export class WorldState implements GameState {
 
   private buildScene(data: GameData): void {
     const session = this.ctx.session;
-    const zone = data.zones.zones.find((entry) => entry.id === session?.world.zone);
     const spawn = session?.world.position ?? { x: 0, y: 0, z: 0 };
-    const fogColor = resolveColorToken(zone?.fogColor ?? data.zones.world.outsideZoneFog);
-    const groundColor = resolveColorToken(zone?.terrainColor ?? data.zones.world.outsideZoneColor);
-    const fogFar = this.fogFar(data);
+    const preset = this.preset(data);
+    this.qualityId = preset.id;
 
     const scene = new Scene();
-    scene.background = new Color(fogColor);
-    scene.fog = new Fog(fogColor, fogFar * 0.35, fogFar);
     // Warm low sun, cool twilight sky (style guide L1–L3).
     scene.add(new HemisphereLight(palette.mistpaars, palette.schemerviolet, 1.8));
     const sun = new DirectionalLight(palette.zonsondergang, 2);
     sun.position.set(-2, 3, 1.5);
     scene.add(sun);
 
-    // Flat test floor over the whole world (terrain and chunks come in step 1.7).
-    const b = shapeBounds(data.zones.world.bounds, emptyBox());
-    const width = b.maxX - b.minX;
-    const depth = b.maxZ - b.minZ;
-    const floor = new Mesh(
-      new PlaneGeometry(width, depth),
-      new MeshLambertMaterial({ color: groundColor }),
-    );
-    floor.rotation.x = -Math.PI / 2;
-    floor.position.set(b.minX + width / 2, 0, b.minZ + depth / 2);
-    scene.add(floor);
-    const grid = new GridHelper(
-      GRID_SIZE,
-      GRID_SIZE / GRID_CELL,
-      palette.schemerviolet,
-      palette.mistpaars,
-    );
-    grid.position.set(
-      Math.round(spawn.x / GRID_CELL) * GRID_CELL,
-      0.01,
-      Math.round(spawn.z / GRID_CELL) * GRID_CELL,
-    );
-    scene.add(grid);
-
-    const hash = new SpatialHash(8);
-    this.collision = new CollisionWorld(hash, b);
-    const spawnPoint = zone?.spawnPoints[0];
-    const course = buildTestCourse(
-      spawnPoint?.x ?? spawn.x,
-      spawnPoint?.z ?? spawn.z,
-      terrainColors.zandsteen,
-      palette.mistpaars,
-    );
-    for (const collider of course.colliders) hash.insert(collider);
-    for (const mesh of course.meshes) scene.add(mesh);
+    const world = new World(scene, data, preset, (message) => this.ctx.reportProblem(message));
+    world.start(spawn.x, spawn.z);
+    this.world = world;
+    // The save names the zone; the ground decides (e.g. after zone borders moved in the data).
+    if (session && world.currentZone) session.world.zone = world.currentZone;
 
     const appearance = normalizeAppearance(
       session?.character?.appearance ?? data.appearance.defaults,
@@ -309,48 +276,55 @@ export class WorldState implements GameState {
     );
     const player = new Player(data.appearance, appearance);
     player.place(spawn.x, spawn.z, session?.world.heading ?? 0);
-    // A save could put the player inside an obstacle (e.g. after the course changed).
-    this.collision.resolve(player.state, data.player.movement.radius);
+    // A save could put the player inside an obstacle (e.g. after the world data changed).
+    world.collision.resolve(player.state, data.player.movement.radius);
     player.place(player.state.x, player.state.z, player.state.heading);
     player.state.energy = data.player.base.energy;
     player.state.sinceEnergySpent = data.player.regen.energyDelaySeconds;
     scene.add(player.model.root);
     this.player = player;
 
-    this.rig = new CameraRig(data.player.camera, fogFar + 20);
-    this.rig.orbit.snap(player.state.x, 0, player.state.z, player.state.heading);
-    this.rig.apply();
+    this.rig = new CameraRig(data.player.camera, world.viewDistance + CAMERA_FAR_MARGIN);
+    const groundY = world.field.heightAt(player.state.x, player.state.z);
+    this.rig.orbit.snap(player.state.x, groundY, player.state.z, player.state.heading);
+    this.rig.apply(world.origin.x, world.origin.z, world.field);
     this.ctx.renderer.setCamera(this.rig.camera);
     this.scene = scene;
   }
 
-  /** View distance from the graphics preset (the QualityManager takes this over in step 1.10). */
-  private fogFar(data: GameData): number {
+  /** The graphics preset in use (the QualityManager takes this over in step 1.10). */
+  private preset(data: GameData): QualityPreset {
     const settings = this.ctx.session?.settings;
     const id =
       settings && settings.quality !== 'auto'
         ? settings.quality
         : (settings?.autoQuality ?? data.quality.default);
     const preset = data.quality.presets.find((entry) => entry.id === id) ?? data.quality.presets[0];
-    return preset?.fogFar ?? 200;
+    if (!preset) throw new Error('quality.json has no presets');
+    return preset;
+  }
+
+  /** Settings changed: a different graphics preset changes view distance and streaming. */
+  private applyPreset(): void {
+    const { world, rig, player } = this;
+    const data = this.ctx.data;
+    if (!world || !rig || !player || !data) return;
+    const preset = this.preset(data);
+    if (preset.id === this.qualityId) return;
+    this.qualityId = preset.id;
+    world.setPreset(preset, player.state.x, player.state.z);
+    rig.camera.far = world.viewDistance + CAMERA_FAR_MARGIN;
+    rig.camera.updateProjectionMatrix();
   }
 
   private disposeScene(): void {
     this.player?.dispose();
     this.player = null;
-    this.scene?.traverse((object) => {
-      if (object instanceof Mesh || object instanceof GridHelper) {
-        object.geometry.dispose();
-        const material = object.material as MeshLambertMaterial | MeshLambertMaterial[];
-        if (Array.isArray(material)) material.forEach((m) => m.dispose());
-        else material.dispose();
-      }
-      if ((object as InstancedMesh).isInstancedMesh) (object as InstancedMesh).dispose();
-    });
+    this.world?.dispose();
+    this.world = null;
     this.scene?.clear();
     this.scene = null;
     this.rig = null;
-    this.collision = null;
   }
 
   private readonly updateDebugLines = (): void => {
@@ -364,6 +338,16 @@ export class WorldState implements GameState {
       `${s.x.toFixed(1)}, ${s.z.toFixed(1)} · heading ${Math.round(s.heading / DEG)}°` +
         (s.dashing ? ' · dash' : s.moving ? ' · walk' : ''),
     );
+    const world = this.world;
+    if (world) {
+      const zone = world.currentZone ?? '-';
+      const ground = world.field.heightAt(s.x, s.z);
+      debug.lines.set(
+        'zone',
+        `${zone} · ground ${ground.toFixed(1)} m · quality ${this.qualityId}`,
+      );
+      debug.lines.set('chunks', world.debugLine());
+    }
     debug.lines.set('energy', `${Math.round(s.energy)} · dash cd ${s.dashCooldown.toFixed(2)} s`);
     debug.lines.set(
       'camera',

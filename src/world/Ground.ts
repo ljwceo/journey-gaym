@@ -1,11 +1,7 @@
 /**
- * Ground height under a point. The open world (step 1.7) samples the terrain heightmaps of the
- * loaded chunks; until then the test floor is flat.
+ * Ground height under a point. In the world this is the TerrainField, so the player stands on
+ * the same ground everywhere, whatever mesh detail is drawn.
  */
 export interface Ground {
   heightAt(x: number, z: number): number;
 }
-
-export const flatGround: Ground = {
-  heightAt: () => 0,
-};
