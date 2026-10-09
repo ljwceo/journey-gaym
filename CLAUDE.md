@@ -140,7 +140,7 @@ Alle renderinstellingen hangen aan één `QualityManager` met drie presets in `p
 
 ## 7. Speler, camera, besturing, collision
 
-- **Camera:** third-person **over de schouder, zoals Genshin Impact** (gewijzigd op 2026-10-09; eerst was het schuin van boven). Laag achter de speler, kijkt licht naar beneden, blijft strak bij het karakter (fps-onafhankelijk). Inzoomen met scrollwiel/knijpen binnen grenzen. Gaat niet onder de grond.
+- **Camera:** third-person **over de schouder, zoals Genshin Impact**. Laag achter de speler, kijkt licht naar beneden, blijft strak bij het karakter (fps-onafhankelijk). Inzoomen met scrollwiel/knijpen binnen grenzen. Gaat niet onder de grond.
 - **Camera draaien:** vrij rond de speler, omhoog en omlaag. Pc: één keer klikken in het spel, daarna draait de muis de camera zonder knop (pointer lock, muis verborgen); Escape geeft de muis vrij en pauzeert. Touch: met één vinger slepen buiten de joystick. Gevoeligheid instelbaar in Settings.
 - **Camera bij lopen:** de camera blijft waar de speler hem zet; W loopt de kant op waar de camera kijkt. Bij opzij lopen draait de camera licht mee (zoals Genshin). Getallen in config.
 - **Lopen:** WASD en pijltjestoetsen op pc; virtuele joystick op touch (linkeronderhoek, verschijnt waar je drukt). Beweging relatief aan de camera, 360°. **Loopsnelheid 4 m/s** (uit `player.json`).
