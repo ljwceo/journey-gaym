@@ -49,6 +49,7 @@
     "fps60": "60 fps",
     "fps120": "120 fps",
     "volume": "Volume",
+    "cameraSensitivity": "Camerasnelheid",
     "debug": "Debugmodus",
     "deleteSave": "Save verwijderen",
     "deleteConfirm1": "Je save verwijderen? Je begint dan helemaal opnieuw.",
@@ -263,5 +264,8 @@
     "winter_extra": "The Frozen Lake is te bereiken.",
     "spring_extra": "Kruiden groeien sneller.",
     "nextIn": "Volgend seizoen over {days} d {hours} u"
+  },
+  "controls": {
+    "dash": "Dash"
   }
 }

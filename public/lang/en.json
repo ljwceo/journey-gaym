@@ -49,6 +49,7 @@
     "fps60": "60 fps",
     "fps120": "120 fps",
     "volume": "Volume",
+    "cameraSensitivity": "Camera sensitivity",
     "debug": "Debug mode",
     "deleteSave": "Delete save",
     "deleteConfirm1": "Delete your save? You will start completely over.",
@@ -263,5 +264,8 @@
     "winter_extra": "The Frozen Lake can be reached.",
     "spring_extra": "Herbs grow faster.",
     "nextIn": "Next season in {days} d {hours} h"
+  },
+  "controls": {
+    "dash": "Dash"
   }
 }

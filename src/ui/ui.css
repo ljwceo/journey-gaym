@@ -208,6 +208,19 @@
   touch-action: pan-x;
 }
 
+.ui-slider-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ui-slider-value {
+  min-width: 3.5em;
+  text-align: right;
+  font-family: var(--gh-font-stats);
+  color: var(--gh-ornamentgoud);
+}
+
 /* ------------------------------------------------------------ boot */
 
 .ui-loading {
@@ -323,6 +336,84 @@
   border: 1px solid var(--gh-koper);
   border-radius: 50%;
   cursor: pointer;
+}
+
+/*
+ * Safe zones for touch controls. The joystick appears where the thumb goes down in the lower
+ * left (left 50% of the width, below the top 35% — keep in sync with Input.ts); the action
+ * buttons sit in the lower right. HUD elements must stay out of both zones.
+ */
+:root {
+  --joystick-zone-width: 50vw;
+  --joystick-zone-top: 35vh;
+  --button-zone-width: 168px;
+  --button-zone-height: 168px;
+}
+
+/* Full-screen surface under the world HUD that receives drags, pinches and the mouse wheel. */
+.ui-world-input {
+  position: absolute;
+  inset: 0;
+  touch-action: none;
+}
+
+.ui-touch-controls {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  display: none;
+}
+
+.ui-touch-visible {
+  display: block;
+}
+
+.ui-joystick {
+  position: absolute;
+  display: none;
+  box-sizing: border-box;
+  border: 2px solid color-mix(in srgb, var(--gh-ornamentgoud) 55%, transparent);
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--gh-nachtinkt) 35%, transparent);
+  pointer-events: none;
+}
+
+.ui-joystick-active {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ui-joystick-knob {
+  width: 44%;
+  height: 44%;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--gh-ornamentgoud) 70%, transparent);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--gh-lantaarnamber) 40%, transparent);
+}
+
+.ui-touch-button {
+  position: absolute;
+  width: 76px;
+  height: 76px;
+  font: 600 15px var(--gh-font-tekst);
+  color: var(--gh-tekst);
+  background: color-mix(in srgb, var(--gh-panel) 55%, transparent);
+  border: 2px solid color-mix(in srgb, var(--gh-ornamentgoud) 70%, transparent);
+  border-radius: 50%;
+  pointer-events: auto;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.ui-touch-button:active {
+  background: color-mix(in srgb, var(--gh-lantaarnamber) 45%, transparent);
+}
+
+.ui-dash-button {
+  right: max(28px, calc(env(safe-area-inset-right) + 12px));
+  bottom: max(36px, calc(env(safe-area-inset-bottom) + 16px));
 }
 
 /* ------------------------------------------------------------ character creator */
