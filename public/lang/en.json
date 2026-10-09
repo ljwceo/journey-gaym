@@ -162,7 +162,13 @@
     "qualityLowered": "Graphics lowered to {quality} to keep the game smooth.",
     "interact": "Interact",
     "dash": "Dash",
-    "rest": "Rest"
+    "rest": "Rest",
+    "talkTo": "Talk to {name}",
+    "pet": "Pet {name}"
+  },
+  "dialog": {
+    "next": "Continue",
+    "close": "Close"
   },
   "place": {
     "monastery": "The Monastery is your checkpoint. If you fall, you wake up here. Rest in your bed to recover.",
@@ -212,7 +218,8 @@
     },
     "master_brink": {
       "1": "Welcome to the Academy. Magic rewards those who are patient.",
-      "2": "Come back when you are ready to choose your path."
+      "2": "Come back when you are ready to choose your path.",
+      "ready": "You have grown strong. It is time to choose your path. Will you train under me?"
     },
     "wizard_sam": {
       "1": "Hm. Not many visitors find their way to me.",

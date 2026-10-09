@@ -212,10 +212,52 @@ const npcSchema = z.strictObject({
   safeAreas: optional(z.array(id)),
   /** Only present in this season. */
   season: optional(id),
+  /** Where a static NPC faces when nobody is near, in degrees (0 = +z). */
+  heading: optional(range(-360, 360)),
+  /**
+   * Quest hook: other lines once a named condition (triggers.json `conditions`) holds. The first
+   * matching entry wins; otherwise `dialogue` is used.
+   */
+  dialogueWhen: optional(
+    z.array(z.strictObject({ condition: name, lines: atLeast(z.array(textKey)) })),
+  ),
 });
 
 export const npcsFileSchema = z.strictObject({
-  roles: z.array(z.strictObject({ id, color: colorToken })),
+  settings: z.strictObject({
+    /** E / tap works within this distance (m) of an NPC you can talk to or pet. */
+    interactRange: max(positive, 10),
+    /**
+     * Petting a companion needs you to step closer than this (m). Smaller than the follow
+     * distance, so the cat beside you does not take the E key all the time.
+     */
+    petRange: max(positive, 10),
+    /** NPCs appear within this distance of the player, the same on every graphics preset. */
+    showRadius: max(positive, 1000),
+    /** ...and disappear again beyond showRadius + hideMargin (no flicker at the edge). */
+    hideMargin: max(positive, 200),
+    /** Wandering NPCs only walk this close to the player (where collision is loaded). */
+    simulateRadius: max(positive, 64),
+    /** Static NPCs turn towards the player within this distance. */
+    noticeRadius: max(positive, 30),
+    turnDegreesPerSecond: max(positive, 1440),
+    /** A wanderer waits this long (s, min and max) between walks. */
+    wanderPauseSeconds: z.tuple([nonNegative, nonNegative]),
+    /** A follower further away than this (m) jumps to the player (teleport, long dash chains). */
+    followTeleportDistance: max(positive, 200),
+    /** Seconds the little hop lasts after petting. */
+    petHopSeconds: max(positive, 5),
+  }),
+  roles: z.array(
+    z.strictObject({
+      id,
+      color: colorToken,
+      /** Placeholder model (entities/NpcFactory), e.g. "placeholder:npc_humanoid". */
+      model: name,
+      /** Collision radius (m) against the player; 0 = the player walks through. */
+      radius: max(nonNegative, 10),
+    }),
+  ),
   npcs: z.array(npcSchema),
 });
 
