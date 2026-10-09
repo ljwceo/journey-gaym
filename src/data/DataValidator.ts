@@ -156,6 +156,7 @@ class CrossChecker {
   private collectIds(): void {
     const d = this.data;
     this.unique('zone', 'zones', 'zones', d.zones.zones);
+    this.unique('prop', 'zones', 'world.props', d.zones.world.props);
     d.zones.zones.forEach((zone, i) => {
       this.unique(`spawn:${zone.id}`, 'zones', `zones[${i}].spawnPoints`, zone.spawnPoints);
       this.unique('area', 'zones', `zones[${i}].areas`, zone.areas);
@@ -203,6 +204,23 @@ class CrossChecker {
     this.color(f, 'world.outsideZoneFog', world.outsideZoneFog);
     this.ref('zone', f, 'startZone', startZone);
     const byId = new Map(zones.map((zone) => [zone.id, zone]));
+    const props = new Map(world.props.map((prop) => [prop.id, prop]));
+    const terrain = world.terrain;
+    if (terrain.seaFloor >= terrain.seaLevel) {
+      this.issue(f, 'world.terrain.seaFloor', 'the sea floor must lie below the sea level');
+    }
+    world.props.forEach((prop, i) => {
+      const p = `world.props[${i}]`;
+      prop.colors.forEach((color, c) => this.color(f, `${p}.colors[${c}]`, color));
+      this.range(f, `${p}.scale`, prop.scale[0], prop.scale[1]);
+      if (prop.decor && prop.colliderRadius > 0) {
+        this.issue(
+          f,
+          `${p}.colliderRadius`,
+          'decor props never block (graphics presets thin them)',
+        );
+      }
+    });
 
     zones.forEach((zone, i) => {
       const p = `zones[${i}]`;
@@ -243,6 +261,19 @@ class CrossChecker {
         }
       });
       zone.npcs.forEach((npcId, n) => this.ref('npc', f, `${p}.npcs[${n}]`, npcId));
+      zone.scatter.forEach((entry, s) => {
+        const path = `${p}.scatter[${s}]`;
+        this.ref('prop', f, `${path}.prop`, entry.prop);
+        const prop = props.get(entry.prop);
+        if (prop && entry.perChunk > prop.maxPerChunk) {
+          this.issue(f, `${path}.perChunk`, `more than maxPerChunk (${prop.maxPerChunk})`);
+        }
+      });
+      zone.scatterExclude.forEach((areaId, a) => {
+        if (!zone.areas.some((area) => area.id === areaId)) {
+          this.issue(f, `${p}.scatterExclude[${a}]`, `"${areaId}" is not an area of this zone`);
+        }
+      });
     });
   }
 
@@ -433,6 +464,7 @@ class CrossChecker {
   private checkQuality(): void {
     const f = 'quality';
     const q = this.data.quality;
+    const chunkSize = this.data.zones.world.chunkSize;
     for (const level of ['low', 'mid', 'high']) {
       if (!q.presets.some((preset) => preset.id === level)) {
         this.issue(f, 'presets', `missing preset "${level}"`);
@@ -444,6 +476,25 @@ class CrossChecker {
       const rings = preset.chunkRings;
       if (!(rings.active <= rings.preload && rings.preload < rings.unload)) {
         this.issue(f, `${p}.chunkRings`, 'rings must grow: active ≤ preload < unload (hysteresis)');
+      }
+      if (preset.lodRing > rings.preload) {
+        this.issue(f, `${p}.lodRing`, 'the detailed ring cannot be larger than the preload ring');
+      }
+      if (preset.terrainSegments.far > preset.terrainSegments.near) {
+        this.issue(f, `${p}.terrainSegments`, 'the far mesh cannot be finer than the near one');
+      }
+      // Everything inside the fog must be loaded: the preload ring has to reach the fog's end.
+      const reach = rings.preload * chunkSize;
+      if (preset.fogFar > reach) {
+        this.issue(
+          f,
+          `${p}.fogFar`,
+          `fog ends at ${preset.fogFar} m but chunks load to ${reach} m`,
+        );
+      }
+      // Gameplay (colliders, later enemies) runs in the active ring: equal on every preset.
+      if (rings.active !== q.presets[0]?.chunkRings.active) {
+        this.issue(f, `${p}.chunkRings.active`, 'the active ring must be the same on every preset');
       }
       if ((preset.shadows === 'off') !== (preset.shadowMapSize === 0)) {
         this.issue(

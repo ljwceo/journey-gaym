@@ -46,6 +46,8 @@ const zoneSchema = z.strictObject({
   terrain: z.strictObject({
     baseHeight: z.number().min(-100).max(500),
     amplitude: nonNegative.max(500),
+    /** Size (m) of the largest hills: bigger is smoother. */
+    scale: z.number().min(20).max(5000),
   }),
   neighbors: z.array(id),
   spawnPoints: z.array(z.strictObject({ id, x: coord, z: coord })).min(1),
@@ -55,6 +57,27 @@ const zoneSchema = z.strictObject({
   instances: z.array(
     z.strictObject({ id, name: z.string().min(1), entrance: pointSchema, enabled: z.boolean() }),
   ),
+  /** Props scattered over this zone: how many of each per chunk (before rejecting water etc.). */
+  scatter: z.array(z.strictObject({ prop: id, perChunk: nonNegative })),
+  /** Area ids of this zone where nothing is scattered (e.g. the city of Greyhaven). */
+  scatterExclude: z.array(id),
+});
+
+/** A kind of scattered object (trees, rocks, bushes): drawn with one InstancedMesh. */
+const propSchema = z.strictObject({
+  id,
+  /** Placeholder model id; real models replace only the factory behind it. */
+  model: z.string().regex(/^placeholder:[a-z0-9_]+$/),
+  /** Color tokens for the model's parts (e.g. trunk, crown). */
+  colors: z.array(colorToken).min(1),
+  /** Collider radius (m) at scale 1; 0 = no collider (walk through it). */
+  colliderRadius: nonNegative.max(20),
+  scale: z.tuple([positive, positive]),
+  maxPerChunk: z.number().int().min(1).max(512),
+  /** Never placed lower than this above the sea (m); negative allows it in shallow water. */
+  minHeightAboveSea: z.number().min(-50).max(500),
+  /** Decoration only: the graphics preset thins it out. Never has a collider. */
+  decor: z.boolean(),
 });
 
 export const zonesFileSchema = z.strictObject({
@@ -65,6 +88,18 @@ export const zonesFileSchema = z.strictObject({
     originShiftDistance: z.number().min(100).max(100_000),
     outsideZoneColor: colorToken,
     outsideZoneFog: colorToken,
+    terrain: z.strictObject({
+      /** Width (m) over which neighboring zones (and the coast) blend into each other. */
+      blendWidth: z.number().min(1).max(1000),
+      seaLevel: z.number().min(-100).max(100),
+      /** Ground height outside every zone (the sea floor). */
+      seaFloor: z.number().min(-500).max(100),
+      /** Water deeper than this (m) blocks walking. */
+      deepWaterDepth: nonNegative.max(50),
+      /** How far (m) chunk edges hang down to hide cracks between detail levels. */
+      skirtDepth: positive.max(100),
+    }),
+    props: z.array(propSchema),
   }),
   startZone: id,
   zones: z.array(zoneSchema).min(1),
@@ -310,8 +345,14 @@ export const qualityFileSchema = z.strictObject({
       }),
       fogFar: positive.max(5000),
       density: z.strictObject({ grass: fraction, props: fraction, effects: fraction }),
-      lodBias: positive.max(4),
       fpsTarget: z.union([z.literal(60), z.literal(120)]),
+      /** Chunks up to this ring use the detailed terrain mesh; further ones the coarse one. */
+      lodRing: z.number().int().min(0).max(12),
+      /** Terrain grid cells per chunk side for the detailed and the coarse mesh. */
+      terrainSegments: z.strictObject({
+        near: z.number().int().min(2).max(128),
+        far: z.number().int().min(1).max(128),
+      }),
     }),
   ),
   default: qualityLevelSchema,
@@ -325,6 +366,16 @@ export const qualityFileSchema = z.strictObject({
     belowFps: positive.max(240),
     windowSeconds: positive.max(60),
     graceSecondsAfterChange: nonNegative.max(60),
+  }),
+  /** Chunk loading limits (the same on every preset). */
+  streaming: z.strictObject({
+    /** Main-thread time (ms) per frame for putting finished chunks into the world. */
+    frameBudgetMs: positive.max(16),
+    maxAppliesPerFrame: z.number().int().min(1).max(16),
+    maxJobsInFlight: z.number().int().min(1).max(32),
+    maxWorkers: z.number().int().min(1).max(8),
+    /** How strongly chunks in the walking direction go first (0 = by distance only). */
+    directionBonus: nonNegative.max(4),
   }),
 });
 

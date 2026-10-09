@@ -5,7 +5,46 @@
     "chunkSize": 64,
     "originShiftDistance": 1000,
     "outsideZoneColor": "zeewater",
-    "outsideZoneFog": "mistpaars"
+    "outsideZoneFog": "mistpaars",
+    "terrain": {
+      "blendWidth": 80,
+      "seaLevel": 0,
+      "seaFloor": -14,
+      "deepWaterDepth": 0.8,
+      "skirtDepth": 6
+    },
+    "props": [
+      {
+        "id": "tree",
+        "model": "placeholder:tree",
+        "colors": ["lavasteen", "bosgroen"],
+        "colliderRadius": 0.35,
+        "scale": [0.8, 1.5],
+        "maxPerChunk": 64,
+        "minHeightAboveSea": 0.6,
+        "decor": false
+      },
+      {
+        "id": "rock",
+        "model": "placeholder:rock",
+        "colors": ["steengrijs"],
+        "colliderRadius": 0.9,
+        "scale": [0.6, 1.8],
+        "maxPerChunk": 24,
+        "minHeightAboveSea": -1,
+        "decor": false
+      },
+      {
+        "id": "bush",
+        "model": "placeholder:bush",
+        "colors": ["bosgroen"],
+        "colliderRadius": 0,
+        "scale": [0.6, 1.3],
+        "maxPerChunk": 48,
+        "minHeightAboveSea": 0.4,
+        "decor": true
+      }
+    ]
   },
   "startZone": "greyhaven",
   "zones": [
@@ -16,7 +55,7 @@
       "bounds": { "type": "rect", "minX": -2000, "minZ": -400, "maxX": -1500, "maxZ": 400 },
       "terrainColor": "steengrijs",
       "fogColor": "mistpaars",
-      "terrain": { "baseHeight": 4, "amplitude": 10 },
+      "terrain": { "baseHeight": 4, "amplitude": 10, "scale": 260 },
       "neighbors": ["greenwood", "mournfen"],
       "spawnPoints": [
         { "id": "monastery_bed", "x": -1760, "z": -130 },
@@ -41,7 +80,13 @@
           "shape": { "type": "rect", "minX": -1940, "minZ": -380, "maxX": -1520, "maxZ": 340 }
         }
       ],
-      "instances": []
+      "instances": [],
+      "scatter": [
+        { "prop": "tree", "perChunk": 4 },
+        { "prop": "rock", "perChunk": 3 },
+        { "prop": "bush", "perChunk": 8 }
+      ],
+      "scatterExclude": ["greyhaven_city"]
     },
     {
       "id": "greenwood",
@@ -50,7 +95,7 @@
       "bounds": { "type": "rect", "minX": -1500, "minZ": -1250, "maxX": -700, "maxZ": 0 },
       "terrainColor": "mosgroen",
       "fogColor": "bosgroen",
-      "terrain": { "baseHeight": 6, "amplitude": 14 },
+      "terrain": { "baseHeight": 6, "amplitude": 14, "scale": 220 },
       "neighbors": ["greyhaven", "mournfen", "frozen_lake", "eredhollow"],
       "spawnPoints": [{ "id": "west_edge", "x": -1480, "z": -60 }],
       "checkpoint": { "id": "greenwood_shrine", "kind": "elven_shrine", "x": -1250, "z": -400 },
@@ -65,7 +110,13 @@
           "entrance": { "x": -900, "z": -1000 },
           "enabled": false
         }
-      ]
+      ],
+      "scatter": [
+        { "prop": "tree", "perChunk": 44 },
+        { "prop": "rock", "perChunk": 4 },
+        { "prop": "bush", "perChunk": 24 }
+      ],
+      "scatterExclude": []
     },
     {
       "id": "mournfen",
@@ -74,13 +125,19 @@
       "bounds": { "type": "rect", "minX": -1500, "minZ": 0, "maxX": -700, "maxZ": 1250 },
       "terrainColor": "moerasgroen",
       "fogColor": "mistpaars",
-      "terrain": { "baseHeight": 1, "amplitude": 2 },
+      "terrain": { "baseHeight": 1, "amplitude": 2, "scale": 300 },
       "neighbors": ["greyhaven", "greenwood", "eredhollow", "ruins_of_dunmar"],
       "spawnPoints": [{ "id": "west_edge", "x": -1480, "z": 60 }],
       "checkpoint": { "id": "mournfen_monastery", "kind": "stilt_monastery", "x": -1100, "z": 600 },
       "npcs": [],
       "areas": [],
-      "instances": []
+      "instances": [],
+      "scatter": [
+        { "prop": "tree", "perChunk": 3 },
+        { "prop": "rock", "perChunk": 1 },
+        { "prop": "bush", "perChunk": 14 }
+      ],
+      "scatterExclude": []
     },
     {
       "id": "frozen_lake",
@@ -90,12 +147,17 @@
       "bounds": { "type": "rect", "minX": -700, "minZ": -1250, "maxX": 100, "maxZ": -500 },
       "terrainColor": "sneeuw",
       "fogColor": "sneeuw",
-      "terrain": { "baseHeight": 20, "amplitude": 30 },
+      "terrain": { "baseHeight": 20, "amplitude": 30, "scale": 320 },
       "neighbors": ["greenwood", "eredhollow", "karad_vorn"],
       "spawnPoints": [{ "id": "south_edge", "x": -300, "z": -520 }],
       "npcs": [],
       "areas": [],
-      "instances": []
+      "instances": [],
+      "scatter": [
+        { "prop": "tree", "perChunk": 6 },
+        { "prop": "rock", "perChunk": 8 }
+      ],
+      "scatterExclude": []
     },
     {
       "id": "eredhollow",
@@ -104,7 +166,7 @@
       "bounds": { "type": "rect", "minX": -700, "minZ": -500, "maxX": 100, "maxZ": 300 },
       "terrainColor": "mistpaars",
       "fogColor": "mistpaars",
-      "terrain": { "baseHeight": 3, "amplitude": 25 },
+      "terrain": { "baseHeight": 3, "amplitude": 25, "scale": 240 },
       "neighbors": [
         "greenwood",
         "mournfen",
@@ -116,7 +178,13 @@
       "spawnPoints": [{ "id": "west_edge", "x": -680, "z": -100 }],
       "npcs": [],
       "areas": [],
-      "instances": []
+      "instances": [],
+      "scatter": [
+        { "prop": "tree", "perChunk": 8 },
+        { "prop": "rock", "perChunk": 10 },
+        { "prop": "bush", "perChunk": 6 }
+      ],
+      "scatterExclude": []
     },
     {
       "id": "ruins_of_dunmar",
@@ -125,12 +193,17 @@
       "bounds": { "type": "rect", "minX": -700, "minZ": 300, "maxX": 100, "maxZ": 1250 },
       "terrainColor": "zandsteen",
       "fogColor": "mistpaars",
-      "terrain": { "baseHeight": 2, "amplitude": 6 },
+      "terrain": { "baseHeight": 2, "amplitude": 6, "scale": 280 },
       "neighbors": ["mournfen", "eredhollow", "plains_of_tharond"],
       "spawnPoints": [{ "id": "west_edge", "x": -680, "z": 700 }],
       "npcs": [],
       "areas": [],
-      "instances": []
+      "instances": [],
+      "scatter": [
+        { "prop": "rock", "perChunk": 12 },
+        { "prop": "bush", "perChunk": 6 }
+      ],
+      "scatterExclude": []
     },
     {
       "id": "karad_vorn",
@@ -139,12 +212,14 @@
       "bounds": { "type": "rect", "minX": 100, "minZ": -1250, "maxX": 1200, "maxZ": -300 },
       "terrainColor": "lavasteen",
       "fogColor": "schemerviolet",
-      "terrain": { "baseHeight": 30, "amplitude": 60 },
+      "terrain": { "baseHeight": 30, "amplitude": 60, "scale": 200 },
       "neighbors": ["frozen_lake", "eredhollow", "plains_of_tharond", "morvath"],
       "spawnPoints": [{ "id": "west_edge", "x": 120, "z": -700 }],
       "npcs": [],
       "areas": [],
-      "instances": []
+      "instances": [],
+      "scatter": [{ "prop": "rock", "perChunk": 20 }],
+      "scatterExclude": []
     },
     {
       "id": "plains_of_tharond",
@@ -153,12 +228,18 @@
       "bounds": { "type": "rect", "minX": 100, "minZ": -300, "maxX": 1200, "maxZ": 1250 },
       "terrainColor": "steppe",
       "fogColor": "zonsondergang",
-      "terrain": { "baseHeight": 12, "amplitude": 8 },
+      "terrain": { "baseHeight": 12, "amplitude": 8, "scale": 400 },
       "neighbors": ["eredhollow", "ruins_of_dunmar", "karad_vorn", "morvath"],
       "spawnPoints": [{ "id": "west_edge", "x": 120, "z": 300 }],
       "npcs": [],
       "areas": [],
-      "instances": []
+      "instances": [],
+      "scatter": [
+        { "prop": "tree", "perChunk": 1 },
+        { "prop": "rock", "perChunk": 3 },
+        { "prop": "bush", "perChunk": 12 }
+      ],
+      "scatterExclude": []
     },
     {
       "id": "morvath",
@@ -167,12 +248,17 @@
       "bounds": { "type": "rect", "minX": 1200, "minZ": -1250, "maxX": 2000, "maxZ": 1250 },
       "terrainColor": "verdorven",
       "fogColor": "schemerviolet",
-      "terrain": { "baseHeight": 5, "amplitude": 20 },
+      "terrain": { "baseHeight": 5, "amplitude": 20, "scale": 260 },
       "neighbors": ["karad_vorn", "plains_of_tharond", "black_citadel"],
       "spawnPoints": [{ "id": "west_edge", "x": 1220, "z": 0 }],
       "npcs": [],
       "areas": [],
-      "instances": []
+      "instances": [],
+      "scatter": [
+        { "prop": "tree", "perChunk": 2 },
+        { "prop": "rock", "perChunk": 6 }
+      ],
+      "scatterExclude": []
     },
     {
       "id": "black_citadel",
@@ -182,12 +268,14 @@
       "bounds": { "type": "rect", "minX": 1750, "minZ": -250, "maxX": 2000, "maxZ": 250 },
       "terrainColor": "nachtinkt",
       "fogColor": "verdorven",
-      "terrain": { "baseHeight": 10, "amplitude": 4 },
+      "terrain": { "baseHeight": 10, "amplitude": 4, "scale": 200 },
       "neighbors": ["morvath"],
       "spawnPoints": [{ "id": "gate", "x": 1770, "z": 0 }],
       "npcs": [],
       "areas": [],
-      "instances": []
+      "instances": [],
+      "scatter": [],
+      "scatterExclude": []
     }
   ]
 }

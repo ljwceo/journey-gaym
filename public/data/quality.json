@@ -6,11 +6,12 @@
       "shadows": "off",
       "shadowMapSize": 0,
       "antialias": "off",
-      "chunkRings": { "active": 1, "preload": 2, "unload": 3 },
+      "chunkRings": { "active": 1, "preload": 3, "unload": 4 },
       "fogFar": 180,
       "density": { "grass": 0.2, "props": 0.5, "effects": 0.4 },
-      "lodBias": 0.6,
-      "fpsTarget": 60
+      "fpsTarget": 60,
+      "lodRing": 1,
+      "terrainSegments": { "near": 16, "far": 4 }
     },
     {
       "id": "mid",
@@ -18,11 +19,12 @@
       "shadows": "simple",
       "shadowMapSize": 1024,
       "antialias": "fxaa",
-      "chunkRings": { "active": 2, "preload": 3, "unload": 4 },
-      "fogFar": 280,
+      "chunkRings": { "active": 1, "preload": 4, "unload": 5 },
+      "fogFar": 250,
       "density": { "grass": 0.6, "props": 0.8, "effects": 0.7 },
-      "lodBias": 1,
-      "fpsTarget": 60
+      "fpsTarget": 60,
+      "lodRing": 2,
+      "terrainSegments": { "near": 32, "far": 8 }
     },
     {
       "id": "high",
@@ -30,11 +32,12 @@
       "shadows": "soft",
       "shadowMapSize": 2048,
       "antialias": "msaa",
-      "chunkRings": { "active": 2, "preload": 4, "unload": 5 },
-      "fogFar": 400,
+      "chunkRings": { "active": 1, "preload": 6, "unload": 7 },
+      "fogFar": 380,
       "density": { "grass": 1, "props": 1, "effects": 1 },
-      "lodBias": 1.5,
-      "fpsTarget": 120
+      "fpsTarget": 120,
+      "lodRing": 3,
+      "terrainSegments": { "near": 32, "far": 8 }
     }
   ],
   "default": "mid",
@@ -44,9 +47,12 @@
     "highMaxFrameMs": 6,
     "midMaxFrameMs": 12
   },
-  "autoDowngrade": {
-    "belowFps": 58,
-    "windowSeconds": 5,
-    "graceSecondsAfterChange": 5
+  "autoDowngrade": { "belowFps": 58, "windowSeconds": 5, "graceSecondsAfterChange": 5 },
+  "streaming": {
+    "frameBudgetMs": 2,
+    "maxAppliesPerFrame": 2,
+    "maxJobsInFlight": 4,
+    "maxWorkers": 2,
+    "directionBonus": 0.75
   }
 }

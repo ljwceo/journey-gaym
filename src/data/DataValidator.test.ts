@@ -129,4 +129,26 @@ describe('validateGameData catches broken data', () => {
     raw.triggers.conditions.canLeaveCity = { type: 'questCompleted', quest: 'slay_moon' };
     expect(messages(raw)).toContainEqual(expect.stringContaining('unknown quest "slay_moon"'));
   });
+
+  it('reports broken scatter settings', () => {
+    const raw = freshData();
+    raw.zones.zones[1].scatter.push({ prop: 'mushroom', perChunk: 3 });
+    raw.zones.zones[1].scatter[0].perChunk = 999;
+    raw.zones.zones[0].scatterExclude.push('nowhere');
+    raw.zones.world.props[2].colliderRadius = 0.5;
+    const found = messages(raw);
+    expect(found).toContainEqual(expect.stringContaining('unknown prop "mushroom"'));
+    expect(found).toContainEqual(expect.stringContaining('more than maxPerChunk'));
+    expect(found).toContainEqual(expect.stringContaining('"nowhere" is not an area'));
+    expect(found).toContainEqual(expect.stringContaining('decor props never block'));
+  });
+
+  it('reports fog further than the loaded chunks, and unequal active rings', () => {
+    const raw = freshData();
+    raw.quality.presets[0].fogFar = 1000;
+    raw.quality.presets[2].chunkRings.active = 2;
+    const found = messages(raw);
+    expect(found).toContainEqual(expect.stringContaining('but chunks load to'));
+    expect(found).toContainEqual(expect.stringContaining('same on every preset'));
+  });
 });
