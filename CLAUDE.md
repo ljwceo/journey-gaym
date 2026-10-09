@@ -300,8 +300,8 @@ Status: afgesloten op de pc (2026-10-09): Mid 60 fps en High 120 fps zonder hape
 
 ### Fase 2 – Solo-gevecht en de eerste dag
 Status: plan, wacht op akkoord (zie `docs/PROGRESS.md`).
-Doel: de eerste dag in Greyhaven spelen (kleine quest per basis-NPC, ±level 3), in de Greenwood vechten tegen slimes en goblins, en Sultan verslaan.
-Bouwen: HP/mana/energie, zwaardaanvallen (muis: links fast hit, rechts heavy hit; telefoon: knoppen), vijanden met AI en spawngebieden (Green Slime, Big Slime, Goblin, Goblin Archer, Goblin Chief, Treewarden), XP en levels, buit en een simpele tas, drankjes, doodgaan en rusten, HUD-regels aan, questsysteem met de quests van de eerste dag (Marco en Hilda in een simpele versie), cutscene-speler, baasgevecht Sultan.
+Doel: het speelbare intro-gevecht tegen Lucael en Baelor (onwinbaar, episch en komisch), de eerste dag in Greyhaven spelen (kleine quest per basis-NPC, ±level 3), in de Greenwood vechten tegen slimes en goblins, en Sultan verslaan (beginnersbaas: test of je de basis snapt).
+Bouwen: HP/mana/energie, zwaardaanvallen (muis: links fast hit, rechts heavy hit; telefoon: knoppen), vijanden met AI en spawngebieden (Green Slime, Big Slime, Goblin, Goblin Archer, Goblin Chief, Treewarden), XP en levels, buit en een simpele tas, drankjes, doodgaan en rusten, HUD-regels aan, questsysteem met de quests van de eerste dag (Marco en Hilda in een simpele versie), cutscene-speler, speelbaar intro-gevecht (paneel 4), baasgevecht Sultan met hints de eerste keer.
 Data: `player.json` (aanvallen, regen, level-bonussen), `monsters.json` (gedrag, waarschuwingen, buit), `zones.json` (spawngebieden), `quests.json`, `npcs.json`, `items.json` (drankjes, Slime Gel), `cutscenes.json`, `triggers.json` (poortvoorwaarde), save versie 3.
 Niet doen: klassekeuze, staf, spells, kristallen, gear, Biscuit (fase 3); echte Forge, markt, skill tree (fase 4); co-op (fase 5). Speciale aanvallen komen later op eigen toetsen/knoppen.
 Afspraken: Sultan vecht je vóór de klassekeuze; de stadspoort gaat pas open na de klassekeuze (fase 3) en blijft tot dan open om te testen. Testen op de pc.
@@ -311,6 +311,7 @@ Definition of Done:
 - [ ] Ik krijg XP, ga levels omhoog (balken en XP volgens de HUD-regels), krijg buit en kan een drankje drinken.
 - [ ] Doodgaan kost 10% gold en ik word wakker bij mijn checkpoint; rusten in bed maakt HP en mana vol.
 - [ ] De vijf quests van de eerste dag werken in het Nederlands en Engels en brengen me rond level 3.
-- [ ] Sultan: de cutscene speelt (overslaanbaar), het gevecht werkt zoals in het concept, en verliezen of winnen werkt.
+- [ ] De intro heeft een speelbaar gevecht tegen Lucael en Baelor: ik kan bewegen en slaan maar niet winnen, ze overrompelen me op een komische manier, daarna word ik wakker in het Monastery. Overslaanbaar.
+- [ ] Sultan: de cutscene speelt (overslaanbaar), het gevecht leert en test de basis (duidelijke waarschuwingen, momenten om te slaan, hints de eerste keer), en verliezen of winnen werkt.
 - [ ] Alles blijft 60/120 fps op de pc, ook met veel vijanden, en is op elke grafische stand gelijk.
 - [ ] Tests (gevechtsformules, XP, quests, save-migratie) en de DataValidator slagen.
