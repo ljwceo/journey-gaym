@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { createNewSave, migrate, SAVE_VERSION, type Migration } from './SaveData';
+import {
+  createNewSave,
+  DEFAULT_CAMERA_SENSITIVITY,
+  migrate,
+  SAVE_VERSION,
+  type Migration,
+} from './SaveData';
 import { SAVE_KEY, SaveManager, type StorageLike } from './SaveManager';
 
 class MemoryStorage implements StorageLike {
@@ -149,5 +155,21 @@ describe('migrate', () => {
     // migrations[v] must exist for every v from 1 up to the current version.
     const result = migrate(createNewSave('en'));
     expect(result.ok).toBe(true);
+  });
+
+  it('upgrades a version 1 save: camera sensitivity gets its default', () => {
+    const current = sampleSave();
+    const { cameraSensitivity: _dropped, ...oldSettings } = current.settings;
+    const v1 = { ...current, version: 1, settings: { ...oldSettings, volume: 0.3 } };
+    const storage = new MemoryStorage();
+    storage.setItem(SAVE_KEY, JSON.stringify(v1));
+    const result = new SaveManager(storage).load();
+    expect(result.status).toBe('ok');
+    if (result.status !== 'ok') return;
+    expect(result.save.version).toBe(SAVE_VERSION);
+    expect(result.save.settings.cameraSensitivity).toBe(DEFAULT_CAMERA_SENSITIVITY);
+    // Everything else stays as it was.
+    expect(result.save.settings.volume).toBe(0.3);
+    expect(result.save.character?.name).toBe('Zoë42');
   });
 });

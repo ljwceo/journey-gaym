@@ -113,12 +113,50 @@ export const playerFileSchema = z.strictObject({
     walkSpeed: positive.max(20),
     slopeLimitDegrees: z.number().min(0).max(89),
     radius: positive.max(5),
+    /** How fast the character turns towards where it walks. */
+    turnSpeedDegrees: positive.max(10_000),
   }),
   dash: z.strictObject({
     energyCost: nonNegative,
     cooldownSeconds: nonNegative.max(30),
     distance: positive.max(30),
     durationSeconds: positive.max(2),
+  }),
+  /** Third-person camera. Sharpness values are per second (higher = snappier). */
+  camera: z.strictObject({
+    fovDegrees: z.number().min(20).max(100),
+    /** Point on the character the camera looks at, in meters above the feet. */
+    targetHeight: nonNegative.max(5),
+    /** Default angle below the horizon; free look moves between min and max. */
+    pitchDegrees: z.number().min(0).max(89),
+    minPitchDegrees: z.number().min(0).max(89),
+    maxPitchDegrees: z.number().min(0).max(89),
+    distance: positive.max(100),
+    minDistance: positive.max(100),
+    maxDistance: positive.max(100),
+    followSharpness: positive.max(100),
+    zoomSharpness: positive.max(100),
+    /** After walking starts, wait this long before the camera turns back behind the character. */
+    returnDelaySeconds: nonNegative.max(10),
+    returnSharpness: positive.max(100),
+    /** Turning per dragged pixel at 100% sensitivity. */
+    rotateRadiansPerPixelMouse: positive.max(1),
+    rotateRadiansPerPixelTouch: positive.max(1),
+    /** Zoom change per mouse wheel notch, as a fraction of the distance. */
+    zoomStepPerWheelNotch: positive.max(1),
+    /** Range of the camera sensitivity setting (fractions; 1 = 100%). */
+    sensitivity: z.strictObject({ min: positive.max(2), max: positive.max(2) }),
+  }),
+  controls: z.strictObject({
+    /** How far (CSS px) the joystick knob can move from where the thumb went down. */
+    joystickRadiusPx: positive.max(300),
+    /** Joystick input below this fraction counts as standing still. */
+    joystickDeadZone: fraction,
+    /**
+     * Walking keeps its direction while the camera turns back behind the character; only a
+     * change of the stick/keys by more than this angle re-reads the camera direction.
+     */
+    moveRetargetDegrees: z.number().min(0).max(180),
   }),
   sword: z.strictObject({
     fastHit: z.strictObject({

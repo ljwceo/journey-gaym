@@ -1,6 +1,13 @@
 {
-  "base": { "hp": 100, "mana": 50, "energy": 100 },
-  "perLevel": { "hp": 10, "mana": 5 },
+  "base": {
+    "hp": 100,
+    "mana": 50,
+    "energy": 100
+  },
+  "perLevel": {
+    "hp": 10,
+    "mana": 5
+  },
   "maxLevel": 50,
   "xpToNextLevel": [100, 150, 220, 300, 400, 520, 660],
   "regen": {
@@ -11,7 +18,8 @@
   "movement": {
     "walkSpeed": 4,
     "slopeLimitDegrees": 40,
-    "radius": 0.4
+    "radius": 0.4,
+    "turnSpeedDegrees": 720
   },
   "dash": {
     "energyCost": 25,
@@ -19,22 +27,69 @@
     "distance": 4,
     "durationSeconds": 0.18
   },
+  "camera": {
+    "fovDegrees": 50,
+    "targetHeight": 1.1,
+    "pitchDegrees": 55,
+    "minPitchDegrees": 10,
+    "maxPitchDegrees": 80,
+    "distance": 11,
+    "minDistance": 4,
+    "maxDistance": 20,
+    "followSharpness": 10,
+    "zoomSharpness": 12,
+    "returnDelaySeconds": 0.15,
+    "returnSharpness": 3,
+    "rotateRadiansPerPixelMouse": 0.008,
+    "rotateRadiansPerPixelTouch": 0.012,
+    "zoomStepPerWheelNotch": 0.12,
+    "sensitivity": {
+      "min": 0.3,
+      "max": 1
+    }
+  },
+  "controls": {
+    "joystickRadiusPx": 56,
+    "joystickDeadZone": 0.12,
+    "moveRetargetDegrees": 30
+  },
   "sword": {
-    "fastHit": { "damage": 10, "energyCost": 10, "damagePerLevel": 2, "maxPerSecond": 3 },
-    "heavyHit": { "damage": 25, "energyCost": 25, "damagePerLevel": 5, "windupSeconds": 0.9 },
+    "fastHit": {
+      "damage": 10,
+      "energyCost": 10,
+      "damagePerLevel": 2,
+      "maxPerSecond": 3
+    },
+    "heavyHit": {
+      "damage": 25,
+      "energyCost": 25,
+      "damagePerLevel": 5,
+      "windupSeconds": 0.9
+    },
     "comboEveryNthHit": 3,
     "comboBonus": 0.5
   },
-  "death": { "goldLossFraction": 0.1 },
+  "death": {
+    "goldLossFraction": 0.1
+  },
   "lowHpThreshold": 0.3,
   "start": {
     "zone": "greyhaven",
     "spawnPoint": "monastery_bed",
     "gold": 0,
     "items": [
-      { "item": "old_sword", "count": 1 },
-      { "item": "travel_mantle", "count": 1 }
+      {
+        "item": "old_sword",
+        "count": 1
+      },
+      {
+        "item": "travel_mantle",
+        "count": 1
+      }
     ],
-    "equipment": { "weapon": "old_sword", "mantle": "travel_mantle" }
+    "equipment": {
+      "weapon": "old_sword",
+      "mantle": "travel_mantle"
+    }
   }
 }
