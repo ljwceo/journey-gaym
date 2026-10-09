@@ -2,6 +2,11 @@ import type { ZonesFile } from '../data/types';
 import { emptyBox, shapeBounds } from './Shapes';
 import type { TerrainConfig } from './TerrainField';
 
+/** Extra room (m) kept free of props around a building. */
+const STRUCTURE_MARGIN = 1.5;
+/** Style-guide color of river beds (water in the shadow). */
+const RIVER_BED_COLOR = 'zeewater';
+
 /** One scatter rule of one zone, flattened for the worker. */
 export interface ScatterRule {
   /** Zone rectangle the props may stand in. */
@@ -21,8 +26,13 @@ export interface ScatterConfig {
   /** Prop ids in data order; results come back per prop index. */
   props: string[];
   rules: ScatterRule[];
-  /** No props in these circles: [x, z, radius] triples (spawn points, checkpoints, entrances). */
+  /**
+   * No props in these circles: [x, z, radius] triples (spawn points, checkpoints, entrances,
+   * buildings).
+   */
   clearings: number[];
+  /** No props in these rectangles: [minX, minZ, maxX, maxZ] (areas with `noScatter`). */
+  clearRects: number[];
   /** Props never stand in water shallower than this above sea level. */
   minHeight: number;
   /** Quality density (0–1) multiplies `perHectare`. */
@@ -52,6 +62,7 @@ export function buildWorldGenConfig(
   const props = world.props.map((prop) => prop.id);
   const rules: ScatterRule[] = [];
   const clearings: number[] = [];
+  const clearRects: number[] = [];
   const terrainZones = zones.zones.map((zone) => {
     shapeBounds(zone.bounds, box);
     for (const rule of zone.scatter ?? []) {
@@ -70,6 +81,17 @@ export function buildWorldGenConfig(
     if (zone.checkpoint) clearings.push(zone.checkpoint.x, zone.checkpoint.z, t.clearingRadius);
     for (const instance of zone.instances) {
       clearings.push(instance.entrance.x, instance.entrance.z, t.clearingRadius);
+    }
+    for (const structure of zone.structures ?? []) {
+      if (structure.x === undefined || structure.z === undefined) continue;
+      // Half the diagonal of the footprint, plus room to walk around it.
+      const radius = Math.hypot(structure.size[0], structure.size[2]) / 2 + STRUCTURE_MARGIN;
+      clearings.push(structure.x, structure.z, radius);
+    }
+    for (const area of zone.areas) {
+      if (!area.noScatter) continue;
+      const areaBox = shapeBounds(area.shape, emptyBox());
+      clearRects.push(areaBox.minX, areaBox.minZ, areaBox.maxX, areaBox.maxZ);
     }
     return {
       id: zone.id,
@@ -97,12 +119,30 @@ export function buildWorldGenConfig(
       octaves: t.octaves,
       seaColor: color(world.outsideZoneColor),
       zones: terrainZones,
+      rivers: (world.rivers ?? []).map((river) => {
+        const points = river.points.flat();
+        const reach = river.width / 2 + river.bank;
+        const xs = river.points.map((point) => point[0]);
+        const zs = river.points.map((point) => point[1]);
+        return {
+          half: river.width / 2,
+          bank: river.bank,
+          depth: river.depth,
+          points,
+          minX: Math.min(...xs) - reach,
+          minZ: Math.min(...zs) - reach,
+          maxX: Math.max(...xs) + reach,
+          maxZ: Math.max(...zs) + reach,
+        };
+      }),
+      riverColor: color(RIVER_BED_COLOR),
     },
     scatter: {
       seed: world.seed,
       props,
       rules,
       clearings,
+      clearRects,
       minHeight: t.seaLevel + 0.3,
       density: propDensity,
     },

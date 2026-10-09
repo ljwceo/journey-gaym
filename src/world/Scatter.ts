@@ -42,7 +42,8 @@ export function scatterChunk(
       const z = random.range(minZ, maxZ);
       const scale = random.range(rule.minScale, rule.maxScale);
       const rotation = random.range(0, Math.PI * 2);
-      if (inClearing(cfg.clearings, x, z)) continue;
+      if (inClearing(cfg.clearings, x, z) || inRect(cfg.clearRects, x, z)) continue;
+      if (field.riverAt(x, z) > 0) continue;
       const h = field.heightAt(x, z);
       if (h < cfg.minHeight) continue;
       const slopeX = Math.abs(field.heightAt(x + 1, z) - h);
@@ -60,6 +61,20 @@ function inClearing(clearings: readonly number[], x: number, z: number): boolean
     const dz = z - (clearings[i + 1] as number);
     const r = clearings[i + 2] as number;
     if (dx * dx + dz * dz < r * r) return true;
+  }
+  return false;
+}
+
+function inRect(rects: readonly number[], x: number, z: number): boolean {
+  for (let i = 0; i < rects.length; i += 4) {
+    if (
+      x >= (rects[i] as number) &&
+      z >= (rects[i + 1] as number) &&
+      x <= (rects[i + 2] as number) &&
+      z <= (rects[i + 3] as number)
+    ) {
+      return true;
+    }
   }
   return false;
 }

@@ -3,8 +3,11 @@ import type { LookDelta } from '../core/Input';
 import type { PlayerConfig } from '../data/types';
 import { angleDelta } from '../systems/Movement';
 import type { Ground } from '../world/Ground';
+import type { CameraOccluder } from '../world/StructureLayer';
 
 const DEG = Math.PI / 180;
+/** The camera stops this far (m) in front of a wall that blocks the view. */
+const WALL_MARGIN = 0.4;
 
 export type CameraConfig = PlayerConfig['camera'];
 
@@ -124,13 +127,31 @@ export class CameraRig {
    * Moves the camera to the orbit's current state. Allocation-free.
    * @param originX render origin (FloatingOrigin): the camera is placed relative to it
    * @param ground optional ground: the camera never goes below it (hills behind the player)
+   * @param occluder optional walls: the camera moves in front of them instead of looking through
    */
-  apply(originX = 0, originZ = 0, ground?: Ground, minAboveGround = 0.4): void {
+  apply(
+    originX = 0,
+    originZ = 0,
+    ground?: Ground,
+    occluder?: CameraOccluder,
+    minAboveGround = 0.4,
+  ): void {
     const o = this.orbit;
-    const horizontal = Math.cos(o.pitch) * o.distance;
-    const x = o.x - Math.sin(o.yaw) * horizontal;
-    const z = o.z - Math.cos(o.yaw) * horizontal;
-    let y = o.y + Math.sin(o.pitch) * o.distance;
+    let distance = o.distance;
+    let horizontal = Math.cos(o.pitch) * distance;
+    let x = o.x - Math.sin(o.yaw) * horizontal;
+    let z = o.z - Math.cos(o.yaw) * horizontal;
+    let y = o.y + Math.sin(o.pitch) * distance;
+    if (occluder) {
+      const t = occluder.clipSegment(o.x, o.y, o.z, x, y, z);
+      if (t < 1) {
+        distance = Math.max(0.3, t * distance - WALL_MARGIN);
+        horizontal = Math.cos(o.pitch) * distance;
+        x = o.x - Math.sin(o.yaw) * horizontal;
+        z = o.z - Math.cos(o.yaw) * horizontal;
+        y = o.y + Math.sin(o.pitch) * distance;
+      }
+    }
     if (ground) y = Math.max(y, ground.heightAt(x, z) + minAboveGround);
     this.camera.position.set(x - originX, y, z - originZ);
     this.camera.lookAt(o.x - originX, o.y, o.z - originZ);
