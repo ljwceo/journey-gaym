@@ -7,9 +7,9 @@
 | | |
 |---|---|
 | **Huidige fase** | Fase 1 – Basis + open wereld + character creator |
-| **Status** | Stap 1.8 klaar (inhoud: gebouwen, rivieren, triggers, checkpoints, HUD); HUD goedgekeurd door Bo en Lucas |
-| **Volgende stap** | Stap 1.9: NPC's (de 9 NPC's in Greyhaven, dialoogvenster, Pringle die volgt, rondlopende Treewardens) |
-| **Laatste sessie** | 2026-10-09: stap 1.8 inhoud |
+| **Status** | Stap 1.9 klaar (NPC's: praten, dialoogvenster, Pringle volgt en is te aaien, Treewardens lopen rond) |
+| **Volgende stap** | Stap 1.10: grafische standen (QualityManager, benchmark, automatisch omlaag) en debug compleet |
+| **Laatste sessie** | 2026-10-09: stap 1.9 NPC's |
 
 ---
 
@@ -49,7 +49,7 @@ Elke stap is één branch + pull request. Na elke stap start de game zonder fout
 ## Fase-log
 
 ### Fase 1 – Basis + open wereld + character creator
-**Status:** bezig, stap 1.1 t/m 1.8 klaar.
+**Status:** bezig, stap 1.1 t/m 1.9 klaar.
 **Gebouwd:**
 - 1.1 Projectopzet: Vite 8 + TypeScript 6 (strict), Three.js r186, ESLint + Prettier, Vitest. Leeg 3D-scherm met een draaiende kubus in stijlgidskleuren (draait per seconde, niet per frame). GitHub Actions controleert elke pull request (lint, opmaak, typecheck, tests, build) en zet `main` op GitHub Pages.
 - 1.2 Kern: `FixedStep` + `GameLoop` (simulatie altijd 60 Hz met accumulator, tekenen interpoleert, max 8 inhaalstappen per frame, frames > 0,25 s worden afgekapt, `?fps=N` om de framerate te beperken), getypte `EventBus` (geen allocaties bij `emit`), `StateMachine` (wissel gebeurt pas vóór de volgende update), `Random` (sfc32 met vaste seed) + `hashSeed` voor per-chunk seeds, `Renderer`, `DebugOverlay` (F3 / drie vingers / `?debug=1`: fps, frametijd, cpu-tijd, draw calls, triangles, geometries/textures, heap, resolutie, simulatiestappen, huidige state). Demo-scène: kubus die rondjes draait op de simulatie en vloeiend getekend wordt. 29 tests.
@@ -133,6 +133,19 @@ Elke stap is één branch + pull request. Na elke stap start de game zonder fout
   - **Validator:** gebouwen met een onbekende kleur, buiten hun zone, een draaiing die niet past bij een rechthoekige botsing, of een brug naar een gebouw dat niet bestaat geven een fout.
   - **Debug:** label met de naam boven elk gebouw in de buurt (bijv. "The Golden Kettle"), en een regel met de triggers waar je in staat, je checkpoint, aantal gebouwen en botsingen, en hoeveel plekken je bezocht hebt. 197 tests.
 
+- 1.9 NPC's:
+  - **Alles uit data** (`npcs.json`): elke NPC heeft een rol (kleur, placeholder-model, botsingsstraal), een plek, gedrag (`static`, `wander`, `follow`) en dialoog-keys. Een nieuwe NPC = alleen data. Nieuw blok `settings` met de getallen (praatafstand, aai-afstand, zichtafstand, enz.).
+  - **De 9 NPC's in Greyhaven** staan als poppetje (lijf in de kleur van hun rol, hoofd met ogen en neus) bij hun plek. Ze **kijken je aan** als je dichtbij komt (5 m) en draaien daarna terug. Je kunt **niet door ze heen lopen**.
+  - **Praten:** loop naar een NPC, dan verschijnt boven zijn hoofd "E Praat met Marco the Merchant" (op de telefoon tik je erop). Het **dialoogvenster** onderin toont naam + één zin tegelijk (1/2 · Verder ▸). Verder met E, spatie, Enter, klikken of tikken; na de laatste zin sluit het. Escape sluit meteen. Tijdens praten sta je stil (rondkijken kan wel); loop je (of teleporteer je) weg, dan stopt het gesprek. Teksten in het Nederlands en Engels, namen blijven Engels. Taal wisselen tijdens een gesprek werkt meteen.
+  - **Quest-haak:** `dialogueWhen` in `npcs.json`: andere zinnen zodra een voorwaarde uit `triggers.json` waar is. Voorbeeld: Master Brink praat vanaf level 5 over je pad kiezen (`readyToChoosePath`). Event `npcTalked` bij elk gesprek, `npcMet` bij de eerste keer (dan ook **autosave**); ontmoete NPC's staan in de save.
+  - **Pringle** (`src/entities/Companion.ts`) loopt met je mee: blijft ±1,8 m bij je, loopt iets sneller dan jij zodat hij je inhaalt, gaat zitten en kijkt naar je als je stilstaat. Verschijnt **rechtsachter je** (niet tussen jou en de camera). Raakt hij ver achter (> 30 m, of 3 s vast achter een muur), dan springt hij weer naast je; bij teleport ook. **Aaien:** stap naar hem toe (binnen 1,5 m), "E Aai Pringle", hij maakt een sprongetje en "Pringle spint tevreden." Aaien neemt de E-toets niet over zolang hij gewoon naast je zit.
+  - **Treewardens** (`src/systems/NpcBehavior.ts`): grote stam met takarmen, gloeiende ogen en een bladerkroon. Ze lopen rustig rond (0,8 m/s) binnen hun straal rond hun plek, wachten 2–7 s, en geven het op als ze vastlopen. Altijd hetzelfde patroon (vaste seed per NPC). Ze lopen alleen binnen 60 m van de speler (daar is botsing geladen); verder weg staan ze stil. In de elfenstad zijn ze **nooit aan te vallen** (`safeAreas`, `isAttackable` klaar voor fase 2; in debug staat er "safe" achter).
+  - **Zichtbaar** binnen 160 m, weg vanaf 180 m (geen geflikker), **gelijk op elke grafische stand** (eis §2.3). NPC's met een `season` bestaan alleen in dat seizoen.
+  - **Tekenen** (`src/render/NpcRenderer.ts`, `src/entities/NpcFactory.ts`): één InstancedMesh per modeldeel, alle NPC's samen ±6 draw calls. Posities worden elke frame geïnterpoleerd, niets nieuws aangemaakt tijdens het spelen. Echte modellen vervangen later alleen de fabriek.
+  - **Invoer:** nieuwe actie `confirm` (Enter, of klikken als de muis gevangen is).
+  - **Validator:** onbekende voorwaarde of tekst-key in `dialogueWhen`, aai-afstand groter dan de volgafstand, en pauzetijden min > max geven een fout. Test: elk model in de rollen bestaat.
+  - **Debug:** regel `npcs` met hoeveel er in beeld zijn, met wie je praat of wie je doelwit is, hoeveel je er ontmoet hebt, Pringle's afstand en Treewardens in de buurt. 215 tests.
+
 **Bekende problemen:**
 - ~~De game-bundel is ±666 kB~~ → opgelost in stap 1.7: opgesplitst in 7 bestanden, grootste 548 kB (Three.js zelf). Three.js kan niet verder opgesplitst worden; dat bestand groeit alleen bij een nieuwe Three.js-versie.
 - De grafische stand wordt al opgeslagen maar doet nog niets; de QualityManager komt in stap 1.10.
@@ -154,6 +167,9 @@ Elke stap is één branch + pull request. Na elke stap start de game zonder fout
 - Joystick, rondkijken en knijpen zijn getest met nagebootste vingers in de headless browser; graag op een echte iPhone testen of het lekker voelt.
 - Of het toetsenbord op een echte iPhone netjes dichtgaat, kan ik in de headless browser niet zien. Graag testen op de telefoon.
 - Veel getallen die niet in het concept staan zijn een **voorstel** (zie besluiten): spell-, combo- en skillwaarden, Sultans waarschuwingstijden, dash-afstand, vijandsnelheden in m/s. Ze staan in data en zijn makkelijk aan te passen.
+- NPC's botsen niet met elkaar (een Treewarden kan door een andere heen lopen). Pringle en Treewardens kunnen niet op platforms of bruggen (zie hierboven).
+- Sta je recht vóór een NPC, dan staat je eigen poppetje er voor de camera vóór. Draai de camera of stap opzij.
+- Treewardens zijn donkergroen en vallen tussen de bomen weinig op. Kleur staat in `npcs.json` (rol `creature`).
 **Gemeten fps:**
 
 | Apparaat | Low | Mid | High |
@@ -229,6 +245,11 @@ Elke stap is één branch + pull request. Na elke stap start de game zonder fout
 | 2026-10-09 | HUD staat helemaal bovenin (balken linksboven, gold rechtsboven, zonenaam en meldingen in het midden) | Zo zit hij nooit in de weg van de joystick of de knoppen op de telefoon |
 | 2026-10-09 | Bezochte plekken worden meteen opgeslagen (autosave bij elk eerste bezoek) | "Wordt opgeslagen wanneer een plek voor het eerst bezocht is" (§6) |
 | 2026-10-09 | Spelerniveau is voor voorwaarden voorlopig 1 en er zijn nog geen voltooide quests | Levels en quests komen in fase 2 en 3 |
+| 2026-10-09 | NPC's verschijnen binnen 160 m (weg vanaf 180 m), op elke grafische stand hetzelfde | Harde eis §2.3: niemand ziet op Low minder dan op High |
+| 2026-10-09 | Treewardens lopen alleen binnen 60 m van de speler | Alleen daar is botsing geladen; anders zouden ze door bomen lopen |
+| 2026-10-09 | Pringle aaien kan pas binnen 1,5 m (hij volgt op 1,8 m) | Anders stond "Aai Pringle" altijd in beeld en kon je niet meer rusten bij een checkpoint |
+| 2026-10-09 | Tijdens een gesprek sta je stil; E/spatie/Enter/klik = verder, Escape = stoppen | Simpel en hetzelfde op pc en telefoon |
+| 2026-10-09 | Eerste ontmoeting met een NPC = autosave | Net als bij eerste bezoek aan een plek; ontmoete NPC's horen in de save (§8) |
 | 2026-10-09 | PerfTest verplaatst naar `experiments/perftest/` | Oude test-code hoort in `/experiments` (§5). Er was geen PeerJS-netwerktest in de repo, dus `experiments/net-test/` bestaat (nog) niet |
 
 ## Sessielog
@@ -248,3 +269,4 @@ Elke stap is één branch + pull request. Na elke stap start de game zonder fout
 - Stap 1.7 gebouwd (één pull request, op verzoek met twee extra's): bundel opgesplitst en zod/mini (grootste bestand 731 → 548 kB, check in de build), open wereld met terrein uit een Web Worker, chunks met ringen en hysterese, grove wereldkaart eronder, bomen/rotsen per zone, lopen over terrein met helling-limiet en diep water, floating origin, naadloze zonewissel met autosave, en een cheatmenu (snelheid, vliegen, teleport, chunkranden). Getest in headless Chromium (pc 1280×800 en iPhone 13): hele flow, teleport naar Greenwood en Mournfen (zone + autosave kloppen), vliegen 25× (100 m/s, 150 m hoog), herladen + Continue zet je terug, 3× wereld in/uit: geometrie terug naar 0, op de telefoon ▲/▼ en het paneel boven de debug-overlay. Unittest: 10 rondes heen en weer lopen laat het aantal chunks en colliders niet groeien. Geen fouten. Tijdelijke namen: geen nieuwe. Volgende stap: 1.8 (inhoud).
 - PR #12 gesloten (dubbel werk). Fix: botsing gelijk op elke grafische stand (vaste botsingsring, alleen versiering volgt de dichtheid). Getest: unittests + headless Chromium, 116 colliders op Low/Mid/High in het bos, geen fouten. Volgende stap: 1.8 (inhoud).
 - Stap 1.8 gebouwd: gebouwen en plekken uit data in Greyhaven, de Greenwood (Old Tjikko, elfenstad met platforms en bruggen, heiligdom, ingang De Wortelgrotten) en de Mournfen (klooster op palen), drie rivieren, laden met de chunks, camera die niet door muren kijkt, triggers met eerste-bezoek-teksten, stadspoort met voorwaarde, checkpoints met rusten, HUD-systeem met fade (zonenaam, meldingen, interactie-icoontje, energiebalk), mist die per zone van kleur verandert. Testbaan weg. Getest in headless Chromium (pc 1280×800 en iPhone 13): wakker worden bij het Monastery met de uitleg en de zonenaam, E en tikken op "Rusten", dash laat de energiebalk zien, door de stadspoort lopen, teleport naar Greenwood en Mournfen, 3× wereld in/uit: geometrie terug naar 0, bezochte plek staat in de save. Geen fouten. Tijdelijke namen: geen nieuwe (Treewardens, De Wortelgrotten, de elfenstad en Gold staan alleen in data). Volgende stap: 1.9 (NPC's).
+- Stap 1.9 gebouwd: NPC's uit data (9 in Greyhaven, Pringle, 3 Treewardens), dialoogvenster, praten in NL en EN, aaien, volgen, rondlopen, niet door NPC's heen lopen, quest-haak `dialogueWhen`, autosave bij eerste ontmoeting. Getest in headless Chromium (pc 1280×800 en 390×844): praten met Marco (2 zinnen, sluit na de laatste, gaat niet opnieuw open), Hilda in het Nederlands en sluiten met Escape (geen pauze), Pringle aaien met melding, Pringle volgt bij lopen, ontmoete NPC's staan na herladen nog in de save, Treewarden loopt rond en staat in de elfenstad als "safe", 3× wereld in/uit: geometrie terug naar 0. Gevonden en opgelost: Pringle nam steeds de E-toets over (nu kleiner aai-bereik) en zat tussen camera en speler (nu rechtsachter). Geen fouten. Tijdelijke namen: geen nieuwe. Volgende stap: 1.10 (grafische standen).

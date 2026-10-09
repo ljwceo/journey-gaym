@@ -58,3 +58,12 @@ Alleen data in `public/data/zones.json`:
 
 ## Cheatmenu (alleen debug)
 `src/systems/Cheats.ts` (snelheid, vliegen) en `src/ui/CheatPanel.ts` (F6 of de knop "Cheats"). Wordt nooit opgeslagen; zet je debugmodus uit, dan gaan alle cheats uit.
+
+## NPC's (stap 1.9)
+
+- **Data:** `public/data/npcs.json`. `roles` geven kleur, placeholder-model en botsingsstraal; `npcs` geven plek, gedrag (`static` / `wander` / `follow`), dialoog-keys en eventueel `dialogueWhen` (andere zinnen als een voorwaarde uit `triggers.json` waar is), `season`, `safeAreas`. `settings` bevat alle afstanden en tijden.
+- **Simulatie** (vaste stap, `src/systems/Npcs.ts`): tonen/verbergen rond de speler (vaste afstand, met marge), statische NPC's draaien naar de speler, wanderers (`NpcBehavior.ts`) lopen binnen de botsingsring, de companion (`entities/Companion.ts`) volgt. Solide NPC's duwen de speler weg. Alles beweegt met dezelfde `GroundedMover` als de speler (muren, hellingen, diep water).
+- **Tekenen** (`src/render/NpcRenderer.ts`): één InstancedMesh per modeldeel uit `entities/NpcFactory.ts`, geïnterpoleerd tussen simulatiestappen.
+- **Praten** (`WorldState` + `ui/Dialog.ts`): het dichtstbijzijnde NPC binnen bereik krijgt het interactie-icoontje; E of tikken opent het dialoogvenster. Events: `npcTalked` (elk gesprek), `npcMet` (eerste keer → autosave).
+- **Nieuwe NPC toevoegen:** zet hem in `npcs.json` (en zijn id in `npcs` van zijn zone in `zones.json`) en zijn teksten in `en.json` + `nl.json`. De validator controleert de rest.
+
