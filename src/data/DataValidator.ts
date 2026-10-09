@@ -693,12 +693,43 @@ class CrossChecker {
 
   private checkCutscenes(): void {
     const f = 'cutscenes';
-    this.data.cutscenes.cutscenes.forEach((cutscene, i) => {
+    const { cutscenes, fights } = this.data.cutscenes;
+    this.unique('fight', f, 'fights', fights);
+    cutscenes.forEach((cutscene, i) => {
       this.unique(`panel:${cutscene.id}`, f, `cutscenes[${i}].panels`, cutscene.panels);
       cutscene.panels.forEach((panel, n) => {
         const p = `cutscenes[${i}].panels[${n}]`;
         this.text(f, `${p}.narration`, panel.narration);
         panel.lines?.forEach((line, l) => this.text(f, `${p}.lines[${l}].text`, line.text));
+        this.ref('fight', f, `${p}.fight`, panel.fight);
+      });
+    });
+    fights.forEach((fight, i) => {
+      const p = `fights[${i}]`;
+      this.color(f, `${p}.arena.groundColor`, fight.arena.groundColor);
+      this.color(f, `${p}.arena.fogColor`, fight.arena.fogColor);
+      this.unique(`foe:${fight.id}`, f, `${p}.foes`, fight.foes);
+      fight.foes.forEach((foe, n) => {
+        this.color(f, `${p}.foes[${n}].color`, foe.color);
+        this.color(f, `${p}.foes[${n}].accent`, foe.accent);
+      });
+      this.unique(`beat:${fight.id}`, f, `${p}.beats`, fight.beats);
+      fight.beats.forEach((beat, b) => {
+        beat.actions.forEach((action, a) => {
+          const ap = `${p}.beats[${b}].actions[${a}]`;
+          this.text(f, `${ap}.text`, action.text);
+          this.ref(`foe:${fight.id}`, f, `${ap}.foe`, action.foe);
+          if (action.type === 'hint' || action.type === 'say') {
+            if (!action.text) this.issue(f, ap, `a "${action.type}" needs a text`);
+          }
+          if (action.type !== 'hint' && !action.foe) {
+            this.issue(f, ap, `a "${action.type}" needs a foe`);
+          }
+          const instant = action.type === 'teleportBehind' || action.type === 'teleportHome';
+          if (!instant && action.seconds === undefined) {
+            this.issue(f, ap, `a "${action.type}" needs seconds`);
+          }
+        });
       });
     });
   }

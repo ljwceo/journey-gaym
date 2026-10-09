@@ -11,8 +11,9 @@ type Cutscene = CutscenesFile['cutscenes'][number];
 const INTRO_ID = 'intro';
 
 /**
- * Intro stub: the panels from cutscenes.json as text cards (art, narration audio and the
- * playable fight come later). Tap, click, Space or Enter goes to the next panel; Skip ends it.
+ * The intro: the panels from cutscenes.json as text cards (art and narration audio come
+ * later). A panel with a `fight` is played in IntroFightState, which comes back here at the
+ * panel after it. Tap, click, Space or Enter goes to the next panel; Skip ends the intro.
  */
 export class IntroState implements GameState {
   private readonly screen: Screen;
@@ -31,7 +32,13 @@ export class IntroState implements GameState {
       return;
     }
     this.cutscene = cutscene;
-    this.sequence = new PanelSequence(cutscene.panels.length);
+    this.sequence = new PanelSequence(cutscene.panels.length, this.ctx.introPanel);
+    // Coming back after the fight past the last panel: the intro is over.
+    if (this.ctx.introPanel >= cutscene.panels.length) {
+      this.done();
+      return;
+    }
+    if (this.playFight()) return;
     this.ctx.renderer.clear();
     this.screen.mount();
     this.screen.root?.addEventListener('click', this.onTap);
@@ -46,12 +53,26 @@ export class IntroState implements GameState {
 
   private advance(): void {
     if (!this.sequence) return;
-    if (this.sequence.next()) this.ctx.goto('world');
-    else this.screen.refresh();
+    if (this.sequence.next()) this.done();
+    else if (!this.playFight()) this.screen.refresh();
   }
 
   private skip(): void {
-    if (this.sequence?.skip()) this.ctx.goto('world');
+    if (this.sequence?.skip()) this.done();
+  }
+
+  /** Hands a playable panel to the fight scene; returns true when it did. */
+  private playFight(): boolean {
+    const index = this.sequence?.index ?? 0;
+    if (!this.cutscene?.panels[index]?.fight) return false;
+    this.ctx.introPanel = index;
+    this.ctx.goto('introFight');
+    return true;
+  }
+
+  private done(): void {
+    this.ctx.introPanel = 0;
+    this.ctx.goto('world');
   }
 
   private build(): (Node | null)[] {

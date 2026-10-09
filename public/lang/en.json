@@ -145,7 +145,17 @@
     "baelor": "You're not even worth killing, little insect. Come back when you're stronger.",
     "panel_5": "Few have faced the Lords of Morvath and lived.",
     "panel_6": "You wake in the Monastery of Greyhaven. Your journey begins here.",
-    "tapToContinue": "Tap or press Space to continue"
+    "tapToContinue": "Tap or press Space to continue",
+    "fight": {
+      "arrive": "Oh look, Brother. A visitor!",
+      "hint": "Attack them! Left mouse = strike, right mouse = heavy hit.",
+      "hintTouch": "Attack them! Tap Attack or Heavy.",
+      "tickle": "Did something just… touch me?",
+      "behind": "Psst. Over here.",
+      "freeze": "Time bends to us. Not to you.",
+      "spin": "Look, Brother, it spins!",
+      "skip": "Skip"
+    }
   },
   "cutscene": {
     "skip": "Skip",

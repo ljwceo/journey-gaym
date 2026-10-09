@@ -100,6 +100,7 @@ const ctx: GameContext = {
   data: null,
   seasons: null,
   session: null,
+  introPanel: 0,
   goto: (state) => states.change(state),
   persist: () => (ctx.session ? saves.write(ctx.session) : false),
   reportProblem: (message) => {
@@ -118,12 +119,17 @@ const worldState = new LazyState(
   () => import('./scenes/WorldState').then((m) => new m.WorldState(ctx)),
   ctx.reportProblem,
 );
+const introFightState = new LazyState(
+  () => import('./scenes/IntroFightState').then((m) => new m.IntroFightState(ctx)),
+  ctx.reportProblem,
+);
 events.on('stateChanged', ({ to }) => {
   // The data is there after Boot, the save after the language choice: (re)apply the preset.
   applySettings();
   if (to === 'title') {
     void worldState.preload();
     void createState.preload();
+    void introFightState.preload();
   }
 });
 
@@ -133,6 +139,7 @@ states
   .register('title', new TitleState(ctx))
   .register('create', createState)
   .register('intro', new IntroState(ctx))
+  .register('introFight', introFightState)
   .register('world', worldState);
 
 // Saved settings that take effect right away.

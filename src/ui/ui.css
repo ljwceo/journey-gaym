@@ -1017,3 +1017,93 @@
 .ui-damage-player {
   color: var(--gh-zonsondergang);
 }
+
+/* ------------------------------------------------------------ intro fight */
+
+.ui-layer > .ui-fight {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.ui-fight > .ui-world-input,
+.ui-fight > .ui-skip {
+  pointer-events: auto;
+}
+
+/* What Lucael and Baelor say: bottom center, above the touch buttons. */
+.ui-fight-subtitle {
+  position: absolute;
+  left: 50%;
+  bottom: max(28px, calc(env(safe-area-inset-bottom) + 16px));
+  width: min(560px, calc(100vw - 32px));
+  box-sizing: border-box;
+  padding: 12px 18px 8px;
+  background: color-mix(in srgb, var(--gh-panel) 88%, transparent);
+  border: 1px solid var(--gh-koper);
+  border-radius: 6px;
+  transform: translate(-50%, 10px);
+  opacity: 0;
+  transition:
+    opacity 0.25s ease,
+    transform 0.25s ease;
+  pointer-events: none;
+}
+
+.ui-fight-hint {
+  position: absolute;
+  left: 50%;
+  top: calc(max(16px, env(safe-area-inset-top)) + 56px);
+  transform: translateX(-50%);
+  max-width: calc(100vw - 32px);
+  padding: 6px 14px;
+  font-size: 16px;
+  text-align: center;
+  color: var(--gh-zonlicht);
+  background: color-mix(in srgb, var(--gh-nachtinkt) 60%, transparent);
+  border-radius: 6px;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.ui-fight-subtitle.ui-fight-show {
+  transform: translate(-50%, 0);
+  opacity: 1;
+}
+
+.ui-fight-hint.ui-fight-show {
+  opacity: 1;
+}
+
+@media (pointer: coarse) {
+  .ui-fight-subtitle {
+    bottom: calc(var(--button-zone-height) + max(8px, env(safe-area-inset-bottom)));
+  }
+}
+
+/* Frozen time (violet, washed out), the spell's white flash, then black. */
+.ui-fight-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: transparent;
+  transition:
+    background-color 0.4s ease,
+    backdrop-filter 0.4s ease;
+}
+
+.ui-fight-overlay.ui-fight-frozen {
+  background: color-mix(in srgb, var(--gh-spreukviolet) 22%, transparent);
+  backdrop-filter: grayscale(0.85);
+}
+
+.ui-fight-overlay.ui-fight-flash {
+  background: var(--gh-zonlicht);
+  transition: background-color 0.3s ease;
+}
+
+.ui-fight-overlay.ui-fight-black {
+  background: var(--gh-nachtinkt);
+  transition: background-color 1.2s ease;
+}

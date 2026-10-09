@@ -4,7 +4,7 @@ import { createNewSave, type SaveData, type SaveSettings } from '../save/SaveDat
 import type { LoadResult } from '../save/SaveManager';
 
 /** Ids of all game states (scenes). */
-export type StateId = 'boot' | 'language' | 'title' | 'create' | 'intro' | 'world';
+export type StateId = 'boot' | 'language' | 'title' | 'create' | 'intro' | 'introFight' | 'world';
 
 /**
  * Where the game goes after loading: the language choice when there is no save, the title
@@ -73,8 +73,12 @@ export class PanelSequence {
   private current = 0;
   private done = false;
 
-  constructor(readonly count: number) {
+  constructor(
+    readonly count: number,
+    start = 0,
+  ) {
     if (count < 1) throw new Error('A sequence needs at least one panel');
+    this.current = Math.min(Math.max(0, start), count - 1);
   }
 
   get index(): number {

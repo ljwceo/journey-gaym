@@ -510,21 +510,6 @@ export class WorldState implements GameState, InstanceHost {
     hud.rules.setHpFraction(c.maxHp > 0 ? c.hp / c.maxHp : 1);
   }
 
-  /** Draws the sword where the swing is (not interpolated: a swing is short and fast). */
-  private updateSwordPose(): void {
-    const { player, sword } = this;
-    if (!player || !sword) return;
-    const c = player.combat;
-    const model = player.model;
-    if (c.heavyWindup > 0) {
-      model.setSwordPose('windup', 1 - c.heavyWindup / sword.heavyWindupSeconds);
-    } else if (c.swingTime > 0 && c.swing !== 'none') {
-      model.setSwordPose(c.swing, 1 - c.swingTime / sword.fastSwingSeconds);
-    } else {
-      model.setSwordPose('rest', 0);
-    }
-  }
-
   private touchLabels(): { attack: string; heavy: string; dash: string } {
     const t = this.ctx.i18n;
     return {
@@ -643,7 +628,7 @@ export class WorldState implements GameState, InstanceHost {
     worldRoot.position.set(-origin.x, 0, -origin.z);
 
     player.syncModel(a);
-    this.updateSwordPose();
+    if (this.sword) player.showSword(this.sword);
     this.npcRenderer?.update(a, this.ctx.data?.npcs.settings.petHopSeconds ?? 1);
     this.enemyRenderer?.update(a);
     input.consumeLook(this.look);
