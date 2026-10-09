@@ -18,7 +18,7 @@
 
 **Legend of Morvath** is een co-op progressie-RPG in de browser, gemaakt door Bo en Lucas. Je bent een rondtrekkende mage (of zwaardvechter) op het continent Eryndor. Twee demi-god necromancers, Lucael en Baelor (de Lords of Morvath), verspreiden corruptie; hoe verder je naar het oosten trekt, hoe sterker het kwaad. De wereld speel je solo; samen vechten alleen in raids (later, via PeerJS en een kamercode).
 
-Het volledige spelconcept staat in de Google Doc "Legend of Morvath – spelconcept". Dat concept is de bron voor verhaal, gebieden, skills, gear, NPC's, stats en vijanden. De wereld is **volledig 3D** (Three.js), camera schuin van boven, vrij lopen in alle richtingen.
+Het volledige spelconcept staat in de Google Doc "Legend of Morvath – spelconcept". Dat concept is de bron voor verhaal, gebieden, skills, gear, NPC's, stats en vijanden. De wereld is **volledig 3D** (Three.js), camera over de schouder (zoals Genshin Impact), vrij lopen in alle richtingen.
 
 **Doel van nu:** een runnende, vloeiende 3D base game. Geen art, geen mooie looks. Alleen placeholders (capsules, kubussen, gekleurd terrein). Wel een stevige technische basis die later alles kan dragen: open wereld, async streaming, data-gedreven systemen, taal, opslaan, grafische standen.
 
@@ -140,8 +140,9 @@ Alle renderinstellingen hangen aan één `QualityManager` met drie presets in `p
 
 ## 7. Speler, camera, besturing, collision
 
-- **Camera:** schuin van boven (perspectief, ongeveer 50–60° naar beneden), volgt de speler soepel (gedempt, fps-onafhankelijk). Inzoomen met scrollwiel/knijpen binnen grenzen.
-- **Camera draaien:** je kunt de camera rond de speler draaien om jezelf te bekijken (rechtermuisknop slepen op pc, met één vinger slepen buiten de joystick op touch). **Zodra je gaat lopen, draait de camera vloeiend terug achter je.** Snelheid en vertraging van dat terugdraaien in config.
+- **Camera:** third-person **over de schouder, zoals Genshin Impact** (gewijzigd op 2026-10-09; eerst was het schuin van boven). Laag achter de speler, kijkt licht naar beneden, blijft strak bij het karakter (fps-onafhankelijk). Inzoomen met scrollwiel/knijpen binnen grenzen. Gaat niet onder de grond.
+- **Camera draaien:** vrij rond de speler, omhoog en omlaag. Pc: één keer klikken in het spel, daarna draait de muis de camera zonder knop (pointer lock, muis verborgen); Escape geeft de muis vrij en pauzeert. Touch: met één vinger slepen buiten de joystick. Gevoeligheid instelbaar in Settings.
+- **Camera bij lopen:** de camera blijft waar de speler hem zet; W loopt de kant op waar de camera kijkt. Bij opzij lopen draait de camera licht mee (zoals Genshin). Getallen in config.
 - **Lopen:** WASD en pijltjestoetsen op pc; virtuele joystick op touch (linkeronderhoek, verschijnt waar je drukt). Beweging relatief aan de camera, 360°. **Loopsnelheid 4 m/s** (uit `player.json`).
 - **Dash:** korte sprong in looprichting (spatie / knop op mobiel). Volgens het concept kost dash **25 energie** en heeft hij **1 seconde cooldown**. Energie: max 100, vult 20 per seconde bij, pas 1 seconde nadat je niets meer doet; zonder genoeg energie geen dash. Alle getallen in `player.json`.
 - **Interactie:** E of tik op een NPC/object binnen bereik. Een klein icoontje boven het dichtstbijzijnde interactieve object.
@@ -220,7 +221,7 @@ Fase 1 is af als ik dit allemaal kan doen, op pc én iPhone:
 - [ ] De game opent vanaf GitHub Pages, vraagt de eerste keer de taal, toont het titelscherm.
 - [ ] New Game opent de character creator: naam (max 16), lichaamstype, kapsel, 19 haarkleuren, 6 huidskleuren, 6 mantelkleuren, random-knop; het draaiende poppetje verandert live mee.
 - [ ] Daarna speelt de intro-stub (overslaanbaar) en word ik wakker bij het Monastery in Greyhaven.
-- [ ] Ik loop met WASD/joystick rond (4 m/s), kan dashen (kost energie, 1 s cooldown), de camera volgt soepel, ik kan hem rond mezelf draaien en hij draait vloeiend terug als ik ga lopen.
+- [ ] Ik loop met WASD/joystick rond (4 m/s), kan dashen (kost energie, 1 s cooldown), de camera hangt over mijn schouder zoals in Genshin, ik kan hem vrij rond mezelf draaien (pc: muis zonder knop) en W loopt de kant op waar ik kijk.
 - [ ] Bij het eerste bezoek aan een plek in Greyhaven verschijnt een korte uitleg.
 - [ ] Ik loop naadloos van Greyhaven naar The Greenwood of Aerandir (met Old Tjikko, riviertjes, elfenstad-gebied, heiligdom) en The Mournfen; de zonenaam verschijnt; er is geen hapering bij het laden van chunks.
 - [ ] Ik kan met NPC's praten in het Nederlands en Engels; Pringle loopt mee en is te aaien; Treewardens lopen rond in het bos.
