@@ -15,6 +15,17 @@
   --gh-magieblauw: #5f6dff;
   --gh-spreukviolet: #a98bff;
 
+  /* Terrein (placeholder-kleuren voor zones) */
+  --gh-terrein-mosgroen: #5e6b4a;
+  --gh-terrein-bosgroen: #3e4b3c;
+  --gh-terrein-moerasgroen: #55574a;
+  --gh-terrein-steppe: #8a8457;
+  --gh-terrein-zandsteen: #a8916c;
+  --gh-terrein-lavasteen: #3b302f;
+  --gh-terrein-verdorven: #3a2c45;
+  --gh-terrein-sneeuw: #d6d3de;
+  --gh-terrein-zeewater: #3d4766;
+
   /* Rollen (UI) */
   --gh-bg: #14131d;
   --gh-panel: #1d1b2b;
