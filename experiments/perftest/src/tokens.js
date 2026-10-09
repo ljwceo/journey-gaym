@@ -8,7 +8,7 @@ window.TOKENS = {
   fonts: {},
 
   async laad() {
-    const res = await fetch('../docs/art-style/tokens.json');
+    const res = await fetch('../../docs/art-style/tokens.json');
     const json = await res.json();
     const alles = Object.assign({}, json.ui);
     for (const [naam, info] of Object.entries(json.palet)) alles[naam] = info.hex;
