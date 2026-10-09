@@ -12,6 +12,11 @@ export interface ScatterRule {
   /** Index into `ScatterConfig.props`. */
   prop: number;
   perHectare: number;
+  /**
+   * Decorative props (no collider, e.g. reeds) follow the quality density; solid ones (trees,
+   * rocks) are the same on every preset, because you can bump into them (CLAUDE.md §2.3).
+   */
+  decorative: boolean;
   minScale: number;
   maxScale: number;
 }
@@ -25,7 +30,7 @@ export interface ScatterConfig {
   clearings: number[];
   /** Props never stand in water shallower than this above sea level. */
   minHeight: number;
-  /** Quality density (0–1) multiplies `perHectare`. */
+  /** Quality density (0–1) multiplies `perHectare` of decorative props only. */
   density: number;
 }
 
@@ -62,6 +67,7 @@ export function buildWorldGenConfig(
         maxZ: box.maxZ,
         prop: props.indexOf(rule.prop),
         perHectare: rule.perHectare,
+        decorative: (world.props.find((prop) => prop.id === rule.prop)?.colliderRadius ?? 0) === 0,
         minScale: rule.minScale,
         maxScale: rule.maxScale,
       });

@@ -128,6 +128,11 @@ export const zonesFileSchema = z.strictObject({
       lodSegments: z.tuple([intRange(2, 128), intRange(1, 128)]),
       /** Edges hang down this far, so LOD seams never show a gap. */
       skirtDepth: range(0, 100),
+      /**
+       * Chunks within this ring around the player have colliders. The same on every graphics
+       * preset (gameplay must not depend on it); each preset's active ring must be at least this.
+       */
+      collisionRing: intRange(1, 8),
       /** Grid spacing (m) of the low-detail map under the whole world (shown before chunks load). */
       farGridSpacing: range(4, 512),
       /** No props within this distance of spawn points, checkpoints and instance entrances. */

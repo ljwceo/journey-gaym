@@ -153,12 +153,20 @@ describe('Scatter', () => {
     }
   });
 
-  it('follows the quality density', () => {
-    const half = buildWorldGenConfig(zones, color, 0.5);
-    const count = (lists: Float32Array[]) => lists.reduce((sum, list) => sum + list.length, 0);
-    const full = count(scatterChunk(field, config.scatter, -16, -10, config.chunkSize));
-    const less = count(scatterChunk(field, half.scatter, -16, -10, config.chunkSize));
-    expect(less).toBeLessThan(full * 0.75);
+  it('lowers only decorative props with the quality density (gameplay is equal, §2.3)', () => {
+    const low = buildWorldGenConfig(zones, color, 0.2);
+    const size = config.chunkSize;
+    // A chunk in the Mournfen: reeds (decorative) plus dead trees and rocks (solid).
+    const full = scatterChunk(field, config.scatter, -17, 10, size);
+    const less = scatterChunk(field, low.scatter, -17, 10, size);
+    const reed = config.scatter.props.indexOf('reed');
+    config.scatter.props.forEach((prop, kind) => {
+      if (kind === reed) return;
+      expect(less[kind], prop).toEqual(full[kind]);
+    });
+    expect((less[reed] as Float32Array).length).toBeLessThan(
+      (full[reed] as Float32Array).length * 0.5,
+    );
   });
 
   it('has a placeholder model for every prop in zones.json', () => {

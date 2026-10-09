@@ -27,6 +27,7 @@ De hoogte en kleur van de grond zijn een **formule** (`TerrainField`) uit `zones
 - **Preload** (≤ `preload`): lage detail (8 × 8 vakjes), geen bomen.
 - **Unload** (> `unload`): pas dan wordt een geladen chunk opgeruimd. Volle detail blijft nog één ring langer staan. Dat is de hysterese: heen en weer lopen op een grens laat chunks niet flikkeren.
 - De ringgroottes komen uit `quality.json` (per grafische stand).
+- **Botsing** staat los daarvan: chunks binnen `collisionRing` (`zones.json`) krijgen colliders, op elke stand even ver. Bomen en rotsen staan op elke stand op dezelfde plek; alleen versiering zonder botsing (riet) wordt minder op Low. Zo is gameplay op Low, Mid en High gelijk (§2.3).
 
 ### Van verzoek tot mesh
 1. De speler komt in een andere chunk → `ChunkPlanner` bepaalt per chunk wat hij moet zijn.
