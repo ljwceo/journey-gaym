@@ -595,6 +595,7 @@ export class WorldState implements GameState, InstanceHost {
       props: this.props,
       propColliders: world.props.map((prop) => prop.colliderRadius),
       rings: preset.chunkRings,
+      collisionRing: world.terrain.collisionRing,
       createWorker: () =>
         new Worker(new URL('../workers/terrain.worker.ts', import.meta.url), { type: 'module' }),
       listener: this.structures,

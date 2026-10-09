@@ -33,7 +33,8 @@ export function scatterChunk(
     const maxZ = Math.min(originZ + size, rule.maxZ);
     if (minX >= maxX || minZ >= maxZ || rule.prop < 0) return;
     random.reseed(hashSeed(cfg.seed, cx, cz, r));
-    const expected = ((rule.perHectare * (maxX - minX) * (maxZ - minZ)) / 10_000) * cfg.density;
+    const density = rule.decorative ? cfg.density : 1;
+    const expected = ((rule.perHectare * (maxX - minX) * (maxZ - minZ)) / 10_000) * density;
     const count = Math.floor(expected) + (random.chance(expected % 1) ? 1 : 0);
     const out = placed[rule.prop] as number[];
     for (let k = 0; k < count; k++) {

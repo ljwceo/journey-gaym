@@ -201,6 +201,7 @@ describe('WorldStreamer', () => {
       props,
       propColliders: zones.world.props.map((prop) => prop.colliderRadius),
       rings: { active: 1, preload: 2, unload: 3 },
+      collisionRing: 1,
       createWorker: () => worker as unknown as Worker,
     });
     const settle = (x: number, z: number) => {
@@ -234,6 +235,21 @@ describe('WorldStreamer', () => {
     expect(root.children.length).toBe(objects);
     const colliders = streamer.list.reduce((sum, chunk) => sum + chunk.colliders.length, 0);
     expect(hash.size).toBe(colliders);
+  });
+
+  it('gives colliders only to chunks in the collision ring, whatever the graphics preset', () => {
+    const { streamer, hash, settle } = setup();
+    // Walk deep into the Greenwood (many trees).
+    settle(-1250, -600);
+    const size = streamer.chunkSize;
+    const cx0 = Math.floor(-1250 / size);
+    const cz0 = Math.floor(-600 / size);
+    for (const chunk of streamer.list) {
+      const distance = ringDistance(chunk.cx - cx0, chunk.cz - cz0);
+      if (distance <= 1) expect(chunk.solid).toBe(true);
+      if (distance > 2) expect(chunk.colliders.length).toBe(0);
+    }
+    expect(hash.size).toBeGreaterThan(0);
   });
 
   it('follows the drawn ground where loaded and the terrain function elsewhere', () => {

@@ -53,7 +53,11 @@ export interface Chunk {
   heights: Float32Array | null;
   segments: number;
   props: InstancedMesh[];
+  /** Prop positions of a full-detail chunk (kept to add colliders when the player comes close). */
+  propData: Float32Array[] | null;
   colliders: CircleCollider[];
+  /** True while the chunk's colliders are in the spatial hash. */
+  solid: boolean;
   /** Position in WorldStreamer.list (swap-remove on unload). */
   slot: number;
 }
@@ -78,6 +82,11 @@ export interface StreamerOptions {
   /** Collider radius at scale 1 per prop index (0 = none). */
   propColliders: readonly number[];
   rings: ChunkRings;
+  /**
+   * Chunks within this ring get colliders. Fixed in zones.json (not per graphics preset), so
+   * what you can bump into is the same on Low, Mid and High (CLAUDE.md §2.3).
+   */
+  collisionRing: number;
   /** Creates the terrain worker (a stub in tests). */
   createWorker: () => Worker;
   /** Told when a chunk first gets ground and when it is unloaded (structures follow chunks). */
@@ -211,6 +220,7 @@ export class WorldStreamer implements Ground {
       const distance = ringDistance(chunk.cx - cx0, chunk.cz - cz0);
       chunk.wanted = wantedLod(distance, chunk.lod ?? chunk.pending, rings);
       if (chunk.wanted === null) this.unload(chunk);
+      else this.syncColliders(chunk);
     }
     // New chunks inside the preload ring (and inside the world).
     const r = rings.preload;
@@ -231,7 +241,9 @@ export class WorldStreamer implements Ground {
           heights: null,
           segments: 0,
           props: [],
+          propData: null,
           colliders: [],
+          solid: false,
           slot: this.list.length,
         };
         this.chunks.set(key, chunk);
@@ -324,7 +336,9 @@ export class WorldStreamer implements Ground {
     chunk.lod = result.lod as ChunkLod;
 
     this.removeProps(chunk);
-    if (chunk.lod === 0) this.addProps(chunk, result.props);
+    chunk.propData = chunk.lod === 0 ? result.props : null;
+    if (chunk.propData) this.addPropMeshes(chunk, chunk.propData);
+    this.syncColliders(chunk);
     if (!old) this.options.listener?.chunkLoaded(chunk.cx, chunk.cz);
   }
 
@@ -340,44 +354,80 @@ export class WorldStreamer implements Ground {
     this.far = mesh;
   }
 
-  private addProps(chunk: Chunk, props: readonly Float32Array[]): void {
-    const { root, hash, propColliders } = this.options;
+  /** Draws the props of a full-detail chunk: one InstancedMesh per kind. */
+  private addPropMeshes(chunk: Chunk, props: readonly Float32Array[]): void {
     const originX = chunk.cx * this.size;
     const originZ = chunk.cz * this.size;
-    props.forEach((list, kind) => {
+    for (let kind = 0; kind < props.length; kind++) {
+      const list = props[kind] as Float32Array;
       const count = list.length / PROP_STRIDE;
-      if (count === 0) return;
+      if (count === 0) continue;
       const mesh = new InstancedMesh(
         this.options.props.geometry(kind),
         this.options.props.material,
         count,
       );
-      const colliderRadius = propColliders[kind] ?? 0;
       for (let i = 0; i < count; i++) {
         const o = i * PROP_STRIDE;
-        const lx = list[o] as number;
-        const y = list[o + 1] as number;
-        const lz = list[o + 2] as number;
         const s = list[o + 3] as number;
         this.rotation.setFromAxisAngle(this.up, list[o + 4] as number);
         mesh.setMatrixAt(
           i,
-          this.matrix.compose(this.position.set(lx, y, lz), this.rotation, this.scale.set(s, s, s)),
+          this.matrix.compose(
+            this.position.set(list[o] as number, list[o + 1] as number, list[o + 2] as number),
+            this.rotation,
+            this.scale.set(s, s, s),
+          ),
         );
-        if (colliderRadius > 0) {
-          const collider = circleCollider(originX + lx, originZ + lz, colliderRadius * s);
-          hash.insert(collider);
-          chunk.colliders.push(collider);
-        }
       }
       mesh.position.set(originX, 0, originZ);
       mesh.matrixAutoUpdate = false;
       mesh.updateMatrix();
       mesh.computeBoundingSphere();
       mesh.name = 'props';
-      root.add(mesh);
+      this.options.root.add(mesh);
       chunk.props.push(mesh);
-    });
+    }
+  }
+
+  /**
+   * Adds or removes a chunk's colliders by its distance to the player: on within the collision
+   * ring, off again one ring further out (hysteresis). Independent of the graphics preset.
+   */
+  private syncColliders(chunk: Chunk): void {
+    const distance = ringDistance(chunk.cx - this.centerX, chunk.cz - this.centerZ);
+    const limit = this.options.collisionRing + (chunk.solid ? 1 : 0);
+    const want = chunk.propData !== null && distance <= limit;
+    if (want === chunk.solid) return;
+    if (!want) {
+      this.removeColliders(chunk);
+      return;
+    }
+    const { hash, propColliders } = this.options;
+    const props = chunk.propData as Float32Array[];
+    const originX = chunk.cx * this.size;
+    const originZ = chunk.cz * this.size;
+    for (let kind = 0; kind < props.length; kind++) {
+      const radius = propColliders[kind] ?? 0;
+      if (radius <= 0) continue;
+      const list = props[kind] as Float32Array;
+      for (let o = 0; o < list.length; o += PROP_STRIDE) {
+        const collider = circleCollider(
+          originX + (list[o] as number),
+          originZ + (list[o + 2] as number),
+          radius * (list[o + 3] as number),
+        );
+        hash.insert(collider);
+        chunk.colliders.push(collider);
+      }
+    }
+    chunk.solid = true;
+  }
+
+  private removeColliders(chunk: Chunk): void {
+    for (const collider of chunk.colliders) this.options.hash.remove(collider);
+    chunk.colliders.length = 0;
+    chunk.solid = false;
   }
 
   private removeProps(chunk: Chunk): void {
@@ -386,8 +436,8 @@ export class WorldStreamer implements Ground {
       mesh.dispose();
     }
     chunk.props.length = 0;
-    for (const collider of chunk.colliders) this.options.hash.remove(collider);
-    chunk.colliders.length = 0;
+    chunk.propData = null;
+    this.removeColliders(chunk);
   }
 
   private unload(chunk: Chunk): void {
