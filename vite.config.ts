@@ -33,8 +33,20 @@ export default defineConfig({
   build: {
     target: 'es2022',
     sourcemap: true,
-    // Three.js alone is ~530 kB minified; code splitting comes when the game grows.
+    // Each output file must stay below this size (scripts/check-bundle.mjs fails CI above it).
     chunkSizeWarningLimit: 800,
+    rolldownOptions: {
+      output: {
+        // Libraries go into their own files: they change rarely, so browsers keep them cached
+        // across deploys, and no single file grows towards the size limit.
+        codeSplitting: {
+          groups: [
+            { name: 'three', test: /node_modules[\\/]three[\\/]/ },
+            { name: 'vendor', test: /node_modules[\\/]/ },
+          ],
+        },
+      },
+    },
   },
   plugins: [copyPerfTest()],
   test: {

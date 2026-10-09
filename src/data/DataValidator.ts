@@ -1,4 +1,4 @@
-import type { z } from 'zod';
+import type { z } from 'zod/mini';
 import { boxContains, emptyBox, pointInShape, shapeBounds } from '../world/Shapes';
 import { DEFAULT_CAMERA_SENSITIVITY } from '../save/SaveData';
 import { dataFileNames, dataSchemas, type DataFileName } from './schemas';
@@ -41,7 +41,7 @@ export function validateGameData(
   const parsed: Partial<Record<DataFileName, unknown>> = {};
 
   for (const name of dataFileNames) {
-    const schema: z.ZodType = dataSchemas[name];
+    const schema: z.ZodMiniType = dataSchemas[name];
     const result = schema.safeParse(raw[name]);
     if (result.success) {
       parsed[name] = result.data;

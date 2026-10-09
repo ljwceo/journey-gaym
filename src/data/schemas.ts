@@ -1,95 +1,123 @@
-import { z } from 'zod';
+import { z } from 'zod/mini';
+import en from 'zod/v4/locales/en.js';
+
+// zod/mini ships without error texts ("Invalid input"); load the English ones for the error list.
+z.config(en());
 
 /**
  * Schemas for every JSON file in public/data. They check the structure of a file (required
  * fields, types, number ranges); cross-file references are checked in DataValidator.
  * Objects are strict: an unknown (e.g. misspelled) field is an error.
  * The TypeScript types below are inferred from these schemas, so the two never drift apart.
+ * Written with zod/mini (functional checks instead of method chains): same checks, ~4× smaller.
  */
 
-const id = z.string().regex(/^[a-z0-9_]+$/, 'ids use lowercase letters, digits and _');
+const id = z.string().check(z.regex(/^[a-z0-9_]+$/, 'ids use lowercase letters, digits and _'));
 /** A translation key, e.g. "npc.marco.1". Existence is checked against en.json. */
-const textKey = z.string().regex(/^[a-zA-Z0-9_.]+$/, 'not a valid text key');
+const textKey = z.string().check(z.regex(/^[a-zA-Z0-9_.]+$/, 'not a valid text key'));
 /** A color token name from docs/art-style/tokens.json. Existence is checked by the validator. */
-const colorToken = z.string().min(1);
-const hexColor = z.string().regex(/^#[0-9a-fA-F]{6}$/, 'expected #RRGGBB');
-const nonNegative = z.number().finite().nonnegative();
-const positive = z.number().finite().positive();
-const fraction = z.number().min(0).max(1);
-const level = z.number().int().min(1).max(100);
+const colorToken = z.string().check(z.minLength(1));
+const hexColor = z.string().check(z.regex(/^#[0-9a-fA-F]{6}$/, 'expected #RRGGBB'));
+const name = z.string().check(z.minLength(1));
+// zod 4 numbers are always finite (no Infinity / NaN).
+const nonNegative = z.number().check(z.nonnegative());
+const positive = z.number().check(z.positive());
+const posInt = z.int().check(z.positive());
+const nonNegInt = z.int().check(z.nonnegative());
+const fraction = range(0, 1);
+const level = z.int().check(z.minimum(1), z.maximum(100));
 const levelRange = z.tuple([level, level]);
-const coord = z.number().finite().min(-100_000).max(100_000);
+const coord = range(-100_000, 100_000);
+const optional = z.optional;
+
+/** A number from min to max (inclusive). */
+function range(min: number, max: number) {
+  return z.number().check(z.minimum(min), z.maximum(max));
+}
+/** An integer from min to max (inclusive). */
+function intRange(min: number, max: number) {
+  return z.int().check(z.minimum(min), z.maximum(max));
+}
+/** `schema` with an extra upper limit, e.g. `max(positive, 20)`. */
+function max(schema: typeof positive, limit: number) {
+  return schema.check(z.maximum(limit));
+}
+/** `array` with at least `n` entries. */
+function atLeast<T extends z.ZodMiniArray>(array: T, n = 1): T {
+  return array.check(z.minLength(n));
+}
 
 export const pointSchema = z.strictObject({ x: coord, z: coord });
 
 export const shapeSchema = z.discriminatedUnion('type', [
   z.strictObject({ type: z.literal('circle'), x: coord, z: coord, radius: positive }),
   z.strictObject({ type: z.literal('rect'), minX: coord, minZ: coord, maxX: coord, maxZ: coord }),
-  z.strictObject({ type: z.literal('polygon'), points: z.array(z.tuple([coord, coord])).min(3) }),
+  z.strictObject({
+    type: z.literal('polygon'),
+    points: atLeast(z.array(z.tuple([coord, coord])), 3),
+  }),
 ]);
 
-const itemStack = z.strictObject({ item: id, count: z.number().int().positive() });
+const itemStack = z.strictObject({ item: id, count: posInt });
 
 // ---------------------------------------------------------------- zones.json
 
 const zoneSchema = z.strictObject({
   id,
-  name: z.string().min(1),
+  name,
   levelRange,
   /** Higher priority wins where zones overlap (e.g. the Citadel inside Morvath). */
-  priority: z.number().int().optional(),
+  priority: optional(z.int()),
   /** Zone is only reachable in this season. */
-  season: id.optional(),
+  season: optional(id),
   bounds: shapeSchema,
   terrainColor: colorToken,
   fogColor: colorToken,
   terrain: z.strictObject({
-    baseHeight: z.number().min(-100).max(500),
-    amplitude: nonNegative.max(500),
+    baseHeight: range(-100, 500),
+    amplitude: max(nonNegative, 500),
   }),
   neighbors: z.array(id),
-  spawnPoints: z.array(z.strictObject({ id, x: coord, z: coord })).min(1),
-  checkpoint: z.strictObject({ id, kind: id, x: coord, z: coord }).optional(),
+  spawnPoints: atLeast(z.array(z.strictObject({ id, x: coord, z: coord }))),
+  checkpoint: optional(z.strictObject({ id, kind: id, x: coord, z: coord })),
   npcs: z.array(id),
   areas: z.array(z.strictObject({ id, shape: shapeSchema })),
-  instances: z.array(
-    z.strictObject({ id, name: z.string().min(1), entrance: pointSchema, enabled: z.boolean() }),
-  ),
+  instances: z.array(z.strictObject({ id, name, entrance: pointSchema, enabled: z.boolean() })),
 });
 
 export const zonesFileSchema = z.strictObject({
   world: z.strictObject({
-    seed: z.number().int().nonnegative(),
+    seed: nonNegInt,
     bounds: shapeSchema,
-    chunkSize: z.number().int().min(16).max(512),
-    originShiftDistance: z.number().min(100).max(100_000),
+    chunkSize: intRange(16, 512),
+    originShiftDistance: range(100, 100_000),
     outsideZoneColor: colorToken,
     outsideZoneFog: colorToken,
   }),
   startZone: id,
-  zones: z.array(zoneSchema).min(1),
+  zones: atLeast(z.array(zoneSchema)),
 });
 
 // ---------------------------------------------------------------- npcs.json
 
 const npcSchema = z.strictObject({
   id,
-  name: z.string().min(1),
+  name,
   role: id,
   zone: id,
   position: pointSchema,
   interaction: z.enum(['talk', 'pet', 'none']),
   behavior: z.enum(['static', 'follow', 'wander']),
   dialogue: z.array(textKey),
-  follow: z.strictObject({ distance: positive, speed: positive.max(20) }).optional(),
-  wander: z.strictObject({ radius: positive, speed: positive.max(20) }).optional(),
-  petText: textKey.optional(),
+  follow: optional(z.strictObject({ distance: positive, speed: max(positive, 20) })),
+  wander: optional(z.strictObject({ radius: positive, speed: max(positive, 20) })),
+  petText: optional(textKey),
   /** Stats come from this monster entry (e.g. Treewardens). */
-  monster: id.optional(),
+  monster: optional(id),
   /** Area ids (zones.json) where this NPC can never be attacked. */
-  safeAreas: z.array(id).optional(),
+  safeAreas: optional(z.array(id)),
   /** Only present in this season. */
-  season: id.optional(),
+  season: optional(id),
 });
 
 export const npcsFileSchema = z.strictObject({
@@ -103,56 +131,56 @@ export const playerFileSchema = z.strictObject({
   base: z.strictObject({ hp: positive, mana: nonNegative, energy: positive }),
   perLevel: z.strictObject({ hp: nonNegative, mana: nonNegative }),
   maxLevel: level,
-  xpToNextLevel: z.array(z.number().int().positive()).min(1),
+  xpToNextLevel: atLeast(z.array(posInt)),
   regen: z.strictObject({
     hpPerSecondOutOfCombat: nonNegative,
     energyPerSecond: positive,
-    energyDelaySeconds: nonNegative.max(10),
+    energyDelaySeconds: max(nonNegative, 10),
   }),
   movement: z.strictObject({
-    walkSpeed: positive.max(20),
-    slopeLimitDegrees: z.number().min(0).max(89),
-    radius: positive.max(5),
+    walkSpeed: max(positive, 20),
+    slopeLimitDegrees: range(0, 89),
+    radius: max(positive, 5),
     /** How fast the character turns towards where it walks. */
-    turnSpeedDegrees: positive.max(10_000),
+    turnSpeedDegrees: max(positive, 10_000),
   }),
   dash: z.strictObject({
     energyCost: nonNegative,
-    cooldownSeconds: nonNegative.max(30),
-    distance: positive.max(30),
-    durationSeconds: positive.max(2),
+    cooldownSeconds: max(nonNegative, 30),
+    distance: max(positive, 30),
+    durationSeconds: max(positive, 2),
   }),
   /**
    * Third-person camera over the shoulder (like Genshin Impact). Sharpness values are per
    * second (higher = snappier). Pitch is the angle below the horizon; negative looks up.
    */
   camera: z.strictObject({
-    fovDegrees: z.number().min(20).max(100),
+    fovDegrees: range(20, 100),
     /** Point on the character the camera orbits and looks at, in meters above the feet. */
-    targetHeight: nonNegative.max(5),
-    pitchDegrees: z.number().min(-89).max(89),
-    minPitchDegrees: z.number().min(-89).max(89),
-    maxPitchDegrees: z.number().min(-89).max(89),
-    distance: positive.max(100),
-    minDistance: positive.max(100),
-    maxDistance: positive.max(100),
+    targetHeight: max(nonNegative, 5),
+    pitchDegrees: range(-89, 89),
+    minPitchDegrees: range(-89, 89),
+    maxPitchDegrees: range(-89, 89),
+    distance: max(positive, 100),
+    minDistance: max(positive, 100),
+    maxDistance: max(positive, 100),
     /** Looking up, the camera moves closer instead of going below this height. */
-    minHeightAboveGround: nonNegative.max(10),
-    followSharpness: positive.max(1000),
-    zoomSharpness: positive.max(100),
+    minHeightAboveGround: max(nonNegative, 10),
+    followSharpness: max(positive, 1000),
+    zoomSharpness: max(positive, 100),
     /** Walking sideways turns the camera this fast towards the walking direction. */
-    strafeFollowDegreesPerSecond: nonNegative.max(720),
+    strafeFollowDegreesPerSecond: max(nonNegative, 720),
     /** Turning per moved/dragged pixel at 100% sensitivity. */
-    rotateRadiansPerPixelMouse: positive.max(1),
-    rotateRadiansPerPixelTouch: positive.max(1),
+    rotateRadiansPerPixelMouse: max(positive, 1),
+    rotateRadiansPerPixelTouch: max(positive, 1),
     /** Zoom change per mouse wheel notch, as a fraction of the distance. */
-    zoomStepPerWheelNotch: positive.max(1),
+    zoomStepPerWheelNotch: max(positive, 1),
     /** Range of the camera sensitivity setting (fractions; 1 = 100%). */
-    sensitivity: z.strictObject({ min: positive.max(2), max: positive.max(2) }),
+    sensitivity: z.strictObject({ min: max(positive, 2), max: max(positive, 2) }),
   }),
   controls: z.strictObject({
     /** How far (CSS px) the joystick knob can move from where the thumb went down. */
-    joystickRadiusPx: positive.max(300),
+    joystickRadiusPx: max(positive, 300),
     /** Joystick input below this fraction counts as standing still. */
     joystickDeadZone: fraction,
   }),
@@ -161,23 +189,23 @@ export const playerFileSchema = z.strictObject({
       damage: positive,
       energyCost: nonNegative,
       damagePerLevel: nonNegative,
-      maxPerSecond: positive.max(10),
+      maxPerSecond: max(positive, 10),
     }),
     heavyHit: z.strictObject({
       damage: positive,
       energyCost: nonNegative,
       damagePerLevel: nonNegative,
-      windupSeconds: nonNegative.max(5),
+      windupSeconds: max(nonNegative, 5),
     }),
-    comboEveryNthHit: z.number().int().min(2),
-    comboBonus: nonNegative.max(5),
+    comboEveryNthHit: z.int().check(z.minimum(2)),
+    comboBonus: max(nonNegative, 5),
   }),
   death: z.strictObject({ goldLossFraction: fraction }),
   lowHpThreshold: fraction,
   start: z.strictObject({
     zone: id,
     spawnPoint: id,
-    gold: z.number().int().nonnegative(),
+    gold: nonNegInt,
     items: z.array(itemStack),
     equipment: z.record(id, id),
   }),
@@ -187,47 +215,45 @@ export const playerFileSchema = z.strictObject({
 
 const attackSchema = z.strictObject({
   id,
-  name: z.string().min(1),
+  name,
   damage: nonNegative,
-  hits: z.number().int().positive(),
-  minHits: z.number().int().positive().optional(),
-  warningSeconds: nonNegative.max(5),
-  recoverySeconds: nonNegative.max(10).optional(),
-  onlyWhenEnraged: z.boolean().optional(),
+  hits: posInt,
+  minHits: optional(posInt),
+  warningSeconds: max(nonNegative, 5),
+  recoverySeconds: optional(max(nonNegative, 10)),
+  onlyWhenEnraged: optional(z.boolean()),
 });
 
 const monsterSchema = z.strictObject({
   id,
-  name: z.string().min(1),
+  name,
   levelRange,
-  hp: positive.max(1_000_000),
+  hp: max(positive, 1_000_000),
   damage: z.strictObject({ min: nonNegative, max: nonNegative }),
-  speed: z.string().min(1),
-  xp: z.number().int().nonnegative(),
+  speed: name,
+  xp: nonNegInt,
   behavior: z.enum(['melee', 'ranged']),
-  range: positive.optional(),
-  rank: z.enum(['miniboss', 'boss']).optional(),
-  neutral: z.boolean().optional(),
-  groupSize: z
-    .strictObject({ min: z.number().int().positive(), max: z.number().int().positive() })
-    .optional(),
-  splitsInto: z.strictObject({ monster: id, count: z.number().int().positive() }).optional(),
-  transformsFrom: id.optional(),
-  enrage: z.strictObject({ belowHpFraction: fraction, speedFactor: positive }).optional(),
-  attacks: z.array(attackSchema).optional(),
+  range: optional(positive),
+  rank: optional(z.enum(['miniboss', 'boss'])),
+  neutral: optional(z.boolean()),
+  groupSize: optional(z.strictObject({ min: posInt, max: posInt })),
+  splitsInto: optional(z.strictObject({ monster: id, count: posInt })),
+  transformsFrom: optional(id),
+  enrage: optional(z.strictObject({ belowHpFraction: fraction, speedFactor: positive })),
+  attacks: optional(z.array(attackSchema)),
   drops: z.array(
     z.strictObject({
       item: id,
       chance: fraction,
-      min: z.number().int().nonnegative(),
-      max: z.number().int().nonnegative(),
+      min: nonNegInt,
+      max: nonNegInt,
     }),
   ),
 });
 
 export const monstersFileSchema = z.strictObject({
   /** Meters per second for each speed class used in the concept ("slow", "fast", ...). */
-  speedClasses: z.record(z.string(), positive.max(30)),
+  speedClasses: z.record(z.string(), max(positive, 30)),
   monsters: z.array(monsterSchema),
 });
 
@@ -235,26 +261,26 @@ export const monstersFileSchema = z.strictObject({
 
 const itemSchema = z.strictObject({
   id,
-  name: z.string().min(1),
+  name,
   type: z.enum(['currency', 'weapon', 'armor', 'crystal', 'potion', 'recipe', 'resource', 'quest']),
-  slot: z.enum(['hat', 'mantle', 'amulet', 'ring']).optional(),
+  slot: optional(z.enum(['hat', 'mantle', 'amulet', 'ring'])),
   rarity: id,
   tradeable: z.boolean(),
-  weight: nonNegative.max(100).optional(),
-  description: textKey.optional(),
-  usesCharacterColor: z.boolean().optional(),
-  season: id.optional(),
-  dryTo: id.optional(),
-  dryHours: positive.optional(),
-  weapon: z
-    .object({
+  weight: optional(max(nonNegative, 100)),
+  description: optional(textKey),
+  usesCharacterColor: optional(z.boolean()),
+  season: optional(id),
+  dryTo: optional(id),
+  dryHours: optional(positive),
+  weapon: optional(
+    z.object({
       kind: z.enum(['sword', 'staff']),
       damageBonus: nonNegative,
-      spellSlots: z.number().int().min(0).max(3).optional(),
-      maxCrystalSize: id.optional(),
-    })
-    .optional(),
-  crystal: z.strictObject({ elements: z.array(id).min(1), size: id }).optional(),
+      spellSlots: optional(intRange(0, 3)),
+      maxCrystalSize: optional(id),
+    }),
+  ),
+  crystal: optional(z.strictObject({ elements: atLeast(z.array(id)), size: id })),
 });
 
 export const itemsFileSchema = z.strictObject({
@@ -262,11 +288,11 @@ export const itemsFileSchema = z.strictObject({
     z.strictObject({
       id,
       color: colorToken,
-      glowColor: colorToken.optional(),
+      glowColor: optional(colorToken),
       glowPx: nonNegative,
     }),
   ),
-  crystalSizes: z.array(id).min(1),
+  crystalSizes: atLeast(z.array(id)),
   items: z.array(itemSchema),
 });
 
@@ -275,12 +301,12 @@ export const itemsFileSchema = z.strictObject({
 const labelled = z.strictObject({ id, label: textKey });
 
 export const appearanceFileSchema = z.strictObject({
-  name: z.strictObject({ maxLength: z.number().int().min(1).max(64), pattern: z.string().min(1) }),
-  bodyTypes: z.array(labelled.extend({ model: z.string().min(1) })).min(1),
-  hairstyles: z.array(labelled.extend({ bodyType: id, model: z.string().min(1) })).min(1),
-  hairColors: z.array(labelled.extend({ hex: hexColor })).min(1),
-  skinTones: z.array(labelled.extend({ hex: hexColor })).min(1),
-  mantleColors: z.array(labelled.extend({ color: colorToken, embroidery: colorToken })).min(1),
+  name: z.strictObject({ maxLength: intRange(1, 64), pattern: name }),
+  bodyTypes: atLeast(z.array(z.extend(labelled, { model: name }))),
+  hairstyles: atLeast(z.array(z.extend(labelled, { bodyType: id, model: name }))),
+  hairColors: atLeast(z.array(z.extend(labelled, { hex: hexColor }))),
+  skinTones: atLeast(z.array(z.extend(labelled, { hex: hexColor }))),
+  mantleColors: atLeast(z.array(z.extend(labelled, { color: colorToken, embroidery: colorToken }))),
   defaults: z.strictObject({
     bodyType: id,
     hairstyle: id,
@@ -299,46 +325,46 @@ export const qualityFileSchema = z.strictObject({
   presets: z.array(
     z.strictObject({
       id: qualityLevelSchema,
-      pixelRatio: z.strictObject({ min: positive.max(4), max: positive.max(4) }),
+      pixelRatio: z.strictObject({ min: max(positive, 4), max: max(positive, 4) }),
       shadows: z.enum(['off', 'simple', 'soft']),
-      shadowMapSize: z.number().int().min(0).max(8192),
+      shadowMapSize: intRange(0, 8192),
       antialias: z.enum(['off', 'fxaa', 'msaa']),
       chunkRings: z.strictObject({
-        active: z.number().int().min(1).max(8),
-        preload: z.number().int().min(1).max(12),
-        unload: z.number().int().min(1).max(16),
+        active: intRange(1, 8),
+        preload: intRange(1, 12),
+        unload: intRange(1, 16),
       }),
-      fogFar: positive.max(5000),
+      fogFar: max(positive, 5000),
       density: z.strictObject({ grass: fraction, props: fraction, effects: fraction }),
-      lodBias: positive.max(4),
+      lodBias: max(positive, 4),
       fpsTarget: z.union([z.literal(60), z.literal(120)]),
     }),
   ),
   default: qualityLevelSchema,
   benchmark: z.strictObject({
-    durationSeconds: positive.max(30),
-    warmupSeconds: nonNegative.max(10),
+    durationSeconds: max(positive, 30),
+    warmupSeconds: max(nonNegative, 10),
     highMaxFrameMs: positive,
     midMaxFrameMs: positive,
   }),
   autoDowngrade: z.strictObject({
-    belowFps: positive.max(240),
-    windowSeconds: positive.max(60),
-    graceSecondsAfterChange: nonNegative.max(60),
+    belowFps: max(positive, 240),
+    windowSeconds: max(positive, 60),
+    graceSecondsAfterChange: max(nonNegative, 60),
   }),
 });
 
 // ---------------------------------------------------------------- seasons.json
 
 export const seasonsFileSchema = z.strictObject({
-  order: z.array(id).min(1),
+  order: atLeast(z.array(id)),
   firstWeekSeason: id,
   alwaysAvailable: z.array(id),
   seasons: z.array(
     z.strictObject({
       id,
       label: textKey,
-      bonus: z.strictObject({ element: id, percent: z.number().min(0).max(1000) }),
+      bonus: z.strictObject({ element: id, percent: range(0, 1000) }),
       resources: z.array(id),
       extra: textKey,
     }),
@@ -356,8 +382,8 @@ export type Condition =
   | { type: 'all'; of: Condition[]; note?: string | undefined }
   | { type: 'any'; of: Condition[]; note?: string | undefined };
 
-const note = z.string().optional();
-export const conditionSchema: z.ZodType<Condition> = z.lazy(() =>
+const note = optional(z.string());
+export const conditionSchema: z.ZodMiniType<Condition> = z.lazy(() =>
   z.discriminatedUnion('type', [
     z.strictObject({ type: z.literal('always'), note }),
     z.strictObject({ type: z.literal('never'), note }),
@@ -369,16 +395,16 @@ export const conditionSchema: z.ZodType<Condition> = z.lazy(() =>
 );
 
 export const triggersFileSchema = z.strictObject({
-  conditions: z.record(z.string().min(1), conditionSchema),
+  conditions: z.record(name, conditionSchema),
   triggers: z.array(
     z.strictObject({
       id,
       zone: id,
       kind: z.enum(['place', 'gate']),
       shape: shapeSchema,
-      firstVisitText: textKey.optional(),
-      condition: z.string().min(1).optional(),
-      blockedText: textKey.optional(),
+      firstVisitText: optional(textKey),
+      condition: optional(name),
+      blockedText: optional(textKey),
     }),
   ),
 });
@@ -387,12 +413,12 @@ export const triggersFileSchema = z.strictObject({
 
 const objectiveSchema = z.discriminatedUnion('type', [
   z.strictObject({ type: z.literal('talk'), npc: id }),
-  z.strictObject({ type: z.literal('find'), item: id, count: z.number().int().positive() }),
-  z.strictObject({ type: z.literal('kill'), monster: id, count: z.number().int().positive() }),
+  z.strictObject({ type: z.literal('find'), item: id, count: posInt }),
+  z.strictObject({ type: z.literal('kill'), monster: id, count: posInt }),
   z.strictObject({
     type: z.literal('deliver'),
     item: id,
-    count: z.number().int().positive(),
+    count: posInt,
     npc: id,
   }),
   z.strictObject({ type: z.literal('boss'), monster: id }),
@@ -402,19 +428,19 @@ export const questsFileSchema = z.strictObject({
   quests: z.array(
     z.strictObject({
       id,
-      name: z.string().min(1),
+      name,
       kind: z.enum(['main', 'side']),
-      giver: id.optional(),
+      giver: optional(id),
       description: textKey,
-      objectives: z.array(objectiveSchema).min(1),
+      objectives: atLeast(z.array(objectiveSchema)),
       requires: z.strictObject({
-        level: level.optional(),
-        quests: z.array(id).optional(),
-        items: z.array(itemStack).optional(),
+        level: optional(level),
+        quests: optional(z.array(id)),
+        items: optional(z.array(itemStack)),
       }),
       rewards: z.strictObject({
-        xp: z.number().int().nonnegative(),
-        gold: z.number().int().nonnegative(),
+        xp: nonNegInt,
+        gold: nonNegInt,
         items: z.array(itemStack),
       }),
     }),
@@ -423,24 +449,24 @@ export const questsFileSchema = z.strictObject({
 
 // ---------------------------------------------------------------- spells.json
 
-const powerCurve = z
-  .array(z.strictObject({ fromLevel: level, toLevel: level, factor: positive.max(10) }))
-  .min(1);
+const powerCurve = atLeast(
+  z.array(z.strictObject({ fromLevel: level, toLevel: level, factor: max(positive, 10) })),
+);
 
 export const spellsFileSchema = z.strictObject({
-  elements: z.array(z.strictObject({ id, name: z.string().min(1), color: colorToken })).min(1),
+  elements: atLeast(z.array(z.strictObject({ id, name, color: colorToken }))),
   powerCurves: z.record(z.string(), powerCurve),
-  maxSpellSlots: z.number().int().min(1).max(10),
+  maxSpellSlots: intRange(1, 10),
   spells: z.array(
     z.strictObject({
       id,
-      name: z.string().min(1),
+      name,
       element: id,
       manaCost: nonNegative,
-      cooldownSeconds: nonNegative.max(120),
+      cooldownSeconds: max(nonNegative, 120),
       damage: nonNegative,
-      range: positive.max(100),
-      usesPerLevel: z.number().int().positive(),
+      range: max(positive, 100),
+      usesPerLevel: posInt,
       perLevel: z.record(z.string(), z.number()),
     }),
   ),
@@ -451,49 +477,49 @@ export const spellsFileSchema = z.strictObject({
 export const skillsFileSchema = z.strictObject({
   rules: z.strictObject({
     pointsPerLevel: z.strictObject({
-      mage: z.number().int().min(0),
-      sword: z.number().int().min(0),
+      mage: z.int().check(z.minimum(0)),
+      sword: z.int().check(z.minimum(0)),
     }),
     firstPointLevel: level,
-    tierUnlockPoints: z.record(z.string(), z.number().int().nonnegative()),
+    tierUnlockPoints: z.record(z.string(), nonNegInt),
     classChoiceLevel: level,
   }),
   core: z.strictObject({
-    opposites: z.array(z.strictObject({ a: id, b: id, maxCombined: z.number().int().positive() })),
+    opposites: z.array(z.strictObject({ a: id, b: id, maxCombined: posInt })),
     stats: z.array(
       z.strictObject({
         id,
-        name: z.string().min(1),
-        maxPoints: z.number().int().positive(),
-        stat: z.string().min(1),
-        perPoint: z.number().positive(),
-        mageOnly: z.boolean().optional(),
+        name,
+        maxPoints: posInt,
+        stat: name,
+        perPoint: positive,
+        mageOnly: optional(z.boolean()),
       }),
     ),
   }),
   branches: z.array(
     z.strictObject({
       id,
-      name: z.string().min(1),
+      name,
       requires: z.enum(['sword', 'element', 'class', 'none']),
-      element: id.optional(),
+      element: optional(id),
     }),
   ),
   skills: z.array(
     z.strictObject({
       id,
-      name: z.string().min(1),
+      name,
       branch: id,
-      tier: z.number().int().min(1).max(3),
-      maxPoints: z.number().int().positive(),
+      tier: intRange(1, 3),
+      maxPoints: posInt,
     }),
   ),
   perks: z.array(
     z.strictObject({
       id,
-      name: z.string().min(1),
-      path: z.enum(['sword', 'light', 'dark']).optional(),
-      stat: z.string().min(1),
+      name,
+      path: optional(z.enum(['sword', 'light', 'dark'])),
+      stat: name,
       value: z.number(),
     }),
   ),
@@ -503,21 +529,21 @@ export const skillsFileSchema = z.strictObject({
 
 export const combosFileSchema = z.strictObject({
   rules: z.strictObject({
-    windowSeconds: positive.max(10),
-    targetCooldownSeconds: nonNegative.max(60),
+    windowSeconds: max(positive, 10),
+    targetCooldownSeconds: max(nonNegative, 60),
     bossCrowdControlFactor: fraction,
   }),
   combos: z.array(
     z.strictObject({
       id,
-      name: z.string().min(1),
+      name,
       elements: z.tuple([id, id]),
       role: z.enum(['damage', 'control', 'support']),
-      effect: z.string().min(1),
-      value: z.number().nonnegative(),
-      durationSeconds: nonNegative.max(60),
-      radius: nonNegative.max(50),
-      crowdControl: z.boolean().optional(),
+      effect: name,
+      value: nonNegative,
+      durationSeconds: max(nonNegative, 60),
+      radius: max(nonNegative, 50),
+      crowdControl: optional(z.boolean()),
     }),
   ),
 });
@@ -529,19 +555,17 @@ export const cutscenesFileSchema = z.strictObject({
     z.strictObject({
       id,
       skippable: z.boolean(),
-      playOnce: z.boolean().optional(),
-      panels: z
-        .array(
+      playOnce: optional(z.boolean()),
+      panels: atLeast(
+        z.array(
           z.strictObject({
             id,
-            narration: textKey.optional(),
-            lines: z
-              .array(z.strictObject({ speaker: z.string().min(1), text: textKey }))
-              .optional(),
-            shake: z.boolean().optional(),
+            narration: optional(textKey),
+            lines: optional(z.array(z.strictObject({ speaker: name, text: textKey }))),
+            shake: optional(z.boolean()),
           }),
-        )
-        .min(1),
+        ),
+      ),
     }),
   ),
 });

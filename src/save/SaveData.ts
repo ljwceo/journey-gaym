@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from 'zod/mini';
 import { qualityLevelSchema } from '../data/schemas';
 import { LANGUAGES, type Language } from '../i18n/I18n';
 
@@ -8,8 +8,9 @@ export const SAVE_VERSION = 2;
 /** Camera sensitivity for new saves (1 = 100%); the allowed range is in player.json. */
 export const DEFAULT_CAMERA_SENSITIVITY = 0.7;
 
-const id = z.string().min(1);
-const finite = z.number().finite();
+const id = z.string().check(z.minLength(1));
+// zod 4 numbers are always finite (no Infinity / NaN).
+const finite = z.number();
 
 export const saveDataSchema = z.object({
   version: z.literal(SAVE_VERSION),
@@ -20,17 +21,17 @@ export const saveDataSchema = z.object({
     /** What the player picked: 'auto' lets the game choose (and lower) the preset. */
     quality: z.enum(['auto', 'low', 'mid', 'high']),
     /** Preset the benchmark / auto-downgrade chose; null until the first benchmark ran. */
-    autoQuality: qualityLevelSchema.nullable(),
+    autoQuality: z.nullable(qualityLevelSchema),
     fpsCap: z.enum(['auto', '60', '120']),
-    volume: z.number().min(0).max(1),
+    volume: z.number().check(z.minimum(0), z.maximum(1)),
     /** How fast dragging turns the camera, as a fraction (0.3 = 30%). */
-    cameraSensitivity: z.number().min(0.05).max(2),
+    cameraSensitivity: z.number().check(z.minimum(0.05), z.maximum(2)),
     debug: z.boolean(),
   }),
   /** Null until the character creator is finished (New Game). */
-  character: z
-    .object({
-      name: z.string().min(1),
+  character: z.nullable(
+    z.object({
+      name: z.string().check(z.minLength(1)),
       appearance: z.object({
         bodyType: id,
         hairstyle: id,
@@ -38,22 +39,22 @@ export const saveDataSchema = z.object({
         skinTone: id,
         mantleColor: id,
       }),
-      gold: z.number().int().nonnegative(),
-      inventory: z.array(z.object({ item: id, count: z.number().int().positive() })),
+      gold: z.int().check(z.nonnegative()),
+      inventory: z.array(z.object({ item: id, count: z.int().check(z.positive()) })),
       equipment: z.record(z.string(), id),
-    })
-    .nullable(),
+    }),
+  ),
   /** Chosen in the main quest "Your Resolve" (phase 3); null until then. */
-  path: z.enum(['sword', 'light', 'dark']).nullable(),
+  path: z.nullable(z.enum(['sword', 'light', 'dark'])),
   world: z.object({
-    zone: id.nullable(),
-    position: z.object({ x: finite, y: finite, z: finite }).nullable(),
+    zone: z.nullable(id),
+    position: z.nullable(z.object({ x: finite, y: finite, z: finite })),
     heading: finite,
-    checkpoint: id.nullable(),
+    checkpoint: z.nullable(id),
   }),
   visitedPlaces: z.array(id),
   metNpcs: z.array(id),
-  playTimeSeconds: z.number().nonnegative(),
+  playTimeSeconds: z.number().check(z.nonnegative()),
 });
 
 export type SaveData = z.infer<typeof saveDataSchema>;

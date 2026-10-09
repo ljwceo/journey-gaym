@@ -1,6 +1,7 @@
 import { createEventBus } from './core/events';
 import type { GameContext } from './core/GameContext';
 import { GameLoop } from './core/GameLoop';
+import { LazyState } from './core/LazyState';
 import { StateMachine } from './core/StateMachine';
 import { I18n } from './i18n/I18n';
 import { DebugOverlay } from './render/DebugOverlay';
@@ -8,12 +9,10 @@ import { Renderer } from './render/Renderer';
 import { AutoSave } from './save/AutoSave';
 import { browserStorage, SaveManager } from './save/SaveManager';
 import { BootState } from './scenes/BootState';
-import { CharacterCreateState } from './scenes/CharacterCreateState';
 import { frameCapFor, type StateId } from './scenes/flow';
 import { IntroState } from './scenes/IntroState';
 import { LanguageSelectState } from './scenes/LanguageSelectState';
 import { TitleState } from './scenes/TitleState';
-import { WorldState } from './scenes/WorldState';
 import { el } from './ui/dom';
 import { Overlays } from './ui/Overlays';
 import './style.css';
@@ -80,13 +79,30 @@ const ctx: GameContext = {
   },
 };
 
+// The creator and the world are separate downloads (smaller first load); they are preloaded
+// from the title screen, so entering them normally needs no waiting.
+const createState = new LazyState(
+  () => import('./scenes/CharacterCreateState').then((m) => new m.CharacterCreateState(ctx)),
+  ctx.reportProblem,
+);
+const worldState = new LazyState(
+  () => import('./scenes/WorldState').then((m) => new m.WorldState(ctx)),
+  ctx.reportProblem,
+);
+events.on('stateChanged', ({ to }) => {
+  if (to === 'title') {
+    void worldState.preload();
+    void createState.preload();
+  }
+});
+
 states
   .register('boot', new BootState(ctx))
   .register('language', new LanguageSelectState(ctx))
   .register('title', new TitleState(ctx))
-  .register('create', new CharacterCreateState(ctx))
+  .register('create', createState)
   .register('intro', new IntroState(ctx))
-  .register('world', new WorldState(ctx));
+  .register('world', worldState);
 
 // `?fps=30` caps the frame rate, to check that the game runs equally fast at any fps.
 const fpsParam = Number(params.get('fps'));
