@@ -215,9 +215,40 @@ function sword(m: Materials): Object3D {
   const guard = mesh(new BoxGeometry(0.16, 0.03, 0.03), m.gear, 0, 0.02, 0);
   const hilt = mesh(new BoxGeometry(0.03, 0.12, 0.03), m.tunic, 0, 0.09, 0);
   const result = group(blade, guard, hilt);
-  result.position.set(-0.3, 0.72, 0.05);
-  result.rotation.set(0.2, 0, -0.25);
+  result.name = 'sword';
+  // Y before X: the blade first tilts (X), then sweeps around the body (Y) in a swing.
+  result.rotation.order = 'YXZ';
+  setSwordPose(result, 'rest', 0);
   return result;
+}
+
+/** How the sword is held: at the hip, slashing, winding up over the head, or chopping down. */
+export type SwordPose = 'rest' | 'fast' | 'windup' | 'heavy';
+
+/** Puts the sword in a pose; `t` (0–1) is how far along the swing is. */
+function setSwordPose(sword: Object3D, pose: SwordPose, t: number): void {
+  const e = t * t * (3 - 2 * t);
+  switch (pose) {
+    case 'rest':
+      sword.position.set(-0.3, 0.72, 0.05);
+      sword.rotation.set(0.2, 0, -0.25);
+      break;
+    case 'fast':
+      // Blade forward at chest height, sweeping from the right side to the left.
+      sword.position.set(0, 1.0, 0.28);
+      sword.rotation.set(-Math.PI / 2, -1.3 + 2.6 * e, 0);
+      break;
+    case 'windup':
+      // Raised further and further over the head, blade pointing back.
+      sword.position.set(-0.1, 0.9 + 0.55 * e, 0.1);
+      sword.rotation.set(0.2 + (Math.PI * 0.85 - 0.2) * e, 0, 0);
+      break;
+    case 'heavy':
+      // Chop from over the head down in front.
+      sword.position.set(0, 1.45 - 0.4 * e, 0.1 + 0.25 * e);
+      sword.rotation.set(Math.PI * 0.85 - Math.PI * 1.2 * e, 0, 0);
+      break;
+  }
 }
 
 // ---------------------------------------------------------------- model
@@ -230,6 +261,7 @@ export class CharacterModel {
   private readonly variants = new Map<string, Object3D>();
   private body: Object3D | null = null;
   private hair: Object3D | null = null;
+  private readonly sword: Object3D;
 
   constructor(private readonly data: AppearanceFile) {
     const material = (color: number) => new MeshLambertMaterial({ color });
@@ -245,7 +277,8 @@ export class CharacterModel {
     // Open shapes (mantle, long hair, bob) are seen from inside too.
     this.materials.mantle.side = DoubleSide;
     this.materials.hair.side = DoubleSide;
-    this.root.add(head(this.materials), mantle(this.materials), sword(this.materials));
+    this.sword = sword(this.materials);
+    this.root.add(head(this.materials), mantle(this.materials), this.sword);
     this.root.name = 'character';
   }
 
@@ -266,6 +299,11 @@ export class CharacterModel {
       m.mantle.color.setHex(resolveColorToken(mantleColor.color));
       m.embroidery.color.setHex(resolveColorToken(mantleColor.embroidery));
     }
+  }
+
+  /** Shows a sword swing (`t` 0–1 along the swing); 'rest' puts it back at the hip. */
+  setSwordPose(pose: SwordPose, t: number): void {
+    setSwordPose(this.sword, pose, t);
   }
 
   /** Frees every geometry and material (call when the model leaves the scene). */

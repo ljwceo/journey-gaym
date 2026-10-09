@@ -1,5 +1,6 @@
 import type { AppearanceFile } from '../data/types';
 import type { Appearance } from '../scenes/creator';
+import { CombatState } from '../systems/Combat';
 import { angleDelta, MoverState } from '../systems/Movement';
 import { CharacterModel } from './PlaceholderFactory';
 
@@ -10,6 +11,8 @@ import { CharacterModel } from './PlaceholderFactory';
  */
 export class Player {
   readonly state = new MoverState();
+  /** HP, mana and the sword (fixed step). */
+  readonly combat = new CombatState();
   readonly model: CharacterModel;
   private prevX = 0;
   private prevY = 0;

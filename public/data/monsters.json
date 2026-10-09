@@ -7,6 +7,20 @@
   },
   "monsters": [
     {
+      "id": "training_dummy",
+      "name": "Training Dummy",
+      "levelRange": [1, 1],
+      "hp": 120,
+      "damage": { "min": 0, "max": 0 },
+      "speed": "verySlow",
+      "xp": 0,
+      "behavior": "static",
+      "model": "placeholder:dummy",
+      "radius": 0.45,
+      "resetSeconds": 3,
+      "drops": []
+    },
+    {
       "id": "green_slime",
       "name": "Green Slime",
       "levelRange": [1, 2],

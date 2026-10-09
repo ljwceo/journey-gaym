@@ -281,7 +281,9 @@
   },
   "controls": {
     "dash": "Dash",
-    "clickToLook": "Click to look around · Esc for the menu"
+    "clickToLook": "Click to look around · Esc for the menu",
+    "attack": "Attack",
+    "heavy": "Heavy"
   },
   "cheats": {
     "title": "Cheats (debug)",

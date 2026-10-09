@@ -370,24 +370,6 @@
           "collider": "box"
         },
         {
-          "id": "training_dummy_1",
-          "model": "placeholder:dummy",
-          "x": -1680,
-          "z": 58,
-          "size": [1.4, 2, 0.5],
-          "color": "zandsteen",
-          "collider": "circle"
-        },
-        {
-          "id": "training_dummy_2",
-          "model": "placeholder:dummy",
-          "x": -1676,
-          "z": 71,
-          "size": [1.4, 2, 0.5],
-          "color": "zandsteen",
-          "collider": "circle"
-        },
-        {
           "id": "forge",
           "name": "Forge",
           "model": "placeholder:house",
@@ -783,6 +765,26 @@
           "perHectare": 2,
           "minScale": 0.6,
           "maxScale": 1.4
+        }
+      ],
+      "spawns": [
+        {
+          "id": "training_dummy_1",
+          "monster": "training_dummy",
+          "x": -1680,
+          "z": 58
+        },
+        {
+          "id": "training_dummy_2",
+          "monster": "training_dummy",
+          "x": -1676,
+          "z": 71
+        },
+        {
+          "id": "training_dummy_3",
+          "monster": "training_dummy",
+          "x": -1690,
+          "z": 64
         }
       ]
     },

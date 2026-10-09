@@ -139,3 +139,12 @@ Alleen data in `public/data/zones.json`:
 - **Wat een stand verandert** (alleen uiterlijk, nooit gameplay, §2.3): resolutie (`pixelRatio`), anti-aliasing (`off`, `fxaa` als nabewerking, `msaa` via een render target met 4 samples), schaduwen (`shadowDistance` m rond de speler, `shadowMapSize`, `shadowSoftness`), kijkafstand en mist (`fogFar`), chunk-ringen, versiering zonder botsing (`density.props`), fps-doel bij fps "Auto" (`fpsTarget`). Botsing, NPC-afstand en bomen/rotsen zijn op elke stand gelijk.
 - **Schaduwen:** één zon (`DirectionalLight`) die met de speler meeschuift (in hele schaduw-texels, tegen kruipende randen). Chunks en gebouwen ontvangen, bomen/rotsen/gebouwen/speler/NPC's werpen.
 - `density.grass`, `density.effects` en `lodBias` staan al in de data voor later (gras, effecten); ze doen nog niets.
+
+## Gevecht (fase 2)
+
+- **Zwaard en HP** (`src/systems/Combat.ts`): pure functies op de vaste tijdstap. `stepSword` krijgt wat je indrukte en geeft terug welke slag landt (fast/heavy) met hoeveel schade; `inSwingArc` zegt of een doel in de boog staat; `assistedHeading` doet de richthulp. Alle getallen in `player.json` (`sword`, `combat`, `regen`).
+- **Vijanden** (`src/entities/Enemy.ts`, `src/systems/Enemies.ts`): één lijst uit de `spawns` van de zones; alleen vijanden binnen `npcs.settings.showRadius` worden gesimuleerd en getekend, op elke grafische stand hetzelfde. `hit()` doet schade, `pushOut()` zorgt dat je er niet doorheen loopt.
+- **Tekenen** (`src/render/EnemyRenderer.ts`, modellen in `src/entities/EnemyFactory.ts`): één InstancedMesh per modeldeel, rood oplichten en wiebelen bij een treffer, liggen als ze verslagen zijn.
+- **Schadegetallen** (`src/ui/DamageNumbers.ts`): vaste pool DOM-elementen boven de 3D-wereld.
+- **Een nieuwe vijand toevoegen:** zet hem in `monsters.json` (met `model`) en een `spawn` in de zone; een nieuw placeholder-model komt in `EnemyFactory.ts`. De validator controleert de verwijzingen, een test controleert dat elk model bestaat.
+

@@ -66,7 +66,22 @@
       "windupSeconds": 0.9
     },
     "comboEveryNthHit": 3,
-    "comboBonus": 0.5
+    "comboBonus": 0.5,
+    "comboWindowSeconds": 1.0,
+    "range": 2.4,
+    "arcDegrees": 120,
+    "fastSwingSeconds": 0.22,
+    "heavyRecoverySeconds": 0.35,
+    "noEnergySlowdown": 2,
+    "inputBufferSeconds": 0.3,
+    "heavyMoveFactor": 0.35,
+    "aimAssist": {
+      "range": 4,
+      "arcDegrees": 90
+    }
+  },
+  "combat": {
+    "lingerSeconds": 4
   },
   "death": {
     "goldLossFraction": 0.1

@@ -1,9 +1,15 @@
-import type { Input } from '../core/Input';
+import type { Action, Input } from '../core/Input';
 import { el } from './dom';
+
+export interface TouchLabels {
+  attack: string;
+  heavy: string;
+  dash: string;
+}
 
 /**
  * On-screen controls for touch screens: the joystick (drawn where the thumb went down, lower
- * left) and the dash button (lower right). Both sit in fixed safe zones that the HUD must
+ * left) and the attack, heavy-hit and dash buttons (lower right). Both sit in fixed safe zones that the HUD must
  * never cover (see --joystick-zone-* and --button-zone-* in ui.css).
  * The touch input itself is handled by Input; this class only draws it.
  */
@@ -12,6 +18,8 @@ export class TouchControls {
   private readonly base: HTMLElement;
   private readonly knob: HTMLElement;
   private readonly dash: HTMLButtonElement;
+  private readonly attack: HTMLButtonElement;
+  private readonly heavy: HTMLButtonElement;
   private shownJoystick = false;
   private shownButtons = false;
   private knobX = Number.NaN;
@@ -19,7 +27,7 @@ export class TouchControls {
 
   constructor(
     private readonly input: Input,
-    dashLabel: string,
+    labels: TouchLabels,
     private readonly radiusPx: number,
   ) {
     this.knob = el('div', { className: 'ui-joystick-knob' });
@@ -29,25 +37,31 @@ export class TouchControls {
       this.knob,
     );
     this.base.style.width = this.base.style.height = `${radiusPx * 2}px`;
-    this.dash = el('button', {
-      className: 'ui-touch-button ui-dash-button',
-      text: dashLabel,
-      attrs: { type: 'button', 'aria-label': dashLabel },
-    });
-    // pointerdown instead of click: no delay, and it works while the other thumb is on the stick.
-    this.dash.addEventListener('pointerdown', this.onDashDown);
-    this.dash.addEventListener('pointerup', this.onDashUp);
-    this.dash.addEventListener('pointercancel', this.onDashUp);
-    this.dash.addEventListener('contextmenu', (event) => event.preventDefault());
-    this.root = el('div', { className: 'ui-touch-controls' }, this.base, this.dash);
+    this.attack = this.actionButton('ui-attack-button', 'attack');
+    this.heavy = this.actionButton('ui-heavy-button', 'heavy');
+    this.dash = this.actionButton('ui-dash-button', 'dash');
+    this.setLabels(labels);
+    this.root = el(
+      'div',
+      { className: 'ui-touch-controls' },
+      this.base,
+      this.attack,
+      this.heavy,
+      this.dash,
+    );
     // Phones and tablets show the buttons from the start; other devices after the first touch.
     this.shownButtons = window.matchMedia('(pointer: coarse)').matches;
     this.root.classList.toggle('ui-touch-visible', this.shownButtons);
   }
 
-  setDashLabel(label: string): void {
-    this.dash.textContent = label;
-    this.dash.setAttribute('aria-label', label);
+  setLabels(labels: TouchLabels): void {
+    const set = (button: HTMLButtonElement, label: string): void => {
+      button.textContent = label;
+      button.setAttribute('aria-label', label);
+    };
+    set(this.attack, labels.attack);
+    set(this.heavy, labels.heavy);
+    set(this.dash, labels.dash);
   }
 
   /** Call once per rendered frame; only touches the DOM when something changed. */
@@ -76,13 +90,24 @@ export class TouchControls {
     this.root.remove();
   }
 
-  private readonly onDashDown = (event: PointerEvent): void => {
-    event.preventDefault();
-    this.input.usedTouch = true;
-    this.input.press('dash');
-  };
-
-  private readonly onDashUp = (): void => {
-    this.input.release('dash');
-  };
+  /**
+   * A round button that holds an input action while pressed. pointerdown instead of click: no
+   * delay, and it works while the other thumb is on the stick.
+   */
+  private actionButton(className: string, action: Action): HTMLButtonElement {
+    const button = el('button', {
+      className: `ui-touch-button ${className}`,
+      attrs: { type: 'button' },
+    });
+    button.addEventListener('pointerdown', (event) => {
+      event.preventDefault();
+      this.input.usedTouch = true;
+      this.input.press(action);
+    });
+    const release = (): void => this.input.release(action);
+    button.addEventListener('pointerup', release);
+    button.addEventListener('pointercancel', release);
+    button.addEventListener('contextmenu', (event) => event.preventDefault());
+    return button;
+  }
 }

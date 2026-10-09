@@ -6,10 +6,10 @@
 
 | | |
 |---|---|
-| **Huidige fase** | Fase 2 – Solo-gevecht (plan, wacht op akkoord) |
-| **Status** | Fase 1 afgesloten op de pc (2026-10-09). iPhone-metingen overgeslagen op verzoek van Bo/Lucas |
-| **Volgende stap** | Plan fase 2 goedkeuren en het fase 2-blok in `CLAUDE.md` zetten |
-| **Laatste sessie** | 2026-10-09: stap 1.11 afronden |
+| **Huidige fase** | Fase 2 – Solo-gevecht en de eerste dag (plan goedgekeurd) |
+| **Status** | Stap 2.1 klaar (gevechtskern: zwaardaanvallen, energie, combo, trainingspoppen, schadegetallen, HUD in gevecht) |
+| **Volgende stap** | Stap 2.2: het speelbare intro-gevecht tegen Lucael en Baelor |
+| **Laatste sessie** | 2026-10-09: stap 2.1 gevechtskern |
 
 ---
 
@@ -46,7 +46,7 @@ Elke stap is één branch + pull request. Na elke stap start de game zonder fout
 
 ---
 
-## Fase 2 – Plan (voorstel, wacht op akkoord)
+## Fase 2 – Plan (goedgekeurd 2026-10-09)
 
 Doel: het spel begint met een speelbaar, episch (en komisch) gevecht tegen Lucael en Baelor dat je niet kunt winnen; daarna speel je je eerste dag in Greyhaven (kleine quest per basis-NPC, ±level 3), vecht je in de Greenwood tegen slimes en goblins, en versla je Sultan, de beginnersbaas die test of je de basis snapt. Elke stap is één branch + pull request; getest op de pc (de telefoon krijgt wel knoppen, maar wordt niet gemeten).
 
@@ -247,6 +247,21 @@ Doel: het spel begint met een speelbaar, episch (en komisch) gevecht tegen Lucae
 
 ---
 
+### Fase 2 – Solo-gevecht en de eerste dag
+**Status:** bezig, stap 2.1 klaar.
+**Gebouwd:**
+- 2.1 Gevechtskern:
+  - **Zwaard** (`src/systems/Combat.ts`, puur en getest): fast hit met de **linkermuisknop** (10 schade, 10 energie, max 3 per seconde, elke 3e slag op rij +50% en goud gekleurd), heavy hit met de **rechtermuisknop** (25 energie vooraf, 0,9 s uithalen, dan 25 schade, daarna 0,35 s herstel). Zonder genoeg energie: fast hits nog wel, maar half zo snel; geen heavy hit. Per level +2 (fast) en +5 (heavy) schade. Alles op de vaste tijdstap: 60 en 120 Hz geven dezelfde slagen (test).
+  - **Raken:** alles in een boog van 120° tot 2,4 m vóór je; richthulp naar de dichtstbijzijnde vijand vóór je. Een klik net te vroeg wordt de volgende slag (invoerbuffer).
+  - **HP, mana, level** (`CombatState` op de speler): level 1 = 100 HP / 50 mana; HP vult 1 per seconde bij buiten een gevecht. "In gevecht" = tot 4 s na de laatste slag.
+  - **HUD-regels echt aan:** in een gevecht verschijnen HP-, mana- en energiebalk, daarna faden ze rustig uit; onder 30% HP blijft de HP-balk staan.
+  - **Schadegetallen** (`src/ui/DamageNumbers.ts`): vaste pool van 24, zweven omhoog en faden uit; normaal wit, combo goud, heavy amber.
+  - **Zwaardzwaai** op het poppetje: fast = zwaai van rechts naar links, heavy = zwaard boven je hoofd en dan een harde slag naar beneden.
+  - **Trainingspoppen** (3 op het trainingsveld naast de Academy): vijanden die niet terugvechten (`src/entities/Enemy.ts`, `src/systems/Enemies.ts`, `src/render/EnemyRenderer.ts`, `src/entities/EnemyFactory.ts`). Ze knipperen rood en wiebelen als je raakt, vallen om bij 0 HP en staan na 3 s weer op; zonder slagen zijn ze na 3 s weer heel. Je loopt er niet doorheen. Dezelfde basis gebruiken de echte vijanden in stap 2.3.
+  - **Telefoon:** knoppen Slaan (vasthouden = blijven slaan), Zwaar en Dash rechtsonder.
+  - **Debug:** regel `combat` (HP, mana, level, zwaai, combo, in gevecht, vijanden in beeld).
+  - Getest in headless Chromium (pc 1100×700 en telefoon 844×390): klikken en tikken bij de trainingspop, schadegetallen 10 / 15 (combo) / 25 (heavy), energie klopt (6 fast + 1 heavy = 85), balken verschijnen. Geen fouten. 251 tests.
+
 ## Besluiten
 
 | Datum | Besluit | Waarom |
@@ -329,6 +344,13 @@ Doel: het spel begint met een speelbaar, episch (en komisch) gevecht tegen Lucae
 | 2026-10-09 | Knop **Meet 20 s** in het cheatmenu (gemiddelde fps, 1% low, langste frame) | Claude kan niet op een echte iPhone of pc meten; zo kunnen Bo en Lucas de fps-tabel in een paar minuten invullen |
 | 2026-10-09 | Fase 1 is pas "af" als de fps op een echte pc en iPhone gemeten is | Harde eis §2.1 kan alleen op echte apparaten gecontroleerd worden |
 | 2026-10-09 | **Fase 1 afgesloten op de pc**; iPhone-metingen (en Low op de pc) overgeslagen | Bo/Lucas: "ga gewoon door met pc". Pc Mid 60 en High 120 fps zonder haperingen. De iPhone kan later alsnog gemeten worden met Meet 20 s |
+| 2026-10-09 | **Invoerbuffer** van 0,3 s voor aanvallen (`inputBufferSeconds`) | Klik je net te vroeg (sneller dan 3 per seconde), dan ging de klik verloren; nu wordt hij de volgende slag. Gevonden bij het testen van stap 2.1 |
+| 2026-10-09 | **Richthulp:** een aanval draait je naar de dichtstbijzijnde vijand vóór je (binnen 4 m en 90°) | Met een camera over de schouder is precies mikken met een zwaard lastig, zeker op de telefoon. Getallen in `player.json` (`aimAssist`) |
+| 2026-10-09 | Raken = alles in een boog van 120° en 2,4 m vóór je; één slag kan meerdere vijanden raken | Voorstel; past bij "Whirlwind" later in de Sword-tak (dan 360°) |
+| 2026-10-09 | Trainingspoppen zijn "monsters" (`training_dummy` in `monsters.json`, `spawns` in `zones.json`) in plaats van gebouwen | Zo gebruiken ze dezelfde code als de echte vijanden in stap 2.3. Ze vallen om bij 0 HP en staan na 3 s weer op |
+| 2026-10-09 | Telefoon: grote **Slaan**-knop in de hoek, **Zwaar** links ervan, **Dash** erboven; vasthouden van Slaan = blijven slaan | Duim hoeft weinig te bewegen; knoppenzone is iets groter geworden (240 × 200 px) |
+| 2026-10-09 | Rechtermuisknop: zonder gevangen muis nog steeds slepen = camera draaien; met gevangen muis = heavy hit | Rondkijken zonder klikken blijft werken zoals in fase 1 |
+| 2026-10-09 | Tijdens het uithalen van een heavy hit loop je op 35% snelheid en kun je niet dashen | "Je moet goed timen" (concept); getal in `player.json` (`heavyMoveFactor`) |
 | 2026-10-09 | PerfTest verplaatst naar `experiments/perftest/` | Oude test-code hoort in `/experiments` (§5). Er was geen PeerJS-netwerktest in de repo, dus `experiments/net-test/` bestaat (nog) niet |
 
 ## Sessielog
