@@ -7,9 +7,9 @@
 | | |
 |---|---|
 | **Huidige fase** | Fase 2 – Solo-gevecht en de eerste dag (plan goedgekeurd) |
-| **Status** | Stap 2.2 klaar (speelbaar intro-gevecht tegen Lucael en Baelor) |
-| **Volgende stap** | Stap 2.3: vijanden in de Greenwood (slimes, goblins, Treewarden) met AI en spawngebieden |
-| **Laatste sessie** | 2026-10-09: stap 2.2 intro-gevecht |
+| **Status** | Stap 2.3 klaar (vijanden in de Greenwood met AI en spawngebieden, Pringle zwerft om je heen) |
+| **Volgende stap** | Stap 2.4: XP, levels, buit, drankjes, doodgaan en rusten (save versie 3) |
+| **Laatste sessie** | 2026-10-10: stap 2.3 vijanden + Pringle |
 
 ---
 
@@ -248,7 +248,7 @@ Doel: het spel begint met een speelbaar, episch (en komisch) gevecht tegen Lucae
 ---
 
 ### Fase 2 – Solo-gevecht en de eerste dag
-**Status:** bezig, stap 2.1 en 2.2 klaar.
+**Status:** bezig, stap 2.1, 2.2 en 2.3 klaar.
 **Gebouwd:**
 - 2.1 Gevechtskern:
   - **Zwaard** (`src/systems/Combat.ts`, puur en getest): fast hit met de **linkermuisknop** (10 schade, 10 energie, max 3 per seconde, elke 3e slag op rij +50% en goud gekleurd), heavy hit met de **rechtermuisknop** (25 energie vooraf, 0,9 s uithalen, dan 25 schade, daarna 0,35 s herstel). Zonder genoeg energie: fast hits nog wel, maar half zo snel; geen heavy hit. Per level +2 (fast) en +5 (heavy) schade. Alles op de vaste tijdstap: 60 en 120 Hz geven dezelfde slagen (test).
@@ -268,6 +268,16 @@ Doel: het spel begint met een speelbaar, episch (en komisch) gevecht tegen Lucae
   - Daarna gaat de intro verder met paneel 5 en 6 en word je wakker in het Monastery. **Overslaan** (knop of Escape) slaat alleen het gevecht over; Skip op de tekstkaarten slaat de hele intro over.
   - Het gevecht duurt zonder slaan ±45 s (test: altijd korter dan een minuut). Laadt als apart bestand (13 kB) en wordt al vanaf het titelscherm opgehaald.
   - Getest in headless Chromium: hele intro → gevecht → alle grappen in volgorde → "0" bij een slag → paneel 5 en 6 → wereld. Gevonden en opgelost: na het teleporteren bleef Lucael pal achter je staan en blokkeerde hij het beeld (nu teleporteert hij terug), en bij de spell keek de camera niet naar Baelor (nu wel). Geen fouten. 255 tests.
+- 2.3 Vijanden in de Greenwood (+ op verzoek: Pringle zwerft om je heen):
+  - **Eén pool voor alle vijanden** (`src/systems/Enemies.ts`): bij het bouwen van de wereld gevuld uit `spawns` en de nieuwe `spawnAreas` in `zones.json`. Vijanden gaan aan en uit (verslagen, terugkomen, splitsen); tijdens het spelen wordt niets aangemaakt. 52 plekken in de pool, 45 vijanden tegelijk in de wereld.
+  - **AI** (`src/systems/EnemyAI.ts`, puur en getest): rondlopen rond hun plek → opmerken (binnen `aggroRadius`) → achtervolgen → **windup** die je ziet (oranje gloed, achteroverleunen; slimes krimpen in) → slag → herstellen. Te ver van huis, vastgelopen of jij knock-out: terug naar huis en weer heel. Getallen per vijand in `monsters.json` (`ai`), gedeelde getallen in `monsters.json` → `settings`.
+  - **Green Slime** springt in hupjes en duikt op je af (5 schade). **Big Slime** (zelfde model, 1,8× zo groot) splitst bij doodgaan in 2 Green Slimes die meteen aanvallen. **Goblins** in groepjes van 2–3: sla je er één, dan komt het hele groepje (8 schade). **Goblin Archer** houdt afstand (stapt achteruit) en schiet pijlen (12 schade) naar waar je stond: opzij stappen of dashen = ontwijken. **Goblin Chief** in een **goblinkamp** (3 tenten en een kampvuur, met bewakers en archers): elke 3e aanval is de **Big Swing** met een **rode cirkel** op de grond die volloopt (20 schade binnen 3,5 m). **Treewarden** (nu een vijand in plaats van een NPC, zelfde 10 plekken): loopt rustig rond, valt alleen terug aan (Heavy Slam, 40 schade, rode cirkel van 4 m), wordt na 8 s zonder klappen weer rustig, en is **in de elfenstad niet aan te vallen** ("Treewarden is protected here.").
+  - **Spawngebieden:** 2 slimeveldjes, 1 Big Slime-kuil, goblins op 2 plekken, archers op een heuvelrug, het goblinkamp in het zuidwesten van het bos. Niets in de elfenstad of binnen 60 m van de ingang. Een verslagen groepje komt na 30–180 s terug, alleen als je minstens 35 m weg bent.
+  - **Jij wordt geraakt:** HP omlaag, rood getal boven je hoofd, korte rode rand om het scherm, HP-balk volgens de HUD-regels. **Bij 0 HP (voorlopig, tot stap 2.4):** "You were knocked out…", je wordt wakker bij je checkpoint met volle HP en alle vijanden zijn weer heel. Nog geen goldverlies (dat komt met gold in 2.4).
+  - **Pringle** (`src/entities/Companion.ts`): houdt geen vaste afstand meer. Sta je stil, dan zit hij, kijkt rond en wandelt af en toe naar een ander plekje naast je (1,8–4,5 m), zonder langs je voeten te lopen. Loop je echt, dan draaft hij schuin naast je mee, nooit vóór je en nooit tussen jou en de camera, en snuffelt hij soms even. Loop je naar hem toe om te aaien, dan blijft hij zitten. Getallen in `npcs.json` (`follow`).
+  - **Tekenen:** placeholder-modellen voor slime, goblin (speer), archer (kap en boog), chief (kroon en knots) en Treewarden in `EnemyFactory.ts`; pijlen en rode cirkels (die de grond volgen) in `src/render/CombatEffects.ts`.
+  - **Debug:** regel `enemies` (getoond / in de wereld / pool, vechtend, pijlen, dichtstbijzijnde vijand met zijn toestand en HP). Cheatmenu: **Monsters vallen aan** aan/uit.
+  - Getest: 270 tests (o.a. slime raakt even vaak op 60 en 120 Hz, ontwijken tijdens de windup, terug naar huis, groepje komt mee, splitsen en terugkomen, archer en ontwijken, elke 3e aanval van de Chief, Treewarden alleen terug en niet in de elfenstad, Pringle nooit vóór je en niet steeds even ver). Headless Chromium: slime valt aan en doet 5 schade, goblinkamp slaat je knock-out → wakker bij het Monastery, rode cirkel van de Big Swing onder speler en Chief, 3× wereld in/uit: geometrie terug naar 0. Geen fouten. Gevonden en opgelost: een slimeveld lag op de oever van een beek (slimes liepen vast; nu verplaatst, en vastgelopen vijanden geven het op), en Pringle liep soms vlak langs je voeten (nu niet meer).
 
 ## Besluiten
 
@@ -362,6 +372,17 @@ Doel: het spel begint met een speelbaar, episch (en komisch) gevecht tegen Lucae
 | 2026-10-09 | De grappen in het intro-gevecht zijn een **voorstel** (teksten in `lang`, volgorde in `cutscenes.json`) | Het concept noemt alleen de twee zinnen en "één krachtige spell"; zeg het als het anders moet |
 | 2026-10-09 | Overslaan in het gevecht slaat alleen het gevecht over (paneel 5 en 6 volgen nog) | Zo mis je het verhaal niet; Skip op de tekstkaarten slaat de hele intro over |
 | 2026-10-09 | PerfTest verplaatst naar `experiments/perftest/` | Oude test-code hoort in `/experiments` (§5). Er was geen PeerJS-netwerktest in de repo, dus `experiments/net-test/` bestaat (nog) niet |
+| 2026-10-10 | Treewardens zijn nu vijanden (`spawns` in `zones.json`) in plaats van NPC's | Zo gebruiken ze dezelfde gevechtscode als slimes en goblins. Zelfde 10 plekken. NPC-velden `monster` en `safeAreas` zijn weg; `safeAreas` staat nu bij de vijand in `monsters.json` |
+| 2026-10-10 | Bij 0 HP voorlopig "knock-out": wakker bij je checkpoint met volle HP, vijanden weer heel, geen goldverlies | Doodgaan (−10% gold, cutscene) is stap 2.4 |
+| 2026-10-10 | De dash maakt je niet onkwetsbaar; ontwijken = uit het bereik of de rode cirkel stappen, of opzij voor een pijl | Voorstel uit het plan. Zeg het als de dash even onkwetsbaar moet maken |
+| 2026-10-10 | Vijanden bewegen en vechten alleen binnen 60 m van jou (`settings.simulateRadius`); verder weg staan ze stil, en wie je achtervolgde gaat naar huis | Alleen daar is botsing geladen; op elke grafische stand hetzelfde |
+| 2026-10-10 | Een goblin-`spawn` op een vaste plek wordt ook een groepje van 2–3 | `groupSize` hoort bij de soort; zo zijn goblins altijd met meer |
+| 2026-10-10 | Aanvallen: Green Slime/Big Slime springen (`lunge`), goblins steken (`strike`), archers schieten (`shoot`); windup 0,45–1,2 s, alle getallen in `monsters.json` | Voorstel; het concept geeft alleen HP, schade, snelheid en XP |
+| 2026-10-10 | Rode cirkel alleen bij de grote aanvallen (Big Swing, Heavy Slam); gewone aanvallen waarschuwen met een oranje gloed en een houding | Concept: "grote aanvallen met waarschuwing"; anders staat het scherm vol rood |
+| 2026-10-10 | Het goblinkamp ligt in het zuidwesten van de Greenwood (rond x −1300, z −1030), met 3 tenten en een kampvuur | Ver van de ingang en buiten de elfenstad; plek is een voorstel |
+| 2026-10-10 | Een verslagen groepje komt pas terug als je minstens 35 m weg bent | Zo verschijnt er nooit een vijand vlak voor je neus |
+| 2026-10-10 | Pringle: geen vaste afstand meer (1,8–4,5 m), zit en wandelt als je stilstaat, draaft schuin naast je als je loopt, nooit vóór je of tussen jou en de camera | Verzoek: "om je heen, niet irritant, niet in de weg, een beetje wanderen, niet steeds dezelfde afstand" |
+| 2026-10-10 | Pringle gaat pas meelopen als je langer dan ~1,2 s loopt | Anders liep hij weg als je naar hem toe liep om hem te aaien |
 
 ## Sessielog
 
@@ -386,3 +407,6 @@ Doel: het spel begint met een speelbaar, episch (en komisch) gevecht tegen Lucae
 - Stap 1.10 gebouwd: QualityManager met Low/Mid/High (resolutie, anti-aliasing, schaduwen, kijkafstand, ringen, versiering, fps-doel), benchmark bij de eerste start (mediaan van werktijd incl. GPU), automatisch één stand omlaag bij < 58 fps over 5 s met melding, debug compleet (quality-regel, seizoen forceren, benchmark opnieuw, save export/import in het cheatmenu). Getest in headless Chromium (pc 1280×800 en 1000×640): hele flow, benchmark kiest Low op software-rendering met melding, alle drie de standen in Settings (schaduw alleen op Mid/High, mist korter op Low), export/import/Continue, ongeldige code, 3× wereld in/uit met wissels: geometrie terug naar 1/2. Geen fouten. Tijdelijke namen: geen nieuwe. Volgende stap: 1.11 (afronden en meten op echte apparaten).
 - Stap 1.11 gebouwd: knop "Meet 20 s" (fps, 1% low, langste frame) voor de echte apparaten, `ARCHITECTURE.md` compleet, README met meetinstructies, Definition of Done nagelopen. Getest in headless Chromium: duurtest van 10 minuten (geheugen groeit niet), automatisch High → Mid → Low, naadloos lopen Greenwood → Mournfen, save verwijderen, meten op pc- en telefoonformaat in EN en NL. Geen fouten. Open: fps meten op een echte pc en iPhone (Bo/Lucas). Tijdelijke namen: geen nieuwe.
 - Eerste echte meting (pc, Chrome, 120 Hz-scherm, 1920×945): Mid avg 60,0 / 1% low 59,5 / worst 16,8 ms; High avg 120,0 / 1% low 117,6 / worst 8,5 ms. Beide precies op hun fps-doel, langste frame = één schermverversing, dus geen haperingen. Low en iPhone nog niet gemeten.
+
+### 2026-10-10
+- Stap 2.3 gebouwd: vijanden in de Greenwood (Green Slime, Big Slime, Goblin, Goblin Archer, Goblin Chief in een goblinkamp, Treewarden) uit één pool, met AI, spawngebieden en terugkomen; pijlen en rode waarschuwingscirkels; knock-out bij 0 HP (voorlopig); debugregel en cheat "Monsters vallen aan". Op verzoek: Pringle zwerft om je heen in plaats van op vaste afstand te volgen. 270 tests, headless Chromium zonder fouten. Tijdelijke namen gebruikt (alleen in data): Treewarden, de elfenstad (`elven_city`), Big Swing, Heavy Slam, Gold, Slime Gel; nieuw: "Goblin tent" en "Campfire" (alleen labels in debug). Volgende stap: 2.4 (XP, levels, buit, doodgaan).

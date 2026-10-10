@@ -7,23 +7,26 @@ export const CHEAT_SPEEDS = [1, 2, 5, 10, 25] as const;
 export const FLY_MAX_ABOVE_GROUND = 400;
 
 /**
- * Debug-only test helpers (never saved, only available in debug mode): faster walking and
- * flying through walls. Gameplay never reads these outside debug mode.
+ * Debug-only test helpers (never saved, only available in debug mode): faster walking,
+ * flying through walls and peaceful monsters. Gameplay never reads these outside debug mode.
  */
 export class Cheats {
   speed: number = 1;
   fly = false;
   /** Chunk outlines in the world (debug view). */
   chunkLines = false;
+  /** Off = monsters never notice or attack you (walk around in peace while testing). */
+  monsters = true;
 
   get active(): boolean {
-    return this.speed !== 1 || this.fly;
+    return this.speed !== 1 || this.fly || !this.monsters;
   }
 
   reset(): void {
     this.speed = 1;
     this.fly = false;
     this.chunkLines = false;
+    this.monsters = true;
   }
 }
 

@@ -1,4 +1,6 @@
+import { Random } from '../core/Random';
 import type { MonsterDef } from '../data/types';
+import { angleDelta } from '../systems/Movement';
 import type { SwordTarget } from '../systems/Combat';
 
 /** Default body radius (m) when monsters.json gives none. */
@@ -7,61 +9,161 @@ export const DEFAULT_ENEMY_RADIUS = 0.5;
 export const WOBBLE_SECONDS = 0.3;
 
 /**
- * One monster in the world (simulation state only; EnemyRenderer draws it). Phase 2.1 has only
- * static training dummies; walking, attacking and respawning monsters build on the same state.
- * Position and heading are interpolated between fixed steps like the player's.
+ * What a monster is doing (enemy AI, see EnemyAI):
+ * idle → wander → (notices you) chase → windup → strike (lunge only) → recover → chase …;
+ * too far from home: return; defeated: dead (lying down), then gone until its pack respawns.
+ * Training dummies only use idle and dead.
+ */
+export type EnemyMode =
+  'idle' | 'wander' | 'chase' | 'windup' | 'strike' | 'recover' | 'return' | 'dead';
+
+/** Which attack a windup leads to: the normal one, or a special from `attacks` (area). */
+export type EnemyAttackKind = 'normal' | 'special';
+
+/**
+ * One monster in the world (simulation state only; EnemyRenderer draws it). All monsters live
+ * in one pool (Enemies) that is filled when the world is built: a slot keeps its monster type
+ * and is switched on and off (spawn, defeat, respawn, a Big Slime splitting), so nothing is
+ * allocated while playing. Position and heading are interpolated between fixed steps like the
+ * player's.
  */
 export class Enemy implements SwordTarget {
   x: number;
   y = 0;
   z: number;
   heading = 0;
-  /** Near enough to the player to be simulated and drawn. */
+  /** In the world (alive, or lying down after a defeat). Off = waiting for a respawn. */
+  active = true;
+  /** Near enough to the player to be drawn (and maybe simulated). */
   shown = false;
+  /** Inside one of its safe areas (Treewardens in the elven city): cannot be hit. */
+  safe = false;
   hp: number;
   readonly maxHp: number;
   readonly radius: number;
+  /** Walking speed (m/s), from the monster's speed class. */
+  speed = 0;
   /** Seconds until a defeated dummy stands up again (0 = standing). */
   downTime = 0;
-  /** Seconds since the last hit taken (dummies reset after a pause). */
+  /** Seconds since the last hit taken (dummies reset after a pause; Treewardens calm down). */
   sinceHit = Infinity;
   /** Seconds of the white hit flash left. */
   flash = 0;
   /** Seconds of the "knocked back" wobble left (drawn only). */
   wobble = 0;
+
+  mode: EnemyMode = 'idle';
+  /** Seconds left in the current mode (pause, windup, strike, recover, lying down). */
+  timer = 0;
+  /** Seconds until the next attack may start. */
+  cooldown = 0;
+  /** The current (or last) attack. */
+  attackKind: EnemyAttackKind = 'normal';
+  /** Attacks done since it noticed the player (specials come every n-th). */
+  attackCount = 0;
+  /** The current lunge already hit the player. */
+  struck = false;
+  /** Where it wanders around and returns to (a spot in its spawn area). */
+  homeX: number;
+  homeZ: number;
+  /** How far from home it roams while calm. */
+  wanderRadius: number;
+  targetX = 0;
+  targetZ = 0;
+  /** Hop cycle for slimes (seconds into the current hop + pause). */
+  hopTime = 0;
+  /** Seconds a walk has made too little progress (blocked: give up). */
+  stuckTime = 0;
+  /** The pack it belongs to (Enemies), -1 for none. */
+  pack = -1;
+  /** Deterministic per slot: the same monster always wanders and rolls damage the same way. */
+  readonly rng: Random;
+
   private prevX: number;
+  private prevY = 0;
   private prevZ: number;
+  private prevHeading = 0;
 
   constructor(
     readonly id: string,
     readonly def: MonsterDef,
-    readonly homeX: number,
-    readonly homeZ: number,
+    x: number,
+    z: number,
+    seed: number,
+    wanderRadius = 0,
   ) {
-    this.x = this.prevX = homeX;
-    this.z = this.prevZ = homeZ;
+    this.x = this.prevX = this.homeX = x;
+    this.z = this.prevZ = this.homeZ = z;
+    this.wanderRadius = wanderRadius;
     this.hp = this.maxHp = def.hp;
     this.radius = def.radius ?? DEFAULT_ENEMY_RADIUS;
+    this.rng = new Random(seed);
   }
 
   get alive(): boolean {
-    return this.hp > 0;
+    return this.active && this.hp > 0;
   }
 
   get hittable(): boolean {
-    return this.hp > 0;
+    return this.alive && !this.safe;
+  }
+
+  /** Busy attacking (windup, strike or recovery). */
+  get attacking(): boolean {
+    return this.mode === 'windup' || this.mode === 'strike' || this.mode === 'recover';
+  }
+
+  /** Fighting the player (chasing or attacking). */
+  get engaged(): boolean {
+    return this.mode === 'chase' || this.attacking;
+  }
+
+  /** Puts the monster somewhere fresh: full HP, calm, no interpolation from the old spot. */
+  spawn(x: number, z: number, heading: number): void {
+    this.active = true;
+    this.x = this.prevX = x;
+    this.z = this.prevZ = z;
+    this.heading = this.prevHeading = heading;
+    this.hp = this.maxHp;
+    this.mode = 'idle';
+    this.timer = 0;
+    this.cooldown = 0;
+    this.attackCount = 0;
+    this.sinceHit = Infinity;
+    this.flash = 0;
+    this.wobble = 0;
+    this.downTime = 0;
+    this.stuckTime = 0;
+    this.hopTime = 0;
+    this.struck = false;
+    this.safe = false;
   }
 
   beginStep(): void {
     this.prevX = this.x;
+    this.prevY = this.y;
     this.prevZ = this.z;
+    this.prevHeading = this.heading;
+  }
+
+  /** The ground height was just set for a fresh spot: no interpolation from 0. */
+  settleY(): void {
+    this.prevY = this.y;
   }
 
   drawX(alpha: number): number {
     return this.prevX + (this.x - this.prevX) * alpha;
   }
 
+  drawY(alpha: number): number {
+    return this.prevY + (this.y - this.prevY) * alpha;
+  }
+
   drawZ(alpha: number): number {
     return this.prevZ + (this.z - this.prevZ) * alpha;
+  }
+
+  drawHeading(alpha: number): number {
+    return this.prevHeading + angleDelta(this.prevHeading, this.heading) * alpha;
   }
 }

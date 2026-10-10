@@ -170,7 +170,7 @@ class CrossChecker {
       'monsterSpawn',
       'zones',
       'zones[].spawns',
-      d.zones.zones.flatMap((zone) => zone.spawns ?? []),
+      d.zones.zones.flatMap((zone) => [...(zone.spawns ?? []), ...(zone.spawnAreas ?? [])]),
     );
     this.unique('role', 'npcs', 'roles', d.npcs.roles);
     this.unique('npc', 'npcs', 'npcs', d.npcs.npcs);
@@ -262,8 +262,18 @@ class CrossChecker {
       zone.spawns?.forEach((spawn, n) => {
         const sp = `${p}.spawns[${n}]`;
         this.ref('monster', f, `${sp}.monster`, spawn.monster);
+        this.needsAi(sp, spawn.monster);
         if (!pointInShape(zone.bounds, spawn.x, spawn.z)) {
           this.issue(f, sp, 'monster spawn lies outside the zone');
+        }
+      });
+      zone.spawnAreas?.forEach((area, n) => {
+        const sp = `${p}.spawnAreas[${n}]`;
+        this.ref('monster', f, `${sp}.monster`, area.monster);
+        this.needsAi(sp, area.monster);
+        const circle = { type: 'circle' as const, x: area.x, z: area.z, radius: area.radius };
+        if (!shapeInside(zone.bounds, circle)) {
+          this.issue(f, sp, 'spawn area reaches outside the zone');
         }
       });
       zone.scatter?.forEach((rule, n) => {
@@ -271,6 +281,14 @@ class CrossChecker {
         this.range(f, `${p}.scatter[${n}]`, rule.minScale, rule.maxScale);
       });
     });
+  }
+
+  /** A monster placed in the world that walks and fights needs `ai` (monsters.json). */
+  private needsAi(path: string, monsterId: string): void {
+    const def = this.data.monsters.monsters.find((monster) => monster.id === monsterId);
+    if (def && def.behavior !== 'static' && !def.ai) {
+      this.issue('zones', path, `monster "${monsterId}" walks and fights but has no ai settings`);
+    }
   }
 
   private checkStructures(zone: Zone, p: string): void {
@@ -319,7 +337,6 @@ class CrossChecker {
       const p = `npcs[${i}]`;
       this.ref('role', f, `${p}.role`, npc.role);
       this.ref('zone', f, `${p}.zone`, npc.zone);
-      this.ref('monster', f, `${p}.monster`, npc.monster);
       this.ref('season', f, `${p}.season`, npc.season);
       npc.dialogue.forEach((key, d) => this.text(f, `${p}.dialogue[${d}]`, key));
       this.text(f, `${p}.petText`, npc.petText);
@@ -327,7 +344,6 @@ class CrossChecker {
         this.ref('condition', f, `${p}.dialogueWhen[${w}].condition`, entry.condition);
         entry.lines.forEach((key, l) => this.text(f, `${p}.dialogueWhen[${w}].lines[${l}]`, key));
       });
-      npc.safeAreas?.forEach((area, a) => this.ref('area', f, `${p}.safeAreas[${a}]`, area));
 
       if (npc.interaction === 'talk' && npc.dialogue.length === 0) {
         this.issue(f, `${p}.dialogue`, 'an NPC you can talk to needs at least one line');
@@ -338,8 +354,13 @@ class CrossChecker {
       if (npc.behavior === 'follow' && !npc.follow) {
         this.issue(f, `${p}.follow`, 'behavior "follow" needs follow settings');
       }
-      if (npc.follow && npc.interaction === 'pet' && npc.follow.distance <= settings.petRange) {
-        this.issue(f, `${p}.follow.distance`, 'must be larger than settings.petRange');
+      if (npc.follow) {
+        const follow = npc.follow;
+        if (npc.interaction === 'pet' && follow.minDistance <= settings.petRange) {
+          this.issue(f, `${p}.follow.minDistance`, 'must be larger than settings.petRange');
+        }
+        this.range(f, `${p}.follow`, follow.minDistance, follow.maxDistance);
+        this.range(f, `${p}.follow.idlePauseSeconds`, ...follow.idlePauseSeconds);
       }
       if (npc.behavior === 'wander' && !npc.wander) {
         this.issue(f, `${p}.wander`, 'behavior "wander" needs wander settings');
@@ -404,6 +425,7 @@ class CrossChecker {
   private checkMonsters(): void {
     const f = 'monsters';
     const speedClasses = this.data.monsters.speedClasses;
+    this.range(f, 'settings.wanderPauseSeconds', ...this.data.monsters.settings.wanderPauseSeconds);
     this.data.monsters.monsters.forEach((monster, i) => {
       const p = `monsters[${i}]`;
       this.range(f, `${p}.levelRange`, monster.levelRange[0], monster.levelRange[1]);
@@ -414,6 +436,23 @@ class CrossChecker {
       if (monster.behavior === 'ranged' && monster.range === undefined) {
         this.issue(f, `${p}.range`, 'a ranged monster needs a range');
       }
+      const ai = monster.ai;
+      if (ai) {
+        const attack = ai.attack;
+        if (attack.style === 'lunge' && (!attack.lungeDistance || !attack.strikeSeconds)) {
+          this.issue(f, `${p}.ai.attack`, 'a lunge needs lungeDistance and strikeSeconds');
+        }
+        if (attack.style === 'shoot' && !attack.projectileSpeed) {
+          this.issue(f, `${p}.ai.attack.projectileSpeed`, 'a shooting attack needs a speed');
+        }
+        if (ai.keepDistance !== undefined && ai.keepDistance >= attack.range) {
+          this.issue(f, `${p}.ai.keepDistance`, 'must be smaller than the attack range');
+        }
+        if (!monster.neutral && ai.aggroRadius <= 0) {
+          this.issue(f, `${p}.ai.aggroRadius`, 'only a neutral monster may have 0');
+        }
+      }
+      monster.safeAreas?.forEach((area, a) => this.ref('area', f, `${p}.safeAreas[${a}]`, area));
       if (monster.groupSize)
         this.range(f, `${p}.groupSize`, monster.groupSize.min, monster.groupSize.max);
       this.ref('monster', f, `${p}.splitsInto.monster`, monster.splitsInto?.monster);
