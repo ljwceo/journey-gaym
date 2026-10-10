@@ -1,3 +1,4 @@
+import type { FollowTarget } from '../entities/Companion';
 import { Npc, type NpcSettings } from '../entities/Npc';
 import type { NpcsFile } from '../data/types';
 import type { PointXZ } from '../world/Colliders';
@@ -20,7 +21,7 @@ export interface NpcWorld {
  *   (the same on every graphics preset; companions are always there),
  * - static NPCs turn towards a player who comes close (or talks to them), then back,
  * - wanderers roam only near the player, where collision is loaded,
- * - companions follow the player,
+ * - companions roam around the player (Pringle),
  * - solid NPCs push the player out (you cannot walk through Brother Ansel),
  * - the nearest NPC you can talk to (within `interactRange`) or pet (within `petRange`).
  * NPCs bound to a season (`season`) only exist in that season.
@@ -50,14 +51,9 @@ export class Npcs {
   }
 
   /** One fixed step. `talkingTo` stands still and faces the player. */
-  update(
-    dt: number,
-    px: number,
-    pz: number,
-    playerHeading: number,
-    world: NpcWorld,
-    talkingTo: Npc | null,
-  ): void {
+  update(dt: number, player: FollowTarget, world: NpcWorld, talkingTo: Npc | null): void {
+    const px = player.x;
+    const pz = player.z;
     const cfg = this.settings;
     const show2 = cfg.showRadius * cfg.showRadius;
     const hide = cfg.showRadius + cfg.hideMargin;
@@ -74,7 +70,7 @@ export class Npcs {
       if (companion) {
         if (!npc.shown) {
           npc.shown = true;
-          companion.placeBehind(s, px, pz, playerHeading);
+          companion.placeBehind(s, px, pz, player.heading);
           this.settle(npc, world);
         }
       } else {
@@ -97,7 +93,7 @@ export class Npcs {
       const d2 = dx * dx + dz * dz;
 
       if (companion) {
-        if (companion.step(s, px, pz, playerHeading, dt, world.mover) === 'teleport') {
+        if (companion.step(s, player, dt, world.mover) === 'teleport') {
           this.settle(npc, world);
           continue;
         }

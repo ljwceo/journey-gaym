@@ -175,7 +175,9 @@
     "rest": "Rest",
     "talkTo": "Talk to {name}",
     "pet": "Pet {name}",
-    "qualityChosen": "Graphics set to {quality} for this device. You can change it in Settings."
+    "qualityChosen": "Graphics set to {quality} for this device. You can change it in Settings.",
+    "knockedOut": "You were knocked out… You wake up at your checkpoint.",
+    "protected": "{name} is protected here."
   },
   "dialog": {
     "next": "Continue",
@@ -323,6 +325,7 @@
     "saveInvalid": "This is not a valid save code.",
     "measure": "Measure fps",
     "measureNote": "Walk around normally for {seconds} s. The result appears in the debug overlay (line \"measure\").",
-    "measureStart": "Measure {seconds} s"
+    "measureStart": "Measure {seconds} s",
+    "monsters": "Monsters attack"
   }
 }

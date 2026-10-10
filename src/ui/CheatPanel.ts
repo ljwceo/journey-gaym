@@ -186,6 +186,13 @@ export class CheatPanel {
           : null,
       ),
       section(
+        t('cheats.monsters'),
+        toggle(cheats.monsters, (on) => {
+          cheats.monsters = on;
+          this.changed();
+        }),
+      ),
+      section(
         t('cheats.chunkLines'),
         toggle(cheats.chunkLines, (on) => {
           cheats.chunkLines = on;

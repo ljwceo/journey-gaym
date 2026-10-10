@@ -175,7 +175,9 @@
     "rest": "Rusten",
     "talkTo": "Praat met {name}",
     "pet": "Aai {name}",
-    "qualityChosen": "Graphics ingesteld op {quality} voor dit apparaat. Je kunt het wijzigen in Instellingen."
+    "qualityChosen": "Graphics ingesteld op {quality} voor dit apparaat. Je kunt het wijzigen in Instellingen.",
+    "knockedOut": "Je bent knock-out gegaan… Je wordt wakker bij je checkpoint.",
+    "protected": "{name} wordt hier beschermd."
   },
   "dialog": {
     "next": "Verder",
@@ -323,6 +325,7 @@
     "saveInvalid": "Dit is geen geldige save-code.",
     "measure": "Fps meten",
     "measureNote": "Loop {seconds} s gewoon rond. De uitslag staat daarna in de debug-overlay (regel \"measure\").",
-    "measureStart": "Meet {seconds} s"
+    "measureStart": "Meet {seconds} s",
+    "monsters": "Monsters vallen aan"
   }
 }

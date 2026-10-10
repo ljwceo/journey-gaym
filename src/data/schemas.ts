@@ -125,8 +125,40 @@ const zoneSchema = z.strictObject({
   areas: z.array(z.strictObject({ id, shape: shapeSchema, noScatter: optional(z.boolean()) })),
   /** Placeholder buildings and landmarks (later real models), loaded with the chunks they touch. */
   structures: optional(z.array(structureSchema)),
-  /** Where monsters (monsters.json) stand or roam in this zone. */
-  spawns: optional(z.array(z.strictObject({ id, monster: id, x: coord, z: coord }))),
+  /**
+   * Single monsters at a fixed spot (training dummies, Treewardens, the Goblin Chief). They roam
+   * within `wanderRadius` of the spot and come back `respawnSeconds` after being defeated.
+   */
+  spawns: optional(
+    z.array(
+      z.strictObject({
+        id,
+        monster: id,
+        x: coord,
+        z: coord,
+        wanderRadius: optional(max(nonNegative, 500)),
+        respawnSeconds: optional(max(positive, 3600)),
+      }),
+    ),
+  ),
+  /**
+   * Spawn areas: `count` packs of a monster roam inside the circle (a pack is one monster, or
+   * `groupSize` monsters for e.g. goblins). A defeated pack comes back after `respawnSeconds`,
+   * once the player is away.
+   */
+  spawnAreas: optional(
+    z.array(
+      z.strictObject({
+        id,
+        monster: id,
+        x: coord,
+        z: coord,
+        radius: max(positive, 500),
+        count: intRange(1, 50),
+        respawnSeconds: max(positive, 3600),
+      }),
+    ),
+  ),
   instances: z.array(z.strictObject({ id, name, entrance: pointSchema, enabled: z.boolean() })),
   /** Props (trees, rocks) scattered over the zone; `perHectare` before the quality density. */
   scatter: optional(
@@ -205,13 +237,22 @@ const npcSchema = z.strictObject({
   interaction: z.enum(['talk', 'pet', 'none']),
   behavior: z.enum(['static', 'follow', 'wander']),
   dialogue: z.array(textKey),
-  follow: optional(z.strictObject({ distance: positive, speed: max(positive, 20) })),
+  /**
+   * Following the player (Pringle): roams between `minDistance` and `maxDistance` around the
+   * player, strolls at `strollSpeed` while the player stands still (pausing `idlePauseSeconds`),
+   * and catches up at `speed`.
+   */
+  follow: optional(
+    z.strictObject({
+      minDistance: positive,
+      maxDistance: positive,
+      speed: max(positive, 20),
+      strollSpeed: max(positive, 20),
+      idlePauseSeconds: z.tuple([nonNegative, nonNegative]),
+    }),
+  ),
   wander: optional(z.strictObject({ radius: positive, speed: max(positive, 20) })),
   petText: optional(textKey),
-  /** Stats come from this monster entry (e.g. Treewardens). */
-  monster: optional(id),
-  /** Area ids (zones.json) where this NPC can never be attacked. */
-  safeAreas: optional(z.array(id)),
   /** Only present in this season. */
   season: optional(id),
   /** Where a static NPC faces when nobody is near, in degrees (0 = +z). */
@@ -397,6 +438,36 @@ const attackSchema = z.strictObject({
   warningSeconds: max(nonNegative, 5),
   recoverySeconds: optional(max(nonNegative, 10)),
   onlyWhenEnraged: optional(z.boolean()),
+  /** Used instead of the normal attack every n-th attack (1 = always). */
+  everyNth: optional(intRange(1, 100)),
+  /** Hits everything within this radius (m) around the monster; a red circle warns first. */
+  areaRadius: optional(max(positive, 50)),
+});
+
+/**
+ * How a monster fights (enemy AI). `range` is the gap (m) between the bodies at which the
+ * normal attack starts: a `strike` hits in front, a `lunge` jumps `lungeDistance` forward and
+ * hits on contact, a `shoot` fires an arrow at `projectileSpeed` m/s.
+ */
+const monsterAiSchema = z.strictObject({
+  /** Notices the player within this distance (0 = only fights back, e.g. Treewardens). */
+  aggroRadius: max(nonNegative, 100),
+  /** Gives up and walks home when it is this far from its spot. */
+  leashRadius: max(positive, 500),
+  /** Ranged monsters step back when the player comes closer than this. */
+  keepDistance: optional(max(positive, 50)),
+  /** Moves in hops (slimes): `seconds` in the air, then `pauseSeconds` on the ground. */
+  hop: optional(z.strictObject({ seconds: max(positive, 5), pauseSeconds: max(nonNegative, 5) })),
+  attack: z.strictObject({
+    style: z.enum(['strike', 'lunge', 'shoot']),
+    range: max(positive, 50),
+    windupSeconds: max(nonNegative, 5),
+    recoverySeconds: max(nonNegative, 10),
+    cooldownSeconds: max(nonNegative, 30),
+    strikeSeconds: optional(max(positive, 5)),
+    lungeDistance: optional(max(positive, 20)),
+    projectileSpeed: optional(max(positive, 100)),
+  }),
 });
 
 const monsterSchema = z.strictObject({
@@ -413,6 +484,12 @@ const monsterSchema = z.strictObject({
   model: optional(name),
   /** Body radius (m): what you hit and what you cannot walk through. */
   radius: optional(max(positive, 10)),
+  /** Size of the placeholder model (1 = as built), e.g. a Big Slime is a bigger slime. */
+  scale: optional(range(0.1, 10)),
+  /** Area ids (zones.json) where this monster can never be attacked (and stops fighting). */
+  safeAreas: optional(z.array(id)),
+  /** Walking, noticing and attacking; required for melee and ranged monsters. */
+  ai: optional(monsterAiSchema),
   /** A defeated dummy stands up again (full HP) after this many seconds. */
   resetSeconds: optional(max(positive, 600)),
   range: optional(positive),
@@ -436,6 +513,28 @@ const monsterSchema = z.strictObject({
 export const monstersFileSchema = z.strictObject({
   /** Meters per second for each speed class used in the concept ("slow", "fast", ...). */
   speedClasses: z.record(z.string(), max(positive, 30)),
+  /** Enemy AI numbers shared by all monsters (the same on every graphics preset). */
+  settings: z.strictObject({
+    /** Monsters move and fight only within this distance (m) of the player. */
+    simulateRadius: range(10, 500),
+    turnDegreesPerSecond: range(1, 3600),
+    /** Seconds a wandering monster waits between walks [min, max]. */
+    wanderPauseSeconds: z.tuple([nonNegative, nonNegative]),
+    /** Wandering speed as a fraction of the monster's speed. */
+    wanderSpeedFactor: range(0.05, 1),
+    /** Seconds a defeated monster lies on the ground before it disappears. */
+    corpseSeconds: max(nonNegative, 60),
+    /** A defeated pack only comes back while the player is at least this far (m) away. */
+    respawnMinPlayerDistance: max(nonNegative, 500),
+    /** A strike still hits when the player is this much (m) beyond its range when it lands. */
+    hitGraceMeters: max(nonNegative, 10),
+    /** Width (degrees) of the arc in front of a monster that its strike hits. */
+    hitArcDegrees: range(1, 360),
+    /** A neutral monster (Treewarden) stops fighting this long (s) after the last hit. */
+    calmDownSeconds: max(positive, 600),
+    /** When one monster of a pack notices you, its pack mates within this distance (m) join. */
+    packAggroRadius: max(nonNegative, 100),
+  }),
   monsters: z.array(monsterSchema),
 });
 

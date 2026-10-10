@@ -17,7 +17,9 @@ import { Input, type LookDelta } from '../core/Input';
 import type { GameState } from '../core/StateMachine';
 import type { GameData, QualityPreset } from '../data/types';
 import { chosenLevel, presetFor } from '../render/quality';
-import { dialogueLines, isAttackable, type Npc } from '../entities/Npc';
+import type { FollowTarget } from '../entities/Companion';
+import type { Enemy } from '../entities/Enemy';
+import { dialogueLines, type Npc } from '../entities/Npc';
 import { Player } from '../entities/Player';
 import { PropLibrary } from '../entities/PropFactory';
 import { CameraRig } from '../render/CameraRig';
@@ -35,8 +37,11 @@ import {
   stepSword,
   swordConfig,
 } from '../systems/Combat';
-import { Enemies } from '../systems/Enemies';
+import { Enemies, type EnemiesWorld } from '../systems/Enemies';
+import type { EnemyTarget } from '../systems/EnemyAI';
+import { ARROW_HEIGHT, Projectiles, type ProjectileWorld } from '../systems/Projectiles';
 import { EnemyRenderer } from '../render/EnemyRenderer';
+import { ProjectileRenderer, WarningRenderer } from '../render/CombatEffects';
 import { DamageNumbers } from '../ui/DamageNumbers';
 import { type Bounds, CollisionWorld } from '../systems/Collision';
 import {
@@ -72,7 +77,7 @@ import { Triggers } from '../world/Triggers';
 import { type StreamerStats, WorldStreamer } from '../world/WorldStreamer';
 import { ZoneLocator } from '../world/ZoneLocator';
 import { normalizeAppearance } from './creator';
-import type { Shape, Zone } from '../data/types';
+import type { Zone } from '../data/types';
 import { placeAtStart } from './flow';
 
 const DEG = Math.PI / 180;
@@ -86,6 +91,7 @@ const DEBUG_KEYS = [
   'npcs',
   'energy',
   'combat',
+  'enemies',
   'camera',
   'cheats',
 ] as const;
@@ -105,6 +111,10 @@ const WATER_SCALE = 3;
 const ICON_ABOVE_HEAD = 0.35;
 /** A conversation ends by itself when the player is this many interact ranges away. */
 const TALK_BREAK_RANGES = 3;
+/** "Protected here" shows at most this often (s) while you keep hitting a protected monster. */
+const PROTECTED_MESSAGE_SECONDS = 4;
+/** Arrows stop at colliders; this is their thickness (m) for that test. */
+const ARROW_COLLIDE_RADIUS = 0.05;
 
 /**
  * The open world: terrain chunks stream in around the player from a Web Worker (WorldStreamer),
@@ -144,6 +154,17 @@ export class WorldState implements GameState, InstanceHost {
   private npcWorld: NpcWorld | null = null;
   private enemies: Enemies | null = null;
   private enemyRenderer: EnemyRenderer | null = null;
+  private projectiles: Projectiles | null = null;
+  private projectileRenderer: ProjectileRenderer | null = null;
+  private warningRenderer: WarningRenderer | null = null;
+  private enemiesWorld: EnemiesWorld | null = null;
+  private projectileWorld: ProjectileWorld | null = null;
+  /** HP reached 0 during this step; handled once the monsters finished their step. */
+  private knockedOut = false;
+  /** Seconds until "protected here" may show again. */
+  private protectedMessageTimer = 0;
+  /** Seconds since the world was entered (drawing only: pulsing warnings). */
+  private time = 0;
   private damageNumbers: DamageNumbers | null = null;
   private sword: SwordConfig | null = null;
   /** Whether the HUD currently shows the fight bars (changes only on transitions). */
@@ -156,7 +177,6 @@ export class WorldState implements GameState, InstanceHost {
   /** Cached icon label (made only when the target or the language changes). */
   private iconLabel = '';
   private iconLabelFor: Npc | 'rest' | null = null;
-  private safeAreas: Map<string, Shape> | null = null;
   /** True while the closed city gate holds the player back (the message shows once). */
   private gateBlocked = false;
   private readonly fogTarget = new Color();
@@ -194,6 +214,15 @@ export class WorldState implements GameState, InstanceHost {
   private readonly swordInput: SwordInput = { fast: false, heavy: false };
   private readonly swordResult: SwordResult = { landed: 'none', damage: 0, combo: false };
   private readonly look: LookDelta = { yaw: 0, pitch: 0, zoom: 1 };
+  private readonly enemyTarget: EnemyTarget = { x: 0, z: 0, radius: 0.4, hostile: true };
+  private readonly followTarget: FollowTarget = {
+    x: 0,
+    z: 0,
+    heading: 0,
+    moving: false,
+    viewYaw: 0,
+  };
+  private readonly arrowProbe = { x: 0, z: 0 };
   private readonly stats: StreamerStats = {
     near: 0,
     far: 0,
@@ -256,6 +285,8 @@ export class WorldState implements GameState, InstanceHost {
     this.damageNumbers = new DamageNumbers();
     ctx.ui.append(this.damageNumbers.root);
     this.hudInCombat = false;
+    this.knockedOut = false;
+    this.time = 0;
     this.talkingTo = null;
     this.targetNpc = null;
     this.iconLabelFor = null;
@@ -429,7 +460,7 @@ export class WorldState implements GameState, InstanceHost {
       this.checkpoints?.update(s.x, s.z, session.world);
     }
     this.updateNpcs(dt);
-    this.enemies?.step(dt, s.x, s.z, this.groundHeight);
+    this.updateEnemies(dt);
     this.updateCombatHud();
     this.hud?.rules.setEnergyFraction(s.energy / movement.maxEnergy);
     this.hud?.setBar('energy', s.energy / movement.maxEnergy);
@@ -482,8 +513,12 @@ export class WorldState implements GameState, InstanceHost {
     let hitAny = false;
     for (let i = 0; i < enemies.shown.length; i++) {
       const e = enemies.shown[i];
-      if (!e || !e.hittable) continue;
+      if (!e?.alive) continue;
       if (!inSwingArc(s.x, s.z, s.heading, e.x, e.z, e.radius, sword.range, sword.halfArc)) {
+        continue;
+      }
+      if (!e.hittable) {
+        this.showProtected(e);
         continue;
       }
       enemies.hit(e, result.damage);
@@ -493,6 +528,71 @@ export class WorldState implements GameState, InstanceHost {
       this.damageNumbers?.spawn(e.x, top, e.z, result.damage, kind);
     }
     if (hitAny) player.combat.sinceCombat = 0;
+  }
+
+  /** "Treewarden is protected here." (elven city), not more often than every few seconds. */
+  private showProtected(e: Enemy): void {
+    if (this.protectedMessageTimer > 0) return;
+    this.protectedMessageTimer = PROTECTED_MESSAGE_SECONDS;
+    this.hud?.showMessage(this.ctx.i18n.t('hud.protected', { name: e.def.name }));
+  }
+
+  /**
+   * Monsters and their arrows for one step. They only attack while the player can be attacked
+   * (not with monsters switched off in the cheat menu).
+   */
+  private updateEnemies(dt: number): void {
+    const { enemies, player, movement, enemiesWorld, projectiles, projectileWorld } = this;
+    if (!enemies || !player || !movement || !enemiesWorld) return;
+    const t = this.enemyTarget;
+    t.x = player.state.x;
+    t.z = player.state.z;
+    t.radius = movement.radius;
+    t.hostile = this.cheats.monsters && !this.cheats.fly;
+    enemies.step(dt, t, enemiesWorld);
+    if (projectiles && projectileWorld) projectiles.step(dt, t, projectileWorld, this.hurtPlayer);
+    this.protectedMessageTimer = Math.max(0, this.protectedMessageTimer - dt);
+    if (this.knockedOut) this.knockOut();
+  }
+
+  /** A monster or an arrow hits the player: HP down, a red number and glow, maybe knocked out. */
+  private readonly hurtPlayer = (damage: number): void => {
+    const player = this.player;
+    if (!player || damage <= 0) return;
+    const c = player.combat;
+    const s = player.state;
+    if (this.knockedOut) return;
+    c.hp = Math.max(0, c.hp - damage);
+    c.sinceCombat = 0;
+    this.damageNumbers?.spawn(s.x, s.y + 2, s.z, damage, 'player');
+    this.hud?.hurt();
+    if (c.hp <= 0) this.knockedOut = true;
+  };
+
+  /**
+   * HP reached 0. For now (until dying arrives in step 2.4): you wake up at your checkpoint
+   * with full HP and the monsters are back at full strength.
+   */
+  private knockOut(): void {
+    const { player, checkpoints, enemies } = this;
+    const session = this.ctx.session;
+    const data = this.ctx.data;
+    this.knockedOut = false;
+    if (!player || !session || !data) return;
+    const checkpoint = checkpoints?.byId(session.world.checkpoint);
+    const zone = data.zones.zones.find((entry) => entry.id === data.player.start.zone);
+    const start = zone?.spawnPoints.find((point) => point.id === data.player.start.spawnPoint);
+    const x = checkpoint?.x ?? start?.x ?? player.state.x;
+    const z = checkpoint?.z ?? start?.z ?? player.state.z;
+    enemies?.resetAll();
+    this.projectiles?.clear();
+    this.placePlayer(x, z);
+    const c = player.combat;
+    c.hp = c.maxHp;
+    c.mana = c.maxMana;
+    c.sinceCombat = Infinity;
+    this.ctx.events.emit('playerKnockedOut', {});
+    this.hud?.showMessage(this.ctx.i18n.t('hud.knockedOut'));
   }
 
   /** HP and mana bars, the "in a fight" rule and the low-HP rule (HUD rules from the concept). */
@@ -555,7 +655,13 @@ export class WorldState implements GameState, InstanceHost {
     const { npcs, player, npcWorld } = this;
     if (!npcs || !player || !npcWorld) return;
     const s = player.state;
-    npcs.update(dt, s.x, s.z, s.heading, npcWorld, this.talkingTo);
+    const f = this.followTarget;
+    f.x = s.x;
+    f.z = s.z;
+    f.heading = s.heading;
+    f.moving = s.moving;
+    f.viewYaw = this.rig?.orbit.yaw ?? s.heading;
+    npcs.update(dt, f, npcWorld, this.talkingTo);
     const talking = this.talkingTo;
     if (talking) {
       const far = npcs.settings.interactRange * TALK_BREAK_RANGES + talking.solidRadius;
@@ -630,7 +736,10 @@ export class WorldState implements GameState, InstanceHost {
     player.syncModel(a);
     if (this.sword) player.showSword(this.sword);
     this.npcRenderer?.update(a, this.ctx.data?.npcs.settings.petHopSeconds ?? 1);
-    this.enemyRenderer?.update(a);
+    if (!this.paused) this.time += frameSeconds;
+    this.enemyRenderer?.update(a, this.time);
+    if (this.enemies) this.warningRenderer?.update(this.enemies.shown, a);
+    this.projectileRenderer?.update(a);
     input.consumeLook(this.look);
     const look = this.look;
     const turning = input.turningCamera || look.yaw !== 0 || look.pitch !== 0;
@@ -828,9 +937,16 @@ export class WorldState implements GameState, InstanceHost {
     const data = this.ctx.data;
     const zone = data?.zones.zones.find((entry) => entry.id === zoneId);
     const spawn = zone?.spawnPoints[0];
+    if (!spawn) return;
+    this.placePlayer(spawn.x, spawn.z);
+  }
+
+  /** Puts the player at (x, z) on the ground (teleport, waking up at the checkpoint). */
+  private placePlayer(x: number, z: number): void {
+    const data = this.ctx.data;
     const { player, streamer, collision, rig, origin } = this;
-    if (!zone || !spawn || !player || !streamer || !collision || !rig || !origin || !data) return;
-    player.place(spawn.x, streamer.heightAt(spawn.x, spawn.z), spawn.z, player.state.heading);
+    if (!player || !streamer || !collision || !rig || !origin || !data) return;
+    player.place(x, streamer.heightAt(x, z), z, player.state.heading);
     collision.resolve(player.state, data.player.movement.radius);
     player.state.y = streamer.heightAt(player.state.x, player.state.z);
     player.place(player.state.x, player.state.y, player.state.z, player.state.heading);
@@ -1012,15 +1128,50 @@ export class WorldState implements GameState, InstanceHost {
     };
     this.npcs = new Npcs(data.npcs, this.ctx.seasons?.currentId() ?? '', resolveColorToken);
     this.npcRenderer = new NpcRenderer(this.npcs.list, worldRoot);
-    // Monsters appear at the same distance as NPCs, on every graphics preset.
-    this.enemies = new Enemies(data.zones.zones, data.monsters, {
-      showRadius: data.npcs.settings.showRadius,
-      hideMargin: data.npcs.settings.hideMargin,
-    });
-    this.enemyRenderer = new EnemyRenderer(this.enemies.list, worldRoot);
-    this.safeAreas = new Map(
+    const safeAreas = new Map(
       data.zones.zones.flatMap((entry) => entry.areas.map((area) => [area.id, area.shape])),
     );
+    // Monsters appear at the same distance as NPCs, on every graphics preset.
+    this.enemies = new Enemies(
+      data.zones.zones,
+      data.monsters,
+      { showRadius: data.npcs.settings.showRadius, hideMargin: data.npcs.settings.hideMargin },
+      safeAreas,
+    );
+    this.enemyRenderer = new EnemyRenderer(this.enemies.list, worldRoot);
+    this.warningRenderer = new WarningRenderer(worldRoot, this.groundHeight);
+    const projectiles = new Projectiles();
+    this.projectiles = projectiles;
+    this.projectileRenderer = new ProjectileRenderer(projectiles.list, worldRoot);
+    const enemies = this.enemies;
+    const mover = this.mover;
+    this.enemiesWorld = {
+      mover,
+      heightAt: this.groundHeight,
+      hitPlayer: (_e, damage) => this.hurtPlayer(damage),
+      shoot: (e, tx, tz, speed, damage) =>
+        projectiles.fire(
+          e.x,
+          e.y + ARROW_HEIGHT * (e.def.scale ?? 1),
+          e.z,
+          tx,
+          tz,
+          speed,
+          damage,
+          e.def.ai?.attack.range ?? 12,
+        ),
+      alert: (e) => enemies.alert(e),
+    };
+    const probe = this.arrowProbe;
+    this.projectileWorld = {
+      heightAt: this.groundHeight,
+      blocked: (x, z) => {
+        probe.x = x;
+        probe.z = z;
+        collision.resolve(probe, ARROW_COLLIDE_RADIUS);
+        return probe.x !== x || probe.z !== z;
+      },
+    };
 
     this.rig = new CameraRig(data.player.camera, preset.fogFar + 20);
     this.rig.orbit.snap(player.state.x, player.state.y, player.state.z, player.state.heading);
@@ -1115,11 +1266,17 @@ export class WorldState implements GameState, InstanceHost {
     this.npcRenderer = null;
     this.enemyRenderer?.dispose();
     this.enemyRenderer = null;
+    this.warningRenderer?.dispose();
+    this.warningRenderer = null;
+    this.projectileRenderer?.dispose();
+    this.projectileRenderer = null;
+    this.projectiles = null;
     this.enemies = null;
+    this.enemiesWorld = null;
+    this.projectileWorld = null;
     this.sword = null;
     this.npcs = null;
     this.npcWorld = null;
-    this.safeAreas = null;
     this.chunkDebug?.dispose();
     this.chunkDebug = null;
     // The streamer first: unloading its chunks also takes the structures away.
@@ -1190,8 +1347,9 @@ export class WorldState implements GameState, InstanceHost {
       'combat',
       `hp ${Math.ceil(c.hp)}/${c.maxHp} · mana ${Math.round(c.mana)} · lvl ${c.level} · ` +
         `${c.heavyWindup > 0 ? 'heavy windup' : c.swing} · combo ${c.comboCount} · ` +
-        `${c.inCombat ? 'in fight' : 'calm'} · enemies ${this.enemies?.shown.length ?? 0}/${this.enemies?.list.length ?? 0}`,
+        `${c.inCombat ? 'in fight' : 'calm'}`,
     );
+    debug.lines.set('enemies', this.enemyDebugLine(s.x, s.z));
     debug.lines.set(
       'camera',
       `yaw ${Math.round(o.yaw / DEG)}° pitch ${Math.round(o.pitch / DEG)}° dist ${o.distance.toFixed(1)} m · sens ${Math.round((this.ctx.session?.settings.cameraSensitivity ?? 1) * 100)}%`,
@@ -1202,7 +1360,22 @@ export class WorldState implements GameState, InstanceHost {
     );
   };
 
-  /** Debug: NPCs shown, the target, met NPCs, Pringle's distance and nearby Treewardens. */
+  /** Debug: monsters shown / in the world / in the pool, fighting, arrows, the nearest one. */
+  private enemyDebugLine(px: number, pz: number): string {
+    const enemies = this.enemies;
+    if (!enemies) return '-';
+    const near = enemies.nearest(px, pz);
+    const nearText = near
+      ? ` · nearest ${near.def.id} ${Math.hypot(near.x - px, near.z - pz).toFixed(1)} m ${near.mode}${near.mode === 'windup' && near.attackKind === 'special' ? ' (special)' : ''}${near.safe ? ' (safe)' : ''} ${Math.ceil(near.hp)}/${near.maxHp}`
+      : '';
+    return (
+      `${enemies.shown.length} shown / ${enemies.activeCount} in world / ${enemies.list.length} pool · ` +
+      `fighting ${enemies.engagedCount} · arrows ${this.projectiles?.activeCount ?? 0}` +
+      `${this.cheats.monsters ? '' : ' · OFF (cheat)'}${nearText}`
+    );
+  }
+
+  /** Debug: NPCs shown, the target, met NPCs and Pringle's distance. */
   private npcDebugLine(px: number, pz: number): string {
     const npcs = this.npcs;
     if (!npcs) return '-';
@@ -1214,10 +1387,6 @@ export class WorldState implements GameState, InstanceHost {
       if (!npc.shown) continue;
       const d = Math.hypot(npc.state.x - px, npc.state.z - pz);
       if (npc.companion) parts.push(`${npc.id} ${d.toFixed(1)} m`);
-      else if (npc.def.monster && this.safeAreas) {
-        const safe = !isAttackable(npc.def, npc.state.x, npc.state.z, this.safeAreas);
-        parts.push(`${npc.id} ${Math.round(d)} m${safe ? ' safe' : ''}`);
-      }
     }
     return parts.join(' · ');
   }

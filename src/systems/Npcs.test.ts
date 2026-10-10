@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { npcsFileSchema, triggersFileSchema, zonesFileSchema } from '../data/schemas';
+import { npcsFileSchema, triggersFileSchema } from '../data/schemas';
 import type { NpcsFile } from '../data/types';
-import { Companion } from '../entities/Companion';
-import { dialogueLines, isAttackable } from '../entities/Npc';
+import { Companion, type FollowConfig, type FollowTarget } from '../entities/Companion';
+import { dialogueLines } from '../entities/Npc';
 import { hasNpcModel } from '../entities/NpcFactory';
 import { readPublicJson } from '../test/loadPublic';
 import type { PointXZ } from '../world/Colliders';
@@ -30,6 +30,11 @@ const wall: Mover = {
 };
 
 const flatWorld: NpcWorld = { mover: free, heightAt: () => 2, resolve: () => {} };
+
+/** The player at (x, z), standing (or walking with `moving`), the camera behind them. */
+function at(x: number, z: number, heading: number, moving = false): FollowTarget {
+  return { x, z, heading, moving, viewYaw: heading };
+}
 
 function npcsFile(): NpcsFile {
   return npcsFileSchema.parse(readPublicJson('data/npcs.json'));
@@ -105,38 +110,129 @@ describe('Wander', () => {
 });
 
 describe('Companion (Pringle)', () => {
-  const cfg = { distance: 1.8, speed: 4.5, teleportDistance: 30, turnSpeed: 6, bodyRadius: 0.25 };
+  const cfg: FollowConfig = {
+    minDistance: 1.8,
+    maxDistance: 4.5,
+    speed: 4.8,
+    strollSpeed: 1.1,
+    idlePauseMin: 1.5,
+    idlePauseMax: 5,
+    teleportDistance: 30,
+    turnSpeed: 6,
+    bodyRadius: 0.25,
+  };
+  const cat = (seed = 7): Companion => new Companion(cfg, new Random(seed));
 
-  it('catches up with a walking player and stops beside them', () => {
-    const cat = new Companion(cfg);
+  /** Where the cat is relative to a player at (px, pz) facing `heading`: ahead and sideways. */
+  function relative(s: { x: number; z: number }, px: number, pz: number, heading: number) {
+    const dx = s.x - px;
+    const dz = s.z - pz;
+    return {
+      ahead: dx * Math.sin(heading) + dz * Math.cos(heading),
+      side: dx * Math.cos(heading) - dz * Math.sin(heading),
+      distance: Math.hypot(dx, dz),
+    };
+  }
+
+  it('trots along beside a travelling player: never in front, never far behind', () => {
+    const c = cat();
     const s = { x: 0, z: 0, heading: 0 };
-    cat.placeBehind(s, 0, 0, 0);
-    // The player walks 4 m/s along +z for 5 s.
-    for (let i = 0; i < 300; i++) cat.step(s, 0, (i + 1) * 4 * DT, 0, DT, free);
-    const playerZ = 20;
-    expect(playerZ - s.z).toBeLessThan(cfg.distance + 1);
-    // The player stops: the cat settles at about `distance`.
-    for (let i = 0; i < 120; i++) cat.step(s, 0, playerZ, 0, DT, free);
-    expect(Math.hypot(s.x, playerZ - s.z)).toBeCloseTo(cfg.distance, 1);
-    expect(cat.walking).toBe(false);
+    c.placeBehind(s, 0, 0, 0);
+    let inTheWay = 0;
+    let farAway = 0;
+    // The player walks 4 m/s along +z for 20 s.
+    for (let i = 0; i < 60 * 20; i++) {
+      const pz = (i + 1) * 4 * DT;
+      c.step(s, at(0, pz, 0, true), DT, free);
+      if (i < 120) continue;
+      const r = relative(s, 0, pz, 0);
+      // "In the way": in front of the player, close to the line they walk.
+      if (r.ahead > 0.3 && Math.abs(r.side) < 1) inTheWay++;
+      if (r.distance > cfg.maxDistance * 2) farAway++;
+    }
+    expect(inTheWay).toBe(0);
+    // Sniffing now and then lets it fall back a bit, but it always catches up.
+    expect(farAway).toBeLessThan(60);
   });
 
-  it('jumps behind the player after a teleport', () => {
-    const cat = new Companion(cfg);
+  it('does not keep one fixed distance', () => {
+    const c = cat(3);
     const s = { x: 0, z: 0, heading: 0 };
-    expect(cat.step(s, 500, 500, Math.PI / 2, DT, free)).toBe('teleport');
-    // Heading 90° faces +x: the cat lands `distance` away, behind (x < 500), off to the side.
-    expect(Math.hypot(s.x - 500, s.z - 500)).toBeCloseTo(cfg.distance);
+    c.placeBehind(s, 0, 0, 0);
+    const distances: number[] = [];
+    for (let i = 0; i < 60 * 30; i++) {
+      // 15 s walking, then 15 s standing still.
+      const pz = Math.min(i, 900) * 4 * DT;
+      c.step(s, at(0, pz, 0, i < 900), DT, free);
+      if (i % 30 === 0 && i > 120) distances.push(Math.hypot(s.x, s.z - pz));
+    }
+    const mean = distances.reduce((a, b) => a + b, 0) / distances.length;
+    const spread = Math.sqrt(distances.reduce((a, b) => a + (b - mean) ** 2, 0) / distances.length);
+    expect(spread).toBeGreaterThan(0.3);
+  });
+
+  it('strolls around a player who stands still: close, but never through their feet', () => {
+    const c = cat(11);
+    const s = { x: 0, z: 0, heading: 0 };
+    c.placeBehind(s, 0, 0, 0);
+    let walks = 0;
+    let wasWalking = false;
+    let furthest = 0;
+    let closest = Infinity;
+    for (let i = 0; i < 60 * 40; i++) {
+      c.step(s, at(0, 0, 0), DT, free);
+      if (c.walking && !wasWalking) walks++;
+      wasWalking = c.walking;
+      furthest = Math.max(furthest, Math.hypot(s.x, s.z));
+      closest = Math.min(closest, Math.hypot(s.x, s.z));
+    }
+    expect(walks).toBeGreaterThanOrEqual(3);
+    expect(furthest).toBeLessThan(cfg.maxDistance + 0.5);
+    expect(closest).toBeGreaterThan(1.1);
+  });
+
+  it('lets you walk up to it to pet it', () => {
+    const c = cat(5);
+    const s = { x: 0, z: 0, heading: 0 };
+    c.placeBehind(s, 0, 0, 0);
+    for (let i = 0; i < 60 * 3; i++) c.step(s, at(0, 0, 0), DT, free);
+    // Walk straight at the cat at 4 m/s until within the pet range (1.5 m).
+    let px = 0;
+    let pz = 0;
+    let reached = false;
+    for (let i = 0; i < 60 * 2 && !reached; i++) {
+      const dx = s.x - px;
+      const dz = s.z - pz;
+      const d = Math.hypot(dx, dz);
+      if (d <= 1.5) {
+        reached = true;
+        break;
+      }
+      px += (dx / d) * 4 * DT;
+      pz += (dz / d) * 4 * DT;
+      c.step(s, at(px, pz, Math.atan2(dx, dz), true), DT, free);
+    }
+    expect(reached).toBe(true);
+  });
+
+  it('jumps beside the player after a teleport', () => {
+    const c = cat();
+    const s = { x: 0, z: 0, heading: 0 };
+    expect(c.step(s, at(500, 500, Math.PI / 2), DT, free)).toBe('teleport');
+    // Heading 90° faces +x: the cat lands behind (x < 500), off to the side.
+    const d = Math.hypot(s.x - 500, s.z - 500);
+    expect(d).toBeGreaterThanOrEqual(cfg.minDistance);
+    expect(d).toBeLessThanOrEqual(cfg.maxDistance);
     expect(s.x).toBeLessThan(500);
     expect(Math.abs(s.z - 500)).toBeGreaterThan(0.5);
   });
 
   it('jumps to the player when stuck behind a wall far away', () => {
-    const cat = new Companion(cfg);
+    const c = cat();
     const s = { x: 0, z: 0, heading: 0 };
     let result = 'walk';
-    for (let i = 0; i < 60 * 5 && result !== 'teleport'; i++) {
-      result = cat.step(s, 20, 0, 0, DT, wall);
+    for (let i = 0; i < 60 * 8 && result !== 'teleport'; i++) {
+      result = c.step(s, at(20, 0, Math.PI / 2, true), DT, wall);
     }
     expect(result).toBe('teleport');
   });
@@ -146,28 +242,29 @@ describe('Npcs', () => {
   it('shows NPCs near the player only, with a margin before hiding', () => {
     const npcs = new Npcs(npcsFile(), 'summer', () => 0xffffff);
     const ansel = npcs.byId('brother_ansel');
-    const treewarden = npcs.byId('treewarden_1');
-    if (!ansel || !treewarden) throw new Error('missing NPCs');
+    const garrick = npcs.byId('sir_garrick');
+    if (!ansel || !garrick) throw new Error('missing NPCs');
     const { x, z } = ansel.def.position;
-    npcs.update(DT, x + 5, z, 0, flatWorld, null);
+    npcs.update(DT, at(x + 5, z, 0), flatWorld, null);
     expect(ansel.shown).toBe(true);
     expect(ansel.state.y).toBe(2);
-    expect(treewarden.shown).toBe(false);
+    expect(garrick.shown).toBe(false);
     const { showRadius, hideMargin } = npcs.settings;
-    npcs.update(DT, x + showRadius + hideMargin / 2, z, 0, flatWorld, null);
+    npcs.update(DT, at(x + showRadius + hideMargin / 2, z, 0), flatWorld, null);
     expect(ansel.shown).toBe(true);
-    npcs.update(DT, x + showRadius + hideMargin + 1, z, 0, flatWorld, null);
+    npcs.update(DT, at(x + showRadius + hideMargin + 1, z, 0), flatWorld, null);
     expect(ansel.shown).toBe(false);
   });
 
   it('keeps the companion with the player everywhere', () => {
     const npcs = new Npcs(npcsFile(), 'summer', () => 0xffffff);
     const pringle = npcs.byId('pringle');
-    npcs.update(DT, -1000, -600, 0, flatWorld, null);
+    npcs.update(DT, at(-1000, -600, 0), flatWorld, null);
     expect(pringle?.shown).toBe(true);
-    expect(Math.hypot((pringle?.state.x ?? 0) + 1000, (pringle?.state.z ?? 0) + 600)).toBeLessThan(
-      3,
-    );
+    const maxDistance = pringle?.def.follow?.maxDistance ?? 0;
+    expect(
+      Math.hypot((pringle?.state.x ?? 0) + 1000, (pringle?.state.z ?? 0) + 600),
+    ).toBeLessThanOrEqual(maxDistance);
   });
 
   it('turns a static NPC towards a player who comes close', () => {
@@ -176,10 +273,10 @@ describe('Npcs', () => {
     if (!marco) throw new Error('missing Marco');
     const { x, z } = marco.def.position;
     // Player 2 m east of Marco: Marco should end up facing +x (90°).
-    for (let i = 0; i < 120; i++) npcs.update(DT, x + 2, z, 0, flatWorld, null);
+    for (let i = 0; i < 120; i++) npcs.update(DT, at(x + 2, z, 0), flatWorld, null);
     expect(marco.state.heading).toBeCloseTo(Math.PI / 2, 3);
     // Player gone: back to the home heading.
-    for (let i = 0; i < 120; i++) npcs.update(DT, x + 50, z, 0, flatWorld, null);
+    for (let i = 0; i < 120; i++) npcs.update(DT, at(x + 50, z, 0), flatWorld, null);
     expect(marco.state.heading).toBeCloseTo(marco.homeHeading, 3);
   });
 
@@ -189,7 +286,7 @@ describe('Npcs', () => {
     const pringle = npcs.byId('pringle');
     if (!ansel || !pringle) throw new Error('missing NPCs');
     const { x, z } = ansel.def.position;
-    npcs.update(DT, x + 1, z, 0, flatWorld, null);
+    npcs.update(DT, at(x + 1, z, 0), flatWorld, null);
     const p = { x: x + 0.3, z };
     expect(npcs.pushOut(p, 0.4)).toBe(true);
     expect(p.x - x).toBeCloseTo(0.4 + ansel.solidRadius);
@@ -197,21 +294,19 @@ describe('Npcs', () => {
     expect(npcs.pushOut(q, 0.4)).toBe(false);
   });
 
-  it('finds the nearest NPC you can talk to, never a Treewarden', () => {
+  it('finds the nearest NPC you can talk to, and Pringle only up close', () => {
     const npcs = new Npcs(npcsFile(), 'summer', () => 0xffffff);
     const hilda = npcs.byId('hilda');
     if (!hilda) throw new Error('missing Hilda');
     const { x, z } = hilda.def.position;
-    npcs.update(DT, x + 1, z, 0, flatWorld, null);
+    npcs.update(DT, at(x + 1, z, 0), flatWorld, null);
     expect(npcs.nearestInteractable(x + 1, z)?.id).toBe('hilda');
     expect(npcs.nearestInteractable(x + 20, z)?.id).not.toBe('hilda');
 
-    const warden = npcs.byId('treewarden_2');
-    if (!warden) throw new Error('missing Treewarden');
-    const w = warden.def.position;
-    npcs.update(DT, w.x + 1, w.z, 0, flatWorld, null);
-    // Pringle sits at its follow distance, outside the (smaller) pet range.
-    expect(npcs.nearestInteractable(w.x + 1, w.z)).toBeNull();
+    // Out in the forest, nobody to talk to; Pringle roams outside the (smaller) pet range.
+    const w = { x: -1100, z: -400 };
+    npcs.update(DT, at(w.x, w.z, 0), flatWorld, null);
+    expect(npcs.nearestInteractable(w.x, w.z)).toBeNull();
     const pringle = npcs.byId('pringle');
     if (!pringle) throw new Error('missing Pringle');
     expect(npcs.nearestInteractable(pringle.state.x + 0.8, pringle.state.z)?.id).toBe('pringle');
@@ -240,21 +335,5 @@ describe('NPC data', () => {
     const high = { level: 5, completedQuests: new Set<string>() };
     expect(dialogueLines(brink, conditions, low)).toEqual(brink.dialogue);
     expect(dialogueLines(brink, conditions, high)).toEqual(['npc.master_brink.ready']);
-  });
-
-  it('never makes Treewardens attackable in the elven city', () => {
-    const zones = zonesFileSchema.parse(readPublicJson('data/zones.json'));
-    const areas = new Map(
-      zones.zones.flatMap((zone) => zone.areas.map((area) => [area.id, area.shape] as const)),
-    );
-    const warden = npcsFile().npcs.find((npc) => npc.id === 'treewarden_1');
-    const ansel = npcsFile().npcs.find((npc) => npc.id === 'brother_ansel');
-    if (!warden || !ansel) throw new Error('missing NPCs');
-    const city = areas.get('elven_city');
-    if (city?.type !== 'circle') throw new Error('elven_city should be a circle');
-    expect(isAttackable(warden, city.x, city.z, areas)).toBe(false);
-    expect(isAttackable(warden, city.x + city.radius + 50, city.z, areas)).toBe(true);
-    // Not a monster: never.
-    expect(isAttackable(ansel, 0, 0, areas)).toBe(false);
   });
 });

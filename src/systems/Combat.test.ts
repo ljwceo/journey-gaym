@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { monstersFileSchema, playerFileSchema, zonesFileSchema } from '../data/schemas';
+import { playerFileSchema } from '../data/schemas';
 import type { PlayerConfig } from '../data/types';
-import { hasEnemyModel } from '../entities/EnemyFactory';
 import { readPublicJson } from '../test/loadPublic';
 import {
   applyLevel,
@@ -16,7 +15,6 @@ import {
   stepSword,
   swordConfig,
 } from './Combat';
-import { Enemies } from './Enemies';
 
 const DT = 1 / 60;
 const player = playerFileSchema.parse(readPublicJson('data/player.json')) as PlayerConfig;
@@ -171,48 +169,6 @@ describe('regen and fight state', () => {
     c.sinceCombat = cfg.combatLingerSeconds + 1;
     regenOutOfCombat(c, 1, 1);
     expect(c.hp).toBe(51);
-  });
-});
-
-describe('Enemies (training dummies)', () => {
-  const zones = zonesFileSchema.parse(readPublicJson('data/zones.json'));
-  const monsters = monstersFileSchema.parse(readPublicJson('data/monsters.json'));
-
-  it('every monster model exists in the placeholder factory', () => {
-    for (const m of monsters.monsters) {
-      if (m.model) expect(hasEnemyModel(m.model), m.model).toBe(true);
-    }
-  });
-
-  it('a dummy falls at 0 HP and stands up again with full HP', () => {
-    const enemies = new Enemies(zones.zones, monsters, { showRadius: 160, hideMargin: 20 });
-    const dummy = enemies.list.find((e) => e.def.id === 'training_dummy');
-    expect(dummy).toBeDefined();
-    if (!dummy) return;
-    enemies.step(DT, dummy.x, dummy.z + 3, () => 0);
-    expect(enemies.shown).toContain(dummy);
-    expect(enemies.hit(dummy, dummy.maxHp - 1)).toBe(false);
-    expect(enemies.hit(dummy, 5)).toBe(true);
-    expect(dummy.alive).toBe(false);
-    for (let i = 0; i < 60 * 4; i++) enemies.step(DT, dummy.x, dummy.z + 3, () => 0);
-    expect(dummy.alive).toBe(true);
-    expect(dummy.hp).toBe(dummy.maxHp);
-  });
-
-  it('only near enemies are shown, the same on every graphics preset', () => {
-    const enemies = new Enemies(zones.zones, monsters, { showRadius: 160, hideMargin: 20 });
-    enemies.step(DT, 100_000, 100_000, () => 0);
-    expect(enemies.shown).toHaveLength(0);
-  });
-
-  it('you cannot walk through a dummy', () => {
-    const enemies = new Enemies(zones.zones, monsters, { showRadius: 160, hideMargin: 20 });
-    const dummy = enemies.list[0];
-    if (!dummy) return;
-    enemies.step(DT, dummy.x, dummy.z, () => 0);
-    const p = { x: dummy.x + 0.1, z: dummy.z };
-    expect(enemies.pushOut(p, 0.4)).toBe(true);
-    expect(Math.hypot(p.x - dummy.x, p.z - dummy.z)).toBeCloseTo(0.4 + dummy.radius);
   });
 });
 

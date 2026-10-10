@@ -13,6 +13,8 @@ export interface GameEvents {
   /** The first time the player talks to (or pets) this NPC. */
   npcMet: { npcId: string };
   checkpointSet: { checkpointId: string };
+  /** The player's HP reached 0 (step 2.4 turns this into dying: gold loss, cutscene). */
+  playerKnockedOut: Record<string, never>;
   /** The UI language changed; screens rebuild their text. */
   languageChanged: { language: string };
   /** A setting in the save changed (applied by main.ts). */

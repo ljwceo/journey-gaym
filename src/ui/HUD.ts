@@ -30,6 +30,9 @@ class HudPart {
  * Everything sits at the top of the screen, so it never covers the joystick or the buttons
  * (their safe zones are the lower corners). Times come from player.json `hud`.
  */
+/** Seconds the red edge glow stays on after a hit (then it fades out). */
+const HURT_SECONDS = 0.12;
+
 export class HUD {
   readonly root: HTMLElement;
   readonly rules: HudRules;
@@ -48,6 +51,10 @@ export class HUD {
   private messageGap = 0;
   private interactX = Number.NaN;
   private interactY = Number.NaN;
+  /** Red glow at the screen edges when the player is hit. */
+  private readonly hurtGlow: HTMLElement;
+  private hurtTime = 0;
+  private hurtShown = false;
 
   constructor(
     private readonly cfg: HudConfig,
@@ -90,9 +97,11 @@ export class HUD {
     this.goldValue = el('span', { className: 'ui-hud-gold-value', text: '0' });
     this.gold = part('ui-hud-gold', el('span', { className: 'ui-hud-gold-coin' }), this.goldValue);
 
+    this.hurtGlow = el('div', { className: 'ui-hud-hurt' });
     this.root = el(
       'div',
       { className: 'ui-hud', attrs: { 'aria-live': 'polite' } },
+      this.hurtGlow,
       this.banner.element,
       this.message.element,
       barStack,
@@ -159,8 +168,19 @@ export class HUD {
   }
 
   /** Call every rendered frame with real seconds (fades and timers are fps-independent). */
+  /** A short red glow at the screen edges: the player was hit. */
+  hurt(): void {
+    this.hurtTime = HURT_SECONDS;
+  }
+
   update(seconds: number): void {
     this.updateMessages(seconds);
+    this.hurtTime = Math.max(0, this.hurtTime - seconds);
+    const hurt = this.hurtTime > 0;
+    if (hurt !== this.hurtShown) {
+      this.hurtShown = hurt;
+      this.hurtGlow.classList.toggle('ui-hud-hurt-on', hurt);
+    }
     this.banner.update(seconds);
     this.message.update(seconds);
     this.interact.update(seconds);

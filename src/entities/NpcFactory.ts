@@ -4,17 +4,16 @@ import {
   CapsuleGeometry,
   ConeGeometry,
   CylinderGeometry,
-  DodecahedronGeometry,
   SphereGeometry,
 } from 'three';
-import { palette, terrainColors } from '../render/palette';
+import { palette } from '../render/palette';
 import { colored } from './StructureFactory';
 
 /**
  * Placeholder models for NPCs (npcs.json `roles[].model`). A model is a few parts; every part
  * is one merged geometry with vertex colors, drawn as one InstancedMesh for all NPCs using that
  * model. A tinted part is multiplied by the NPC's role color (white parts take the role color
- * exactly); other parts keep their own colors (skin, eyes, bark).
+ * exactly); other parts keep their own colors (skin, eyes).
  * Heading 0 faces +z, like the player. Real glTF models replace this file later.
  */
 
@@ -87,35 +86,9 @@ function cat(): NpcModel {
   };
 }
 
-/** A Treewarden: a big walking trunk with branch arms and a leafy crown (tinted). */
-function treewarden(): NpcModel {
-  const arm = (side: number): BufferGeometry =>
-    new CylinderGeometry(0.14, 0.2, 1.8, 6).rotateZ(side * 0.6);
-  const glow = (): BufferGeometry => new SphereGeometry(0.11, 6, 4);
-  const trunk = colored([
-    [new CylinderGeometry(0.55, 0.8, 3.4, 8), palette.steengrijs, 0, 1.7, 0],
-    [arm(1), palette.steengrijs, -0.95, 2.4, 0],
-    [arm(-1), palette.steengrijs, 0.95, 2.4, 0],
-    [glow(), palette.zonlicht, -0.22, 2.75, 0.55],
-    [glow(), palette.zonlicht, 0.22, 2.75, 0.55],
-  ]);
-  const crown = colored([
-    [new DodecahedronGeometry(1.5, 0), WHITE, 0, 4.1, 0],
-    [new DodecahedronGeometry(0.9, 0), terrainColors.mosgroen, 0.6, 4.9, 0.2],
-  ]);
-  return {
-    parts: [
-      { geometry: trunk, tinted: false },
-      { geometry: crown, tinted: true },
-    ],
-    height: 5.6,
-  };
-}
-
 const builders: Record<string, () => NpcModel> = {
   'placeholder:npc_humanoid': humanoid,
   'placeholder:cat': cat,
-  'placeholder:treewarden': treewarden,
 };
 
 /** True when this factory can build the model named in npcs.json. */
