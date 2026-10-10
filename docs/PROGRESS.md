@@ -6,10 +6,10 @@
 
 | | |
 |---|---|
-| **Huidige fase** | Fase 2 – Solo-gevecht en de eerste dag (plan goedgekeurd) |
-| **Status** | Stap 2.7 klaar: alle stappen van fase 2 gebouwd. Wacht op spelen en meten op de pc door Bo en Lucas |
-| **Volgende stap** | Bo en Lucas: fase 2 spelen, Meet 20 s op de pc (ook bij het goblinkamp en tegen Sultan), en zeggen of Sultan te makkelijk/moeilijk is. Daarna fase 2 afsluiten en fase 3 plannen |
-| **Laatste sessie** | 2026-10-10: stap 2.7 afronden |
+| **Huidige fase** | Fase 3 – Je pad, Entrance Exam en gear (plan goedgekeurd 2026-10-10) |
+| **Status** | Stap 3.0 (debugvenster in groottes) in een pull request. Fase 2 wacht nog op spelen en Meet 20 s op de pc |
+| **Volgende stap** | 3.1 (gear en draaglast) |
+| **Laatste sessie** | 2026-10-10: plan fase 3, stap 3.0 |
 
 ---
 
@@ -72,6 +72,51 @@ Doel: het spel begint met een speelbaar, episch (en komisch) gevecht tegen Lucae
 **Risico's:** veel vijanden tegelijk (AI en botsing op de vaste tijdstap) moet goedkoop blijven; vandaar één pool en de spatial hash. Gevechten moeten later in raids door een host uitgerekend kunnen worden, dus alle gevechtslogica zit in de simulatie (niet in het tekenen).
 
 **Tijdelijke namen die hierin voorkomen** (nog niet definitief): Brother Ansel, Marco the Merchant, Hilda Ironhand, Old Bertha, Sir Garrick, Treewardens, de elfenstad, Gold.
+
+## Fase 3 – Plan (goedgekeurd 2026-10-10)
+
+Doel: na Sultan kies je in de Academy je pad (Sir Garrick, Master Brink of Wizard Sam) en doe je zijn Entrance Exam tot level 5; daarna gaat de stadspoort open. Je krijgt gear (wapen, hoed, mantel, amulet, 2 ringen) in 4 zeldzaamheden, met een draaglast zoals in Elden Ring, en ezel Biscuit die je extra spullen draagt. Een mage krijgt een staf met kristal die meteen werkt (Arcane Shard + één spell), met lock-on. Elke stap is één pull request; getest op de pc.
+
+**Keuzes van Bo en Lucas (2026-10-10):**
+- **Spells in fase 3:** één basis-spell per element (eerste staf = 1 spellslot). Spellboek en meer spells: fase 4.
+- **Staf:** linkermuisknop schiet een **glintstone-achtig scherfje** (geen mana; voorlopige naam *Arcane Shard*), rechtermuisknop = je spell (mana). **Alles wat je schiet heeft een reisafstand** en verdwijnt daarna.
+- **Lock-on:** in een gevecht zet je lock-on op een vijand; dan hoef je niet te mikken (je schoten buigen naar hem toe). Je kunt wél missen: als de vijand op dat moment een aanval doet (hij beweegt weg, je schot buigt niet meer mee) of als je te ver van hem wegkijkt (bijv. meer dan 40°). **Alle richthulp-getallen zijn in het cheatmenu aan te passen**, zodat Bo en Lucas kunnen testen voor de definitieve keuze.
+- **Gewicht zoals Elden Ring**, maar realistisch voor wapens en spullen die je bij je hebt: hoe zwaarder, hoe trager. Wat Biscuit draagt telt niet voor jou, maar daar kun je ook niet bij: om het te gebruiken, aan te trekken of later te laten maken bij de Forge moet je het eerst uit zijn tas halen.
+- **Gear-stats:** max HP, schade %, minder schade %, mana, loopsnelheid; hogere zeldzaamheid geeft meer.
+- **Biscuit** krijg je van Marco direct na Sultan.
+- **Deuren/portalen naar aparte kaarten (instances):** je loopt door een deur, er volgt een kort laadscherm en er wordt een aparte kaart voor dat stuk geladen (en weer opgeruimd als je weggaat), zodat die niet de hele tijd geladen is. De eerste keer dat je bij Master Brink of Wizard Sam binnenkomt, volgt een korte cutscene waarin hij uitlegt waar zijn magie om draait.
+- **Debugvenster in groottes** (het zat echt in de weg) en **cheats ook als het venster niet in beeld staat**.
+- Exam-quests: voorstel van Claude (alleen data, namen tijdelijk).
+
+**Draaglast (naar Elden Ring, uitgezocht 2026-10-10):** in Elden Ring telt alleen wat je aan hebt; je draaglast is een percentage van je maximum, met vaste grenzen: onder 30% *licht* (snelle, verre ontwijking), 30–70% *middel* (kortere ontwijking), 70–100% *zwaar* ("fat roll": kort, langzaam herstel), boven 100% *overbelast* (niet rennen, niet rollen). Het maximum groeit met Endurance. Voor ons:
+
+| Stand | Draaglast | Lopen | Dash | Energie per dash |
+|---|---|---|---|---|
+| Licht | < 30% | 100% | 4 m, snel | 25 |
+| Middel | 30–70% | 95% | 3,2 m | 25 |
+| Zwaar | 70–100% | 85% | 2,4 m + 0,35 s herstel | 35 |
+| Overbelast | > 100% | 50% | geen dash | – |
+
+- Telt mee: wapens en gear die **jij bij je hebt** (aan én reserve in je tas). Grondstoffen, drankjes en questitems wegen niets (concept). Wat Biscuit draagt telt niet voor jou.
+- Maximum: 30 kg op level 1, +1 kg per level (later ook via de skill tree). Biscuit draagt 60 kg. Alle getallen zijn een **voorstel** in `player.json`.
+- In de tas zie je je gewicht en stand ("23,5 / 34 kg · Middel"); bij overbelast verschijnt een melding.
+
+| Stap | Wat |
+|---|---|
+| 3.0 | **Debugvenster:** groottes Groot / Normaal / Klein / Mini (alleen fps) / Verborgen (F3 wisselt, ook in het cheatmenu). Debugmodus blijft aan als het venster verborgen is, dus het cheatmenu (F6) blijft werken. Keuze onthouden per browser. |
+| 3.1 | **Gear en draaglast:** 6 slots (wapen, hoed, mantel, amulet, ring 1, ring 2), zeldzaamheidskleuren, stats, aan- en uitdoen in de tas (alleen buiten gevecht), draaglast met de vier standen hierboven (lopen en dash), placeholder-vormen op het poppetje, gear als buit in de Greenwood en een paar stukken bij Marco. Save versie 6. |
+| 3.2 | **Ezel Biscuit:** krijg je van Marco na Sultan, loopt rustig achter je aan, pakdier-tas met maximum gewicht (alleen dichtbij Biscuit en buiten gevecht), spullen op Biscuit zijn niet te gebruiken tot je ze eruit haalt. Haak "wacht bij de ingang" voor dungeons. |
+| 3.3 | **Instances:** deur/portaal-trigger → kort laadscherm → aparte kaart uit data (`instances.json`), open wereld staat zolang stil; bij weggaan wordt de kaart opgeruimd (`dispose`). Eerste twee: **de Academy-hal** (Master Brink) en **de kelder van Wizard Sam** (trap vanuit de hal). Eerste keer binnen: korte cutscene met uitleg over zijn magie. Save onthoudt in welke instance je bent. |
+| 3.4 | **Main quest *Your Resolve*:** keuzeknoppen in de dialoog; "Will you train under me?" → nee mag altijd, ja → nog één keer bevestigen → pad in de save. Sam waarschuwt voor de duistere weg, Brink zegt dat geduld wordt beloond. |
+| 3.5 | **Vechten met een staf + lock-on:** Arcane Shard (links, geen mana), één spell per element (rechts, mana) uit een pool, met reisafstand; lock-on (pc: middelste muisknop of Tab, telefoon: knop) met marker en camera die het doel in beeld houdt; missen bij een vijandaanval of te ver wegkijken; richthulp-getallen in het cheatmenu. Lock-on werkt ook met het zwaard. Op elke grafische stand gelijk. |
+| 3.6 | **Entrance Exams en pad:** 3 quests per leraar tot level 5; zwaardvechter: beter zwaard, geen mana, 115% kracht, perks Iron Body, Battle Hardened, Swift Blade; mage: Mage Staff + **Crystal Ceremony** (stripcutscene; Brink: willekeurig Water/Fire/Nature/Wind, Sam: Dark) en krachtcurves. Daarna `canLeaveCity` = Sultan verslagen + exam klaar. |
+| 3.7 | **Afronden:** balans (nagebootste speler met zwaard, licht en duister), Meet 20 s, geheugen (ook instances in/uit), documentatie. |
+
+**Niet in fase 3:** skill tree en skillpunten, spellboek en meer spells, kristallen mergen of opnieuw renderen, de echte Forge en markt (fase 4); co-op (fase 5); Warrior/Berserker (level 15), Old Rivals, Grimoire, Nine Lives, Second Wind (later).
+
+**Afspraak:** Master Brink heet in het spel overal *Master Brink*. Zijn echte naam (Ruben) komt pas uit in de quest Old Rivals en staat tot dan nergens in de data of de teksten.
+
+**Tijdelijke namen die hierin voorkomen** (nog niet definitief): Sir Garrick the Blademaster, ezel Biscuit, Marco the Merchant, Gold, Treewardens; nieuw en voorlopig: Arcane Shard, de namen van de 5 spells, de gear, het betere zwaard en de exam-quests.
 
 ## Fase-log
 
@@ -359,6 +404,15 @@ Doel: het spel begint met een speelbaar, episch (en komisch) gevecht tegen Lucae
 | ✅🎮 | 60/120 fps op de pc, ook met veel vijanden; op elke stand hetzelfde gevecht | Rekenwerk gemeten (0,03 ms met alle vijanden), draw calls per stand hierboven; gevecht staat los van de grafische stand (tests). **Fps op de pc nog meten** |
 | ✅ | Tests (gevechtsformules, XP, quests, save-migratie) en de DataValidator slagen | 330 tests |
 
+### Fase 3 – Je pad, Entrance Exam en gear
+**Status:** plan goedgekeurd; stap 3.0 gebouwd.
+**Gebouwd:**
+- 3.0 Debugvenster in groottes:
+  - **F3** (of tikken met drie vingers) zet debugmodus aan en wisselt daarna de grootte: **Groot** (alles, zoals eerst) → **Normaal** (alles, kleiner en doorzichtiger) → **Klein** (fps, draw calls, grafische stand, positie en zone) → **Alleen fps** (één regel) → **Verborgen** → Groot. Ook te kiezen bovenin het cheatmenu (**Debugvenster**). De keuze wordt per browser onthouden (niet in de save).
+  - **Debugmodus blijft aan als het venster verborgen is:** de knop Cheats, F6, F4 (seizoen) en alle cheats blijven werken. Debugmodus helemaal uit gaat via Settings.
+  - Gebouwlabels in de wereld en de rode foutlijst staan alleen bij Groot en Normaal; bij Klein, Alleen fps en Verborgen wordt de tekst van de wereld niet eens opgebouwd (scheelt rekenwerk).
+  - Getest: 336 tests (o.a. de volgorde van F3, welke regels in Klein staan). Headless Chromium (pc 1100×700, NL): titelscherm F3 door alle groottes; in de wereld verborgen → Cheats-knop en F6 werken, Klein kiezen in het cheatmenu. Geen fouten.
+
 ## Besluiten
 
 | Datum | Besluit | Waarom |
@@ -491,6 +545,10 @@ Doel: het spel begint met een speelbaar, episch (en komisch) gevecht tegen Lucae
 | 2026-10-10 | Na een cutscene wordt de muis niet vanzelf gevangen; één klik en je kijkt weer rond | Vanzelf vangen liet de camera soms een sprong maken |
 | 2026-10-10 | Sultan iets vriendelijker na de balanstest: pauze 1,0–2,0 s, Pounce mikt 0,3 s vóór de sprong, Flurry waarschuwt 0,9 s en loopt minder mee | Een beginner (0,5 s reactietijd) won anders maar 1 van de 8 keer; nu wint hij net (±37 HP over). Wie niet ontwijkt verliest nog steeds |
 | 2026-10-10 | Balans wordt getest met een nagebootste speler in de tests (`Balance.test.ts`) | Zo zien we bij elke wijziging in `monsters.json` meteen of het gevecht te makkelijk of te moeilijk wordt |
+| 2026-10-10 | Debugvenster in 5 groottes (F3 wisselt), debugmodus en cheats blijven aan als het venster verborgen is; F3 zet debug niet meer uit (dat kan in Settings) | Verzoek van Bo/Lucas: "het zit echt in de weg" en cheats zonder venster in beeld. Vervangt "F3 = debug aan/uit" |
+| 2026-10-10 | Draaglast zoals Elden Ring (licht < 30%, middel 30–70%, zwaar 70–100%, overbelast > 100%), maar voor alle gear die je bij je hebt; wat Biscuit draagt telt niet, maar is ook niet bruikbaar tot je het eruit haalt | Verzoek van Bo/Lucas; getallen zijn een voorstel in `player.json` |
+| 2026-10-10 | Lock-on met schoten die meebuigen; missen als de vijand aanvalt of als je meer dan ±40° wegkijkt; alle richthulp-getallen in het cheatmenu | Verzoek van Bo/Lucas, om te testen voor de definitieve keuze |
+| 2026-10-10 | Academy-hal en kelder van Sam worden instances (deur → laadscherm → aparte kaart) | Verzoek van Bo/Lucas; oefent meteen de interface voor De Wortelgrotten |
 
 ## Sessielog
 
@@ -522,3 +580,4 @@ Doel: het spel begint met een speelbaar, episch (en komisch) gevecht tegen Lucae
 - Stap 2.5 gebouwd: questsysteem uit `quests.json` (praten, hebben, brengen, verslaan, kopen, rusten, ergens heen lopen), de vijf quests van de eerste dag (Brother Ansel, Marco, Hilda, Rose, Old Bertha) in EN en NL, winkel van Marco, Hilda slijpt je zwaard (+3 schade), stukje grond in de Garden, questmarkeringen, quests in de tas, save versie 4. 307 tests, headless Chromium (EN en NL) zonder fouten. Tijdelijke namen gebruikt (alleen in data): Brother Ansel, Marco the Merchant, Hilda Ironhand, Old Bertha, Gold, Slime Gel; nieuw: de vijf questnamen, Honed Old Sword, Herb Seeds, "Your plot". Op verzoek (optie a): een slime-erf binnen de stadsmuur voor Hilda's Slime Gel. Volgende stap: 2.6 (Sultan).
 - Stap 2.6 gebouwd: Sultan, de beginnersbaas: quest begint vanzelf na de eerste dag, stripcutscene "Pringle" (één keer, overslaanbaar), baasgevecht in een ring bij de stadspoort (Claw Combo, Pounce, Dash Strike, Flurry onder 50%, alleen raakbaar na een aanval, tips de eerste keer, HP-balk), winnen = Sultan wordt een NPC buiten de poort en Pringle is weg, verliezen = doodgaan en meteen een herkansing. Save versie 5. Cheat "Vecht tegen Sultan". 325 tests, headless Chromium (pc EN/NL en telefoon) zonder fouten. Tijdelijke namen gebruikt (alleen in data): Gold; nieuw: geen (Sultan, Pringle en de aanvalsnamen komen uit het concept). Volgende stap: 2.7 (afronden).
 - Stap 2.7 gebouwd: balanstest met een nagebootste speler tegen Sultan (en Sultan iets vriendelijker gemaakt), fout opgelost waarbij Sultan niet aanviel als je tegen hem aan bleef staan, rekentijd van alle vijanden gemeten (0,03 ms per stap met alle 45 vijanden om je heen), draw calls per stand bij het goblinkamp en tegen Sultan, geheugen na 3× wereld in/uit gelijk, Definition of Done van fase 2 nagelopen. 330 tests. Open: spelen en Meet 20 s op de pc door Bo en Lucas.
+- Plan fase 3 geschreven en goedgekeurd met aanpassingen (glintstone-achtig schot met reisafstand, lock-on met missen en instelbare richthulp, draaglast zoals Elden Ring, instances via deuren met uitleg-cutscene, debugvenster in groottes). Stap 3.0 gebouwd: debugvenster in groottes, cheats ook met verborgen venster. 336 tests. Tijdelijke namen: geen nieuwe. Volgende stap: 3.1 (gear en draaglast).

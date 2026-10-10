@@ -7,20 +7,71 @@ const REFRESH_SECONDS = 0.25;
 /** Extra values a scene or system wants to show, e.g. player position (filled in later steps). */
 export type DebugLines = Map<string, string>;
 
+/**
+ * How much of the overlay is on screen. Debug mode (and the cheat menu) stays on in every view,
+ * also when the overlay is hidden.
+ */
+export const DEBUG_VIEWS = ['large', 'normal', 'small', 'mini', 'hidden'] as const;
+export type DebugView = (typeof DEBUG_VIEWS)[number];
+
+/** Scene lines that stay in the small view (the rest only in normal and large). */
+const SMALL_VIEW_KEYS = ['zone', 'pos', 'quality'];
+
+/** Remembered per browser: a developer preference, not part of the save. */
+const VIEW_STORAGE_KEY = 'morvath.debugView';
+
+/** The view after `view` when cycling with F3 (hidden wraps around to large). */
+export function nextDebugView(view: DebugView): DebugView {
+  return DEBUG_VIEWS[(DEBUG_VIEWS.indexOf(view) + 1) % DEBUG_VIEWS.length] ?? 'large';
+}
+
+/** Whether the scene's own debug lines are on screen in this view (skip building them otherwise). */
+export function showsSceneLines(view: DebugView): boolean {
+  return view === 'large' || view === 'normal' || view === 'small';
+}
+
+/** Scene lines shown in a view, in insertion order. */
+export function visibleLineKeys(view: DebugView, keys: Iterable<string>): string[] {
+  if (!showsSceneLines(view)) return [];
+  const all = [...keys];
+  return view === 'small' ? all.filter((key) => SMALL_VIEW_KEYS.includes(key)) : all;
+}
+
+function loadView(): DebugView {
+  try {
+    const stored = window.localStorage.getItem(VIEW_STORAGE_KEY);
+    return (DEBUG_VIEWS as readonly string[]).includes(stored ?? '')
+      ? (stored as DebugView)
+      : 'large';
+  } catch {
+    return 'large';
+  }
+}
+
+function storeView(view: DebugView): void {
+  try {
+    window.localStorage.setItem(VIEW_STORAGE_KEY, view);
+  } catch {
+    // Private mode or blocked storage: the view simply resets next time.
+  }
+}
+
 interface MemoryInfo {
   usedJSHeapSize: number;
 }
 
 /**
  * Developer overlay: fps, frame time, CPU time, draw calls, triangles, GPU resources, simulation
- * counters. Toggle with F3, a three-finger tap (touch), or start with `?debug=1`.
+ * counters. Debug mode is switched on in Settings or with `?debug=1`; F3 (or a three-finger tap)
+ * switches it on and then cycles the size: large → normal → small → mini (fps only) → hidden.
  * Labels are technical abbreviations for developers and intentionally not translated.
  */
 export class DebugOverlay {
   readonly lines: DebugLines = new Map();
   private readonly element: HTMLPreElement;
   private readonly errorElement: HTMLPreElement;
-  private visible = false;
+  private enabled = false;
+  private viewMode: DebugView = loadView();
 
   private frames = 0;
   private frameTimeSum = 0;
@@ -43,18 +94,59 @@ export class DebugOverlay {
 
     window.addEventListener('keydown', this.onKeyDown);
     window.addEventListener('touchstart', this.onTouchStart, { passive: true });
-    this.setVisible(new URLSearchParams(window.location.search).get('debug') === '1');
+    this.setEnabled(new URLSearchParams(window.location.search).get('debug') === '1');
   }
 
-  get isVisible(): boolean {
-    return this.visible;
+  /** Debug mode: debug keys and the cheat menu work, also when the overlay itself is hidden. */
+  get isEnabled(): boolean {
+    return this.enabled;
   }
 
-  setVisible(visible: boolean): void {
-    this.visible = visible;
-    this.element.style.display = visible ? 'block' : 'none';
+  /** Debug mode on and the overlay (in any size) on screen. */
+  get isShown(): boolean {
+    return this.enabled && this.viewMode !== 'hidden';
+  }
+
+  /** Debug mode on and the scene's own lines on screen (worth building them). */
+  get showsLines(): boolean {
+    return this.enabled && showsSceneLines(this.viewMode);
+  }
+
+  /** Debug mode on in a large view: room for extras such as building labels in the world. */
+  get isDetailed(): boolean {
+    return this.enabled && (this.viewMode === 'large' || this.viewMode === 'normal');
+  }
+
+  get view(): DebugView {
+    return this.viewMode;
+  }
+
+  setEnabled(enabled: boolean): void {
+    this.enabled = enabled;
+    this.applyView();
+  }
+
+  setView(view: DebugView): void {
+    this.viewMode = view;
+    storeView(view);
+    this.applyView();
+  }
+
+  private applyView(): void {
+    this.element.style.display = this.isShown ? 'block' : 'none';
+    this.element.className = `debug-overlay debug-overlay--${this.viewMode}`;
     this.updateErrorVisibility();
-    if (visible) this.reset();
+    if (this.isShown) {
+      this.reset();
+      // Show the new size right away instead of after the next refresh.
+      this.element.textContent = this.viewMode === 'mini' ? 'fps …' : 'debug …';
+    }
+  }
+
+  /** F3 / three-finger tap: switch debug mode on, or show the next size. */
+  private cycle(): void {
+    if (!this.enabled) this.setEnabled(true);
+    else this.setView(nextDebugView(this.viewMode));
   }
 
   /** Problems to show in red while debug mode is on (data validation, missing texts, ...). */
@@ -64,7 +156,7 @@ export class DebugOverlay {
   }
 
   private updateErrorVisibility(): void {
-    const show = this.visible && this.errorElement.textContent !== '';
+    const show = this.isDetailed && this.errorElement.textContent !== '';
     this.errorElement.style.display = show ? 'block' : 'none';
   }
 
@@ -74,7 +166,7 @@ export class DebugOverlay {
    * @param cpuMs time spent in update + render this frame
    */
   frame(frameSeconds: number, cpuMs: number): void {
-    if (!this.visible) return;
+    if (!this.isShown) return;
     this.frames++;
     this.frameTimeSum += frameSeconds;
     if (frameSeconds > this.frameTimeMax) this.frameTimeMax = frameSeconds;
@@ -110,6 +202,19 @@ export class DebugOverlay {
     const size = this.renderer.domElement;
     const memory = (performance as Performance & { memory?: MemoryInfo }).memory;
 
+    if (this.viewMode === 'mini') {
+      this.element.textContent = `${fps.toFixed(0)} fps · ${avgMs.toFixed(1)} ms · ${info.render.calls} calls`;
+      return;
+    }
+    if (this.viewMode === 'small') {
+      let small = `fps      ${fps.toFixed(0)} (${avgMs.toFixed(1)} ms, max ${maxMs.toFixed(1)})\ncalls    ${info.render.calls}`;
+      for (const key of visibleLineKeys('small', this.lines.keys())) {
+        small += `\n${key.padEnd(8)} ${this.lines.get(key) ?? ''}`;
+      }
+      this.element.textContent = small;
+      return;
+    }
+
     let text =
       `fps      ${fps.toFixed(0)}\n` +
       `frame    ${avgMs.toFixed(2)} ms (max ${maxMs.toFixed(1)})\n` +
@@ -129,11 +234,11 @@ export class DebugOverlay {
   private readonly onKeyDown = (event: KeyboardEvent): void => {
     if (event.code === 'F3') {
       event.preventDefault();
-      this.setVisible(!this.visible);
+      this.cycle();
     }
   };
 
   private readonly onTouchStart = (event: TouchEvent): void => {
-    if (event.touches.length === 3) this.setVisible(!this.visible);
+    if (event.touches.length === 3) this.cycle();
   };
 }

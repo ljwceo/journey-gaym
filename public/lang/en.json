@@ -434,6 +434,13 @@
     "potion": "Drink potion"
   },
   "cheats": {
+    "debugView": "Debug overlay",
+    "debugViewNote": "F3 cycles the size. Hidden keeps debug mode and this menu (F6) on.",
+    "debugView_large": "Large",
+    "debugView_normal": "Normal",
+    "debugView_small": "Small",
+    "debugView_mini": "Fps only",
+    "debugView_hidden": "Hidden",
     "title": "Cheats (debug)",
     "note": "Only in debug mode, never saved.",
     "speed": "Speed",

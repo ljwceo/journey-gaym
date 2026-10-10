@@ -315,3 +315,21 @@ Definition of Done:
 - [ ] Sultan: de cutscene speelt (overslaanbaar), het gevecht leert en test de basis (duidelijke waarschuwingen, momenten om te slaan, hints de eerste keer), en verliezen of winnen werkt.
 - [ ] Alles blijft 60/120 fps op de pc, ook met veel vijanden, en is op elke grafische stand gelijk.
 - [ ] Tests (gevechtsformules, XP, quests, save-migratie) en de DataValidator slagen.
+
+### Fase 3 – Je pad, Entrance Exam en gear
+Status: plan goedgekeurd (2026-10-10); stap 3.0 gebouwd. Details, keuzes en stappen in `docs/PROGRESS.md`.
+Doel: na Sultan kies je in de Academy je pad (Sir Garrick, Master Brink of Wizard Sam), doet zijn Entrance Exam tot level 5 en kunt daarna de stad uit. Je draagt gear met gewicht (draaglast zoals Elden Ring) en ezel Biscuit draagt je extra spullen. Een mage vecht met staf, kristal, Arcane Shard en één spell, met lock-on.
+Bouwen: debugvenster in groottes + cheats zonder venster; gear (6 slots, 4 zeldzaamheden, stats) en draaglast (licht/middel/zwaar/overbelast); Biscuit met pakdier-tas (spullen erop zijn niet bruikbaar tot je ze eruit haalt); instances via deur/portaal (Academy-hal, kelder van Sam) met cutscene bij de eerste keer; keuzedialoog Your Resolve; staf-gevecht (Arcane Shard, 5 spells met reisafstand, lock-on, richthulp in het cheatmenu); Entrance Exams, pad-effecten, Crystal Ceremony, poort open.
+Data: `items.json` (gear, staven, zwaarden, gewicht, stats), `player.json` (draaglast, perks, lock-on, richthulp), `npcs.json` (Biscuit, keuzes), `quests.json` (Your Resolve + exams), `spells.json`, `monsters.json` (gear-buit), `cutscenes.json` (Crystal Ceremony, uitleg Brink/Sam), `instances.json` (nieuw), `triggers.json` (poort, deuren), save versie 6+.
+Niet doen: skill tree, spellboek, kristallen mergen/renderen, echte Forge en markt (fase 4); co-op (fase 5); Warrior/Berserker, Old Rivals, Grimoire, Nine Lives (later). De naam Ruben komt nergens voor tot Old Rivals.
+Definition of Done:
+- [ ] Het debugvenster heeft groottes (ook verborgen) en het cheatmenu werkt ook als het venster verborgen is.
+- [ ] Na Sultan kies ik in de Academy mijn pad: nee mag altijd, ja vraagt nog één keer; de keuze staat in de save.
+- [ ] Door een deur ga ik naar de Academy-hal en de kelder van Sam (kort laadscherm); de eerste keer legt Brink/Sam zijn magie uit; weggaan zet me terug en de kaart wordt opgeruimd.
+- [ ] De Entrance Exam van elke leraar werkt in NL en EN, brengt me naar level 5 en opent daarna de stadspoort.
+- [ ] Zwaardvechter: beter zwaard, geen mana, perks. Mage: staf met kristal (Crystal Ceremony), Arcane Shard en één spell die werken; licht en duister volgen hun krachtcurve.
+- [ ] Lock-on werkt; schoten kunnen missen bij een vijandaanval of als ik te ver wegkijk; de richthulp is in het cheatmenu aan te passen.
+- [ ] Gear in 6 slots en 4 zeldzaamheden; draaglast maakt me trager (licht/middel/zwaar/overbelast) zoals in het plan.
+- [ ] Biscuit loopt mee en draagt spullen; wat op Biscuit ligt kan ik pas gebruiken als ik het eruit haal.
+- [ ] Alles blijft 60/120 fps op de pc en is op elke grafische stand gelijk; geheugen groeit niet bij instances in en uit.
+- [ ] Tests (draaglast, lock-on/missen, keuzes, quests, save-migratie) en de DataValidator slagen.
