@@ -342,14 +342,14 @@
       }
     },
     "steel_and_slime": {
-      "desc": "Bring Hilda 3 Slime Gel from the slimes in the Greenwood. She will hone your old sword.",
+      "desc": "Bring Hilda 3 Slime Gel from the slimes in the yard by the north-east city wall. She will hone your old sword.",
       "offer": {
         "1": "HA! That rusty old thing is your sword? It couldn't cut butter on a summer day!",
         "2": "I can hone it for you. But I need Slime Gel to polish the steel. Three blobs of it.",
-        "3": "Slimes hop about in the Greenwood, through the east gate. Whack a few and bring me their gel!"
+        "3": "A few slimes have crept into the old yard by the north-east city wall. Whack them and bring me their gel!"
       },
       "progress": {
-        "1": "No gel, no shine! Slimes live in the Greenwood, east of the city gate."
+        "1": "No gel, no shine! The slimes are in the old yard by the north-east city wall."
       },
       "complete": {
         "1": "Ooh, nice and sticky. Hand me that sword. *CLANG* *CLANG* *hiss*",

@@ -4,6 +4,7 @@ import {
   monstersFileSchema,
   playerFileSchema,
   questsFileSchema,
+  zonesFileSchema,
 } from '../data/schemas';
 import type { PlayerConfig, QuestDef } from '../data/types';
 import type { SaveQuests } from '../save/SaveData';
@@ -15,6 +16,7 @@ import { QuestBook } from './Quests';
 const quests = questsFileSchema.parse(readPublicJson('data/quests.json')).quests;
 const player = playerFileSchema.parse(readPublicJson('data/player.json')) as PlayerConfig;
 const monsters = monstersFileSchema.parse(readPublicJson('data/monsters.json')).monsters;
+const zones = zonesFileSchema.parse(readPublicJson('data/zones.json')).zones;
 const items = itemsFileSchema.parse(readPublicJson('data/items.json')).items;
 
 function freshSave(): SaveQuests {
@@ -159,6 +161,27 @@ describe('the first day in Greyhaven (quests.json)', () => {
     const from = items.find((i) => i.id === upgrade?.from);
     const to = items.find((i) => i.id === upgrade?.to);
     expect(to?.weapon?.damageBonus ?? 0).toBeGreaterThan(from?.weapon?.damageBonus ?? 0);
+  });
+
+  it('Slime Gel for Hilda can be found inside the city walls (the gate stays shut until later)', () => {
+    const greyhaven = zones.find((z) => z.id === 'greyhaven');
+    const city = greyhaven?.areas.find((a) => a.id === 'greyhaven_city')?.shape;
+    const slimeIds = monsters
+      .filter((m) => m.drops.some((d) => d.item === 'slime_gel'))
+      .map((m) => m.id);
+    const inside = (greyhaven?.spawnAreas ?? []).filter(
+      (a) =>
+        slimeIds.includes(a.monster) &&
+        city?.type === 'rect' &&
+        a.x - a.radius > city.minX &&
+        a.x + a.radius < city.maxX &&
+        a.z - a.radius > city.minZ &&
+        a.z + a.radius < city.maxZ,
+    );
+    const hilda = quests.find((q) => q.giver === 'hilda');
+    const need = hilda?.objectives.find((o) => o.type === 'deliver');
+    const total = inside.reduce((sum, a) => sum + a.count, 0);
+    expect(need && 'count' in need && total >= need.count).toBe(true);
   });
 
   it("Old Bertha's tale is done as soon as you listened (talk to the giver)", () => {

@@ -342,14 +342,14 @@
       }
     },
     "steel_and_slime": {
-      "desc": "Breng Hilda 3 Slime Gel van de slimes in de Greenwood. Dan slijpt ze je oude zwaard.",
+      "desc": "Breng Hilda 3 Slime Gel van de slimes op het erf bij de noordoostelijke stadsmuur. Dan slijpt ze je oude zwaard.",
       "offer": {
         "1": "HA! Is dat roestige ding je zwaard? Daar snij je op een zomerdag nog geen boter mee!",
         "2": "Ik kan het voor je slijpen. Maar dan heb ik Slime Gel nodig om het staal te poetsen. Drie klodders.",
-        "3": "In de Greenwood, door de oostpoort, hupsen slimes rond. Mep er een paar en breng me hun gel!"
+        "3": "Er zijn een paar slimes het oude erf bij de noordoostelijke stadsmuur in gekropen. Mep ze en breng me hun gel!"
       },
       "progress": {
-        "1": "Geen gel, geen glans! Slimes wonen in de Greenwood, ten oosten van de stadspoort."
+        "1": "Geen gel, geen glans! De slimes zitten op het oude erf bij de noordoostelijke stadsmuur."
       },
       "complete": {
         "1": "Ooh, lekker plakkerig. Geef dat zwaard maar hier. *KLANG* *KLANG* *sssss*",

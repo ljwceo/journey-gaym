@@ -796,6 +796,17 @@
           "x": -1690,
           "z": 64
         }
+      ],
+      "spawnAreas": [
+        {
+          "id": "greyhaven_slime_yard",
+          "monster": "green_slime",
+          "x": -1580,
+          "z": -175,
+          "radius": 12,
+          "count": 3,
+          "respawnSeconds": 30
+        }
       ]
     },
     {
