@@ -419,6 +419,18 @@ class CrossChecker {
         this.issue(f, `potions.quickOrder[${i}]`, `"${itemId}" is not a potion`);
       }
     });
+    player.load.tiers.forEach((tier, i) => {
+      this.text(f, `load.tiers[${i}].label`, tier.label);
+      this.text(f, `load.tiers[${i}].message`, tier.message);
+      const last = i === player.load.tiers.length - 1;
+      if (last !== (tier.maxRatio === undefined)) {
+        this.issue(f, `load.tiers[${i}].maxRatio`, 'every tier but the last needs a maxRatio');
+      }
+      const before = player.load.tiers[i - 1]?.maxRatio;
+      if (tier.maxRatio !== undefined && before !== undefined && tier.maxRatio <= before) {
+        this.issue(f, `load.tiers[${i}].maxRatio`, 'tiers must go from light to heavy');
+      }
+    });
     if (player.xpToNextLevel.length > player.maxLevel - 1) {
       this.issue(f, 'xpToNextLevel', 'more XP steps than levels');
     }
@@ -554,6 +566,13 @@ class CrossChecker {
       }
       if (item.type === 'armor' && item.slot === undefined) {
         this.issue(f, `${p}.slot`, 'armor needs a slot');
+      }
+      const gear = item.type === 'weapon' || item.type === 'armor';
+      if (gear && item.weight === undefined) {
+        this.issue(f, `${p}.weight`, 'weapons and armor need a weight (equip load)');
+      }
+      if (!gear && item.stats !== undefined) {
+        this.issue(f, `${p}.stats`, 'only weapons and armor have stats');
       }
       this.ref('crystalSize', f, `${p}.weapon.maxCrystalSize`, item.weapon?.maxCrystalSize);
       this.ref('crystalSize', f, `${p}.crystal.size`, item.crystal?.size);

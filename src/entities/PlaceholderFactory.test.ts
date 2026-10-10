@@ -32,8 +32,8 @@ describe('PlaceholderFactory', () => {
       if (child instanceof Mesh) colors.add((child.material as MeshLambertMaterial).color.getHex());
     });
     expect(colors.has(hexToNumber(hair.hex))).toBe(true);
-    // Exactly one body and one hairstyle attached: head, mantle, sword, body, hair.
-    expect(model.root.children).toHaveLength(5);
+    // Exactly one body and one hairstyle attached: head, mantle, sword, hat, amulet (hidden), body, hair.
+    expect(model.root.children).toHaveLength(7);
     model.dispose();
     expect(model.root.children).toHaveLength(0);
   });

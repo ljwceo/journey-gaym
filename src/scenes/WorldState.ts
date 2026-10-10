@@ -30,6 +30,8 @@ import { Cheats, stepFlying } from '../systems/Cheats';
 import {
   applyLevel,
   assistedHeading,
+  type CombatState,
+  damageTaken,
   inSwingArc,
   regenOutOfCombat,
   type SwordConfig,
@@ -39,6 +41,18 @@ import {
   swordConfig,
 } from '../systems/Combat';
 import { Enemies, type EnemiesWorld } from '../systems/Enemies';
+import {
+  carriedWeight,
+  dropMissingEquipment,
+  emptyGearStats,
+  equip,
+  type EquipmentSlot,
+  gearStats,
+  isGear,
+  loadTier,
+  maxLoad,
+  unequip,
+} from '../systems/Gear';
 import {
   addItem,
   countItem,
@@ -61,6 +75,7 @@ import { DamageNumbers } from '../ui/DamageNumbers';
 import { type Bounds, CollisionWorld } from '../systems/Collision';
 import {
   type MoveCommand,
+  loadedMovement,
   type MovementConfig,
   movementConfig,
   screenToWorld,
@@ -111,6 +126,7 @@ const DEBUG_KEYS = [
   'npcs',
   'energy',
   'combat',
+  'load',
   'enemies',
   'quests',
   'camera',
@@ -253,7 +269,15 @@ export class WorldState implements GameState, InstanceHost {
   /** Phones and tablets: no "click to look around" hint (there is no mouse). */
   private coarsePointer = false;
   private movement: MovementConfig | null = null;
+  /** Movement from player.json before gear and equip load (see `applyGear`). */
+  private baseMovement: MovementConfig | null = null;
+  /** Walking speed with gear and load, before cheats and the heavy-hit slowdown. */
   private baseWalkSpeed = 0;
+  private readonly gearStatsOut = emptyGearStats();
+  /** Equip load: carried kg, what you can carry, and the tier ('' until first computed). */
+  private carriedKg = 0;
+  private maxLoadKg = 0;
+  private loadTierId = '';
   private preset: QualityPreset | null = null;
   private paused = false;
   /** Set after importing a save: leaving the world must not write the old state over it. */
@@ -305,7 +329,11 @@ export class WorldState implements GameState, InstanceHost {
 
     const t = ctx.i18n.t.bind(ctx.i18n);
     this.movement = movementConfig(data.player);
+    this.baseMovement = movementConfig(data.player);
     this.baseWalkSpeed = this.movement.walkSpeed;
+    this.loadTierId = '';
+    // Gear stats (max HP) are needed before HP is restored from the save in buildScene.
+    this.items = new Map(data.items.items.map((item) => [item.id, item]));
     this.cheats.reset();
 
     // Input surface first, so the pause button and touch buttons lie on top of it.
@@ -345,11 +373,11 @@ export class WorldState implements GameState, InstanceHost {
     this.deathTimer = NOT_DYING;
     this.potionCooldown = 0;
     this.lootRng = new Random((Date.now() >>> 0) ^ 0x5eed);
-    this.items = new Map(data.items.items.map((item) => [item.id, item]));
     this.quests = new QuestBook(data.quests.quests, session.quests);
     this.questTexts = new QuestTexts(data, t);
     this.conditionContext.completedQuests = this.quests.completed;
-    this.applyWeapon();
+    this.applyGear(false);
+    this.updatePlayerGear();
     this.cutscenePlaying = false;
     this.hiddenNpcs = new Set();
     this.encounter = new BossEncounter(this.encounterHost());
@@ -446,8 +474,12 @@ export class WorldState implements GameState, InstanceHost {
       ctx.events.on('itemBought', ({ itemId, count, npcId }) =>
         this.recordQuest('buy', itemId, count, npcId),
       ),
-      ctx.events.on('itemsGained', ({ itemId, count }) => this.itemQuestProgress(itemId, count)),
+      ctx.events.on('itemsGained', ({ itemId, count }) => {
+        this.itemQuestProgress(itemId, count);
+        if (isGear(this.items.get(itemId))) this.applyGear(true);
+      }),
       ctx.events.on('levelUp', () => {
+        this.applyGear(true);
         this.startGiverlessQuests();
         this.refreshQuestMarkers();
       }),
@@ -575,6 +607,7 @@ export class WorldState implements GameState, InstanceHost {
       );
     } else {
       this.command.dash = input.consumePressed('dash');
+      if (this.command.dash && !movement.canDash) this.sayTooHeavy();
       this.stepSwordAndMove(dt);
       // You cannot walk through people (or Treewardens, or monsters).
       if (this.npcs?.pushOut(s, movement.radius)) this.collision?.resolve(s, movement.radius);
@@ -666,6 +699,13 @@ export class WorldState implements GameState, InstanceHost {
     if (hitAny) player.combat.sinceCombat = 0;
   }
 
+  /** Dash pressed while overloaded: say why nothing happens (not more often than every few seconds). */
+  private sayTooHeavy(): void {
+    if (this.protectedMessageTimer > 0) return;
+    this.protectedMessageTimer = PROTECTED_MESSAGE_SECONDS;
+    this.hud?.showMessage(this.ctx.i18n.t('load.cannotDash'));
+  }
+
   /** "Treewarden is protected here." (elven city), not more often than every few seconds. */
   private showProtected(e: Enemy): void {
     if (this.protectedMessageTimer > 0) return;
@@ -698,9 +738,10 @@ export class WorldState implements GameState, InstanceHost {
     const c = player.combat;
     const s = player.state;
     if (this.knockedOut || this.deathTimer !== NOT_DYING) return;
-    c.hp = Math.max(0, c.hp - damage);
+    const taken = damageTaken(c, damage);
+    c.hp = Math.max(0, c.hp - taken);
     c.sinceCombat = 0;
-    this.damageNumbers?.spawn(s.x, s.y + 2, s.z, damage, 'player');
+    this.damageNumbers?.spawn(s.x, s.y + 2, s.z, taken, 'player');
     this.hud?.hurt();
     if (c.hp <= 0) this.knockedOut = true;
   };
@@ -1208,7 +1249,8 @@ export class WorldState implements GameState, InstanceHost {
     for (const unlock of r.unlocks ?? []) {
       if (!session.unlocks.includes(unlock)) session.unlocks.push(unlock);
     }
-    this.applyWeapon();
+    this.applyGear(true);
+    this.updatePlayerGear();
     this.ctx.events.emit('questCompleted', { questId: def.id });
     this.refreshNpcPresence();
     this.startGiverlessQuests();
@@ -1283,12 +1325,46 @@ export class WorldState implements GameState, InstanceHost {
     };
   }
 
-  /** The equipped weapon's damage bonus goes into every hit (Hilda's honed sword). */
-  private applyWeapon(): void {
-    const c = this.player?.combat;
-    const weapon = this.ctx.session?.character?.equipment.weapon;
-    if (!c) return;
+  /** Worn gear → extra max HP / mana and damage factors (no level or load changes). */
+  private applyGearStats(c: CombatState): void {
+    const character = this.ctx.session?.character;
+    if (!character) return;
+    dropMissingEquipment(character.equipment, character.inventory);
+    const stats = gearStats(character.equipment, this.items, this.gearStatsOut);
+    const weapon = character.equipment.weapon;
     c.weaponBonus = (weapon && this.items.get(weapon)?.weapon?.damageBonus) || 0;
+    c.gearHp = stats.hp;
+    c.gearMana = stats.mana;
+    c.damageFactor = 1 + stats.damagePercent / 100;
+    c.damageTakenFactor = 1 - stats.damageReductionPercent / 100;
+  }
+
+  /**
+   * Worn gear and carried weight: stats (the weapon's damage bonus, max HP, ...) and the equip
+   * load tier, which sets how fast you walk and how far you dash. Called whenever gear, the bag
+   * or the level changes. `announce` shows a message when the load tier changes.
+   */
+  private applyGear(announce: boolean): void {
+    const data = this.ctx.data;
+    const character = this.ctx.session?.character;
+    const player = this.player;
+    const { baseMovement, movement } = this;
+    if (!data || !character || !player || !baseMovement || !movement) return;
+    const c = player.combat;
+    this.applyGearStats(c);
+    applyLevel(c, data.player, c.level);
+    this.carriedKg = carriedWeight(character.inventory, this.items);
+    this.maxLoadKg = maxLoad(data.player.load, c.level);
+    const tier = loadTier(data.player.load, this.carriedKg, this.maxLoadKg);
+    loadedMovement(baseMovement, tier, this.gearStatsOut.moveSpeedPercent, movement);
+    this.baseWalkSpeed = movement.walkSpeed;
+    if (this.cheats.speed !== 1) movement.walkSpeed = this.baseWalkSpeed * this.cheats.speed;
+    if (announce && this.loadTierId !== '' && tier.id !== this.loadTierId) {
+      this.hud?.showMessage(
+        this.ctx.i18n.t(tier.message ?? 'hud.loadChanged', { tier: this.ctx.i18n.t(tier.label) }),
+      );
+    }
+    this.loadTierId = tier.id;
   }
 
   /** Gold diamonds above NPCs with a new quest, blue ones above NPCs to hand a quest in. */
@@ -1552,9 +1628,71 @@ export class WorldState implements GameState, InstanceHost {
           const bag = this.ctx.session?.character?.inventory ?? [];
           return this.quests && this.questTexts ? this.questTexts.summaries(this.quests, bag) : [];
         },
+        {
+          equip: (itemId) => this.changeGear(() => this.equipItem(itemId)),
+          unequip: (slot) => this.changeGear(() => this.unequipSlot(slot)),
+          load: () => ({
+            kg: this.carriedKg,
+            maxKg: this.maxLoadKg,
+            tierId: this.loadTierId,
+            tierLabel:
+              this.ctx.data?.player.load.tiers.find((tier) => tier.id === this.loadTierId)?.label ??
+              '',
+          }),
+        },
         resume,
       ),
     );
+  }
+
+  /**
+   * Gear changes only outside a fight (concept: "wisselen alleen buiten gevechten"). After a
+   * change the stats and load are recomputed and the bag is rebuilt.
+   */
+  private changeGear(change: () => boolean): void {
+    const c = this.player?.combat;
+    if (!c) return;
+    if (c.inCombat) {
+      this.hud?.showMessage(this.ctx.i18n.t('hud.gearInCombat'));
+      return;
+    }
+    if (!change()) return;
+    this.applyGear(true);
+    this.updatePlayerGear();
+    this.ctx.overlays.refreshTop();
+  }
+
+  /** Draws worn gear on the player: hat and amulet in their rarity colour, mantle, sword size. */
+  private updatePlayerGear(): void {
+    const data = this.ctx.data;
+    const equipment = this.ctx.session?.character?.equipment;
+    const model = this.player?.model;
+    if (!data || !equipment || !model) return;
+    const colorOf = (itemId: string | undefined): number | null => {
+      const def = itemId ? this.items.get(itemId) : undefined;
+      if (!def) return null;
+      const token = data.items.rarities.find((rarity) => rarity.id === def.rarity)?.color;
+      return token ? resolveColorToken(token) : palette.steengrijs;
+    };
+    const weaponKg = (equipment.weapon && this.items.get(equipment.weapon)?.weight) || 4;
+    model.setGear({
+      hat: colorOf(equipment.hat),
+      amulet: colorOf(equipment.amulet),
+      mantle: equipment.mantle !== undefined,
+      swordScale: Math.min(1.5, Math.max(1, 1 + (weaponKg - 4) * 0.05)),
+    });
+  }
+
+  private equipItem(itemId: string): boolean {
+    const character = this.ctx.session?.character;
+    if (!character) return false;
+    return equip(character.equipment, character.inventory, this.items, itemId) === 'equipped';
+  }
+
+  private unequipSlot(slot: EquipmentSlot): boolean {
+    const character = this.ctx.session?.character;
+    if (!character) return false;
+    return unequip(character.equipment, slot) === 'unequipped';
   }
 
   /** Pauses the game behind a menu panel; closing the panel resumes. */
@@ -1660,7 +1798,15 @@ export class WorldState implements GameState, InstanceHost {
   }
 
   /** Debug: XP, gold or potions for testing levels, dying and drinking. */
-  private grant(kind: 'xp' | 'gold' | 'potions' | 'slimeGel'): void {
+  private grant(kind: 'xp' | 'gold' | 'potions' | 'slimeGel' | 'gear'): void {
+    if (kind === 'gear') {
+      // One of every weapon and armor you do not have yet (tests the load tiers and the bag).
+      const bag = this.ctx.session?.character?.inventory ?? [];
+      for (const def of this.items.values()) {
+        if (isGear(def) && countItem(bag, def.id) === 0) this.gainItem(def.id, 1);
+      }
+      return;
+    }
     if (kind === 'xp') this.gainXp(CHEAT_XP);
     else if (kind === 'gold') this.gainItem(GOLD_ITEM, CHEAT_GOLD);
     else if (kind === 'slimeGel') this.gainItem('slime_gel', CHEAT_SLIME_GEL);
@@ -1790,6 +1936,7 @@ export class WorldState implements GameState, InstanceHost {
     // Level, HP and mana from the save (null = full).
     const progress = session?.progress;
     const level = Math.min(data.player.maxLevel, Math.max(1, progress?.level ?? 1));
+    this.applyGearStats(combat);
     applyLevel(combat, data.player, level);
     combat.hp = Math.min(combat.maxHp, progress?.hp ?? combat.maxHp);
     combat.mana = Math.min(combat.maxMana, progress?.mana ?? combat.maxMana);
@@ -2036,6 +2183,13 @@ export class WorldState implements GameState, InstanceHost {
         `${this.deathTimer !== NOT_DYING ? 'dying · ' : ''}` +
         `${c.heavyWindup > 0 ? 'heavy windup' : c.swing} · combo ${c.comboCount} · ` +
         `${c.inCombat ? 'in fight' : 'calm'}`,
+    );
+    const m = this.movement;
+    debug.lines.set(
+      'load',
+      `${this.carriedKg.toFixed(1)}/${this.maxLoadKg} kg ${this.loadTierId} · walk ` +
+        `${m?.walkSpeed.toFixed(2) ?? '-'} m/s · dash ${m?.canDash ? `${m.dashDistance.toFixed(1)} m, ${m.dashEnergyCost} en` : 'no'}` +
+        `${s.recoverTime > 0 ? ' · getting up' : ''} · dmg ×${c.damageFactor.toFixed(2)} taken ×${c.damageTakenFactor.toFixed(2)}`,
     );
     debug.lines.set('enemies', this.enemyDebugLine(s.x, s.z));
     const quests = this.ctx.session?.quests;

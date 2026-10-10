@@ -119,7 +119,7 @@ Alleen data in `public/data/zones.json`:
 - `scripts/check-bundle.mjs` laat de build falen als één bestand groter is dan 800 kB.
 
 ## Cheatmenu (alleen debug)
-`src/systems/Cheats.ts` (snelheid, vliegen) en `src/ui/CheatPanel.ts` (F6 of de knop "Cheats"): snelheid, vliegen, chunkranden, seizoen forceren, benchmark opnieuw, save exporteren/importeren als tekstcode, teleport naar elke zone. Wordt nooit opgeslagen; zet je debugmodus uit, dan gaan alle cheats uit.
+`src/systems/Cheats.ts` (snelheid, vliegen) en `src/ui/CheatPanel.ts` (F6 of de knop "Cheats"): snelheid, vliegen, chunkranden, seizoen forceren, benchmark opnieuw, save exporteren/importeren als tekstcode, teleport naar elke zone, XP/gold/drankjes/gear geven, de grootte van het debugvenster. Wordt nooit opgeslagen; zet je debugmodus uit, dan gaan alle cheats uit. Het debugvenster zelf (`DebugOverlay`) heeft 5 groottes (F3 wisselt, ook "verborgen"); debugmodus en cheats blijven aan als het verborgen is.
 
 ## NPC's (stap 1.9)
 
@@ -179,3 +179,13 @@ Alleen data in `public/data/zones.json`:
 - **Tekenen:** `EnemyRenderer` geeft de baas zijn houdingen (gloed, door de knieën, sprongen, klauwslagen, hijgen); `WarningRenderer` tekent de rode streep van de Dash Strike en de arenaring. Model: `placeholder:sultan` (kattenman) in `EnemyFactory.ts`, dezelfde vorm als NPC (`placeholder:catman`).
 - **Balans en prestaties** (stap 2.7): `src/systems/Balance.test.ts` laat een nagebootste speler (de echte zwaard-, beweeg- en baascode) tegen Sultan vechten: snel ontwijken, langzaam ontwijken en nooit ontwijken, met grenzen voor duur en winst. Verander je getallen in `monsters.json`, dan zie je meteen of het gevecht te makkelijk of te moeilijk wordt (`npx vitest run Balance --silent=false` laat de uitslag zien). `src/systems/EnemiesPerf.test.ts` meet de rekentijd van alle vijanden op de vaste tijdstap.
 - **Een nieuwe baas** is data: een monster met `boss` en `attacks` met een `pattern`, een trigger, een quest zonder gever (doel `boss`) en een cutscene.
+
+## Gear en draaglast (stap 3.1)
+
+- **Alles in data:** gear staat in `items.json` (`type` weapon/armor, `slot` hat/mantle/amulet/ring, `rarity`, `weight` in kg en `stats`: hp, mana, damagePercent, damageReductionPercent, moveSpeedPercent). De validator eist een gewicht bij elk wapen en elke armor, en stats alleen bij gear.
+- **`src/systems/Gear.ts` (puur, getest):** 6 slots (`weapon`, `hat`, `mantle`, `amulet`, `ring1`, `ring2`). De tas bevat al je spullen; `character.equipment` zegt alleen wat je draagt. `equip` kiest het slot (ringen: eerst een lege ring), `unequip` laat nooit je wapen los, `dropMissingEquipment` haalt gedragen spullen weg die niet meer in de tas zitten.
+- **Draaglast zoals Elden Ring:** `carriedWeight` telt alle wapens en armor in je tas (aan of reserve); grondstoffen, drankjes en questitems wegen niets. Maximum = `player.json` → `load.baseKg` + `perLevelKg` per level. De eerste stand in `load.tiers` waarvan `maxRatio` niet overschreden wordt geldt (licht ≤ 30%, middel ≤ 70%, zwaar ≤ 100%, anders overbelast).
+- **Beweging:** `loadedMovement` (in `Movement.ts`) maakt van de basisbeweging een versie met de stand erin: loopsnelheid × `walkFactor` × (1 + snelheid van gear), dash × `dashDistanceFactor`, extra energie, `dashRecoverySeconds` (na een dash even stilstaan, de "fat roll") en `canDash`. Licht is precies de oude beweging (test).
+- **Gevecht:** gear zet op `CombatState` `gearHp`, `gearMana`, `damageFactor` en `damageTakenFactor`; `applyLevel` telt de HP/mana mee, `stepSword` vermenigvuldigt de schade, `damageTaken` verzacht inkomende schade (minstens 1).
+- **Wereld:** `WorldState.applyGear` rekent alles opnieuw uit bij aandoen/uitdoen, nieuwe gear in de tas, een level omhoog en een quest-beloning; bij een andere stand verschijnt de uitleg uit `load.tiers[].message`. Aan- en uitdoen kan alleen buiten een gevecht. Het poppetje toont hoed en amulet in hun zeldzaamheidskleur, de mantel alleen als je hem draagt, en een zwaarder zwaard groter (`CharacterModel.setGear`).
+

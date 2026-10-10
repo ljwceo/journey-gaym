@@ -7,9 +7,9 @@
 | | |
 |---|---|
 | **Huidige fase** | Fase 3 – Je pad, Entrance Exam en gear (plan goedgekeurd 2026-10-10) |
-| **Status** | Stap 3.0 (debugvenster in groottes) in een pull request. Fase 2 wacht nog op spelen en Meet 20 s op de pc |
-| **Volgende stap** | 3.1 (gear en draaglast) |
-| **Laatste sessie** | 2026-10-10: plan fase 3, stap 3.0 |
+| **Status** | Stap 3.1 (gear en draaglast) in een pull request. Fase 2 wacht nog op spelen en Meet 20 s op de pc |
+| **Volgende stap** | 3.2 (ezel Biscuit) |
+| **Laatste sessie** | 2026-10-10: plan fase 3, stap 3.0 en 3.1 |
 
 ---
 
@@ -405,13 +405,23 @@ Doel: na Sultan kies je in de Academy je pad (Sir Garrick, Master Brink of Wizar
 | ✅ | Tests (gevechtsformules, XP, quests, save-migratie) en de DataValidator slagen | 330 tests |
 
 ### Fase 3 – Je pad, Entrance Exam en gear
-**Status:** plan goedgekeurd; stap 3.0 gebouwd.
+**Status:** plan goedgekeurd; stap 3.0 en 3.1 gebouwd.
 **Gebouwd:**
 - 3.0 Debugvenster in groottes:
   - **F3** (of tikken met drie vingers) zet debugmodus aan en wisselt daarna de grootte: **Groot** (alles, zoals eerst) → **Normaal** (alles, kleiner en doorzichtiger) → **Klein** (fps, draw calls, grafische stand, positie en zone) → **Alleen fps** (één regel) → **Verborgen** → Groot. Ook te kiezen bovenin het cheatmenu (**Debugvenster**). De keuze wordt per browser onthouden (niet in de save).
   - **Debugmodus blijft aan als het venster verborgen is:** de knop Cheats, F6, F4 (seizoen) en alle cheats blijven werken. Debugmodus helemaal uit gaat via Settings.
   - Gebouwlabels in de wereld en de rode foutlijst staan alleen bij Groot en Normaal; bij Klein, Alleen fps en Verborgen wordt de tekst van de wereld niet eens opgebouwd (scheelt rekenwerk).
   - Getest: 336 tests (o.a. de volgorde van F3, welke regels in Klein staan). Headless Chromium (pc 1100×700, NL): titelscherm F3 door alle groottes; in de wereld verborgen → Cheats-knop en F6 werken, Klein kiezen in het cheatmenu. Geen fouten.
+
+- 3.1 Gear en draaglast:
+  - **6 slots:** wapen, hoed, mantel, amulet, ring en ring. In de tas (I of B) staat bovenaan je **draaglast** ("Draaglast 23,5 / 34 kg · Middel", gekleurd per stand), dan wat je **draagt** (met Uitdoen; je wapen kun je alleen wisselen, niet uitdoen), dan je **spullen**. Gear heeft een knop **Aandoen**, en onder de naam staan zeldzaamheid, gewicht en stats ("Zeldzaam · 6 kg · +25 HP · −6% schade ontvangen"). Namen van zeldzame, epische en legendarische spullen hebben hun kleur uit de stijlgids. Wisselen kan alleen buiten een gevecht ("Je kunt geen spullen wisselen tijdens een gevecht.").
+  - **Draaglast zoals Elden Ring** (`src/systems/Gear.ts`, puur en getest): alle wapens en gear in je tas tellen mee, ook wat je niet aan hebt; grondstoffen, drankjes en questitems wegen niets. Je kunt 30 kg dragen op level 1, +1 kg per level. **Licht** (≤ 30%): zoals altijd. **Middel** (≤ 70%): 95% lopen, dash 3,2 m. **Zwaar** (≤ 100%): 85% lopen, dash 2,4 m, kost 35 energie en je staat daarna 0,35 s stil ("fat roll"). **Overbelast** (> 100%): 50% lopen en geen dash ("Te zwaar om te dashen."). Bij een andere stand verschijnt een korte uitleg. Alles in `player.json` → `load`.
+  - **Stats** (`stats` in `items.json`): HP, mana, schade %, minder schade % (max 80%) en loopsnelheid %. Gaan meteen in je HP-maximum, je slagen en de schade die je krijgt.
+  - **13 nieuwe spullen** (namen voorlopig): Goblin Cleaver (zeldzaam zwaard, 8 kg), Chief's Greatblade (episch zwaard, 14 kg), Straw Hat, Leather Cap, Iron Helm (6 kg), Padded Mantle, Ironweave Mantle (9 kg), Copper Amulet, Goblin Tooth Necklace, Brass Ring, Swift Ring, Chief's Signet en Heartwood Ring (legendarisch). Als **buit** in de Greenwood (goblins, archers en Big Slimes soms iets kleins; de Goblin Chief vaak iets zwaars, heel soms de Heartwood Ring) en bij **Marco** (Straw Hat 15, Brass Ring 25, Copper Amulet 30, Padded Mantle 60 Gold).
+  - **Op het poppetje:** hoed en amulet in hun zeldzaamheidskleur, de mantel alleen als je hem draagt, een zwaarder zwaard is groter.
+  - **Cheatmenu:** "Geven → + alle gear" (één van elk: meteen overbelast, handig om de standen te testen). Debugregel `load` (kg, stand, loopsnelheid, dash, schadefactoren).
+  - Geen nieuwe saveversie nodig: wat je draagt stond al in de save (`character.equipment`).
+  - Getest: 349 tests (o.a. gewicht tellen, grenzen van de standen, ringen twee keer, wapen nooit uit, stats optellen, licht = oude beweging, fat roll, overbelast = geen dash en geen energie kwijt, 60 en 120 Hz gelijk, validator). Headless Chromium (pc 1100×760, NL): start 5/30 kg licht → alle gear 55,2/30 kg overbelast met melding → Iron Helm, Heartwood Ring en Chief's Greatblade aandoen (HP 165, schade ×1,20, schade ontvangen ×0,94) → dash doet niets met "Te zwaar om te dashen.". Geen fouten.
 
 ## Besluiten
 
@@ -549,6 +559,10 @@ Doel: na Sultan kies je in de Academy je pad (Sir Garrick, Master Brink of Wizar
 | 2026-10-10 | Draaglast zoals Elden Ring (licht < 30%, middel 30–70%, zwaar 70–100%, overbelast > 100%), maar voor alle gear die je bij je hebt; wat Biscuit draagt telt niet, maar is ook niet bruikbaar tot je het eruit haalt | Verzoek van Bo/Lucas; getallen zijn een voorstel in `player.json` |
 | 2026-10-10 | Lock-on met schoten die meebuigen; missen als de vijand aanvalt of als je meer dan ±40° wegkijkt; alle richthulp-getallen in het cheatmenu | Verzoek van Bo/Lucas, om te testen voor de definitieve keuze |
 | 2026-10-10 | Academy-hal en kelder van Sam worden instances (deur → laadscherm → aparte kaart) | Verzoek van Bo/Lucas; oefent meteen de interface voor De Wortelgrotten |
+| 2026-10-10 | Draaglast: alle wapens en gear in je tas tellen mee (aan én reserve), 30 kg op level 1 +1 per level; licht/middel/zwaar/overbelast op 30/70/100% | Elden Ring telt alleen wat je aan hebt; Bo/Lucas wilden het "echt voor wat je bij je hebt", zodat Biscuit (3.2) zin heeft. Getallen zijn een voorstel |
+| 2026-10-10 | Je wapen kun je niet uitdoen, alleen wisselen | Zonder wapen kun je niet vechten (en een staf komt pas in 3.5) |
+| 2026-10-10 | Gear aandoen geeft extra max HP, maar vult je HP niet bij | Anders kun je HP "bijvullen" door gear uit en aan te doen |
+| 2026-10-10 | Zeldzaamheidskleuren in de tas gemengd met de tekstkleur | Puur magieblauw en spreukviolet waren te donker op het paneel |
 
 ## Sessielog
 
@@ -581,3 +595,4 @@ Doel: na Sultan kies je in de Academy je pad (Sir Garrick, Master Brink of Wizar
 - Stap 2.6 gebouwd: Sultan, de beginnersbaas: quest begint vanzelf na de eerste dag, stripcutscene "Pringle" (één keer, overslaanbaar), baasgevecht in een ring bij de stadspoort (Claw Combo, Pounce, Dash Strike, Flurry onder 50%, alleen raakbaar na een aanval, tips de eerste keer, HP-balk), winnen = Sultan wordt een NPC buiten de poort en Pringle is weg, verliezen = doodgaan en meteen een herkansing. Save versie 5. Cheat "Vecht tegen Sultan". 325 tests, headless Chromium (pc EN/NL en telefoon) zonder fouten. Tijdelijke namen gebruikt (alleen in data): Gold; nieuw: geen (Sultan, Pringle en de aanvalsnamen komen uit het concept). Volgende stap: 2.7 (afronden).
 - Stap 2.7 gebouwd: balanstest met een nagebootste speler tegen Sultan (en Sultan iets vriendelijker gemaakt), fout opgelost waarbij Sultan niet aanviel als je tegen hem aan bleef staan, rekentijd van alle vijanden gemeten (0,03 ms per stap met alle 45 vijanden om je heen), draw calls per stand bij het goblinkamp en tegen Sultan, geheugen na 3× wereld in/uit gelijk, Definition of Done van fase 2 nagelopen. 330 tests. Open: spelen en Meet 20 s op de pc door Bo en Lucas.
 - Plan fase 3 geschreven en goedgekeurd met aanpassingen (glintstone-achtig schot met reisafstand, lock-on met missen en instelbare richthulp, draaglast zoals Elden Ring, instances via deuren met uitleg-cutscene, debugvenster in groottes). Stap 3.0 gebouwd: debugvenster in groottes, cheats ook met verborgen venster. 336 tests. Tijdelijke namen: geen nieuwe. Volgende stap: 3.1 (gear en draaglast).
+- Stap 3.1 gebouwd: gear in 6 slots met zeldzaamheid en stats, draaglast zoals Elden Ring (licht/middel/zwaar/overbelast), aan- en uitdoen in de tas, gear als buit en bij Marco, hoed en amulet op het poppetje, cheat "+ alle gear". 349 tests. Tijdelijke namen (nieuw, alleen in data): de 13 gear-namen. Volgende stap: 3.2 (Biscuit).

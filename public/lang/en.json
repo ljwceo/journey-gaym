@@ -185,7 +185,9 @@
     "protected": "{name} is protected here.",
     "levelUp": "Level up! You are now level {level}.",
     "noPotion": "You have no potions.",
-    "alreadyFull": "Your HP is already full."
+    "alreadyFull": "Your HP is already full.",
+    "loadChanged": "Load: {tier}",
+    "gearInCombat": "You can't change gear during a fight."
   },
   "dialog": {
     "next": "Continue",
@@ -289,6 +291,45 @@
     },
     "honed_old_sword": {
       "desc": "Your old sword, honed by Hilda. Every hit does 3 more damage."
+    },
+    "goblin_cleaver": {
+      "desc": "A crude, heavy goblin blade. Hits hard, but you feel every kilo."
+    },
+    "chiefs_greatblade": {
+      "desc": "The Goblin Chief's pride. Enormous damage, enormous weight."
+    },
+    "straw_hat": {
+      "desc": "Keeps the sun out of your eyes. Light as a feather."
+    },
+    "leather_cap": {
+      "desc": "Simple boiled leather. Better than nothing."
+    },
+    "iron_helm": {
+      "desc": "Solid iron. Strong protection, but heavy on your head."
+    },
+    "padded_mantle": {
+      "desc": "A thick, quilted mantle that softens blows."
+    },
+    "ironweave_mantle": {
+      "desc": "Woven with iron threads. Very strong, very heavy."
+    },
+    "copper_amulet": {
+      "desc": "A simple charm that hums faintly with magic."
+    },
+    "goblin_tooth_necklace": {
+      "desc": "Goblin teeth on a string. Somehow it makes you fiercer."
+    },
+    "brass_ring": {
+      "desc": "A plain brass ring."
+    },
+    "swift_ring": {
+      "desc": "Your steps feel a little lighter."
+    },
+    "chiefs_signet": {
+      "desc": "The Goblin Chief's ring. Heavy with stolen gold."
+    },
+    "heartwood_ring": {
+      "desc": "Carved from a fallen branch of Old Tjikko. It feels alive."
     },
     "herb_seeds": {
       "desc": "Seeds from Rose. You can plant them in your plot later."
@@ -476,7 +517,8 @@
     "grantPotions": "+5 Health Potion",
     "grantSlimeGel": "+3 Slime Gel",
     "boss": "Boss fight",
-    "bossSultan": "Fight Sultan"
+    "bossSultan": "Fight Sultan",
+    "grantGear": "+ all gear"
   },
   "bag": {
     "title": "Bag",
@@ -486,7 +528,45 @@
     "level": "Level {level} · {xp} / {need} XP",
     "levelMax": "Level {level} (highest level)",
     "quests": "Quests",
-    "noQuests": "No quests right now. Talk to the people of Greyhaven."
+    "noQuests": "No quests right now. Talk to the people of Greyhaven.",
+    "equip": "Wear",
+    "unequip": "Take off",
+    "equipment": "Worn",
+    "items": "Items",
+    "load": "Load {kg} / {max} kg · {tier}",
+    "weight": "{kg} kg",
+    "rarity": {
+      "rare": "Rare",
+      "epic": "Epic",
+      "legendary": "Legendary"
+    },
+    "slot": {
+      "weapon": "Weapon",
+      "hat": "Hat",
+      "mantle": "Mantle",
+      "amulet": "Amulet",
+      "ring1": "Ring",
+      "ring2": "Ring"
+    },
+    "stat": {
+      "weaponDamage": "+{n} damage per hit",
+      "hp": "+{n} HP",
+      "mana": "+{n} mana",
+      "damagePercent": "+{n}% damage",
+      "damageReductionPercent": "−{n}% damage taken",
+      "moveSpeedPercent": "+{n}% speed"
+    }
+  },
+  "load": {
+    "light": "Light",
+    "medium": "Medium",
+    "heavy": "Heavy",
+    "overloaded": "Overloaded",
+    "mediumMessage": "Medium load: your dash is a bit shorter.",
+    "heavyMessage": "Heavy load: you walk slower, dash short and need a moment to get up.",
+    "overloadedMessage": "Overloaded: you walk very slowly and cannot dash. Put something away.",
+    "lightMessage": "Light load: you move freely again.",
+    "cannotDash": "Too heavy to dash."
   },
   "death": {
     "title": "You were defeated",

@@ -14,8 +14,8 @@ export interface CheatPanelHandlers {
   importSave(code: string): boolean;
   /** Forgets the automatic preset, so the benchmark runs again (Settings back to "Auto"). */
   rerunBenchmark(): void;
-  /** Gives XP, gold, potions or Slime Gel (testing levels, dying, drinking and quests). */
-  grant(kind: 'xp' | 'gold' | 'potions' | 'slimeGel'): void;
+  /** Gives XP, gold, potions, Slime Gel or gear (testing levels, dying, drinking, quests, load). */
+  grant(kind: 'xp' | 'gold' | 'potions' | 'slimeGel' | 'gear'): void;
   /** Starts the Sultan fight right away (no quests needed). */
   bossFight(): void;
 }
@@ -221,6 +221,7 @@ export class CheatPanel {
           chip(t('cheats.grantGold'), false, () => this.handlers.grant('gold')),
           chip(t('cheats.grantPotions'), false, () => this.handlers.grant('potions')),
           chip(t('cheats.grantSlimeGel'), false, () => this.handlers.grant('slimeGel')),
+          chip(t('cheats.grantGear'), false, () => this.handlers.grant('gear')),
         ),
       ),
       section(

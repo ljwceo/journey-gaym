@@ -340,6 +340,33 @@ export const playerFileSchema = z.strictObject({
     durationSeconds: max(positive, 2),
   }),
   /**
+   * Equip load (like Elden Ring): the weight of the weapons and gear you carry (worn or spare in
+   * the bag; resources, potions and quest items weigh nothing) as a share of what you can carry.
+   * Tiers are checked in order; the first whose `maxRatio` is not exceeded applies, the last one
+   * (no `maxRatio`) is "overloaded".
+   */
+  load: z.strictObject({
+    baseKg: max(positive, 1000),
+    perLevelKg: max(nonNegative, 100),
+    tiers: atLeast(
+      z.array(
+        z.strictObject({
+          id,
+          label: textKey,
+          /** Shown when you enter this tier (what it does to you); none for light. */
+          message: optional(textKey),
+          maxRatio: optional(max(positive, 10)),
+          walkFactor: max(nonNegative, 2),
+          dashDistanceFactor: max(nonNegative, 2),
+          dashExtraEnergy: max(nonNegative, 100),
+          /** Stuck after a dash this long (s): the "fat roll". */
+          dashRecoverySeconds: max(nonNegative, 5),
+          canDash: z.boolean(),
+        }),
+      ),
+    ),
+  }),
+  /**
    * Third-person camera over the shoulder (like Genshin Impact). Sharpness values are per
    * second (higher = snappier). Pitch is the angle below the horizon; negative looks up.
    */
@@ -640,6 +667,16 @@ const itemSchema = z.strictObject({
     }),
   ),
   crystal: optional(z.strictObject({ elements: atLeast(z.array(id)), size: id })),
+  /** What wearing it adds (weapons and armor, while equipped). */
+  stats: optional(
+    z.strictObject({
+      hp: optional(max(nonNegative, 10_000)),
+      mana: optional(max(nonNegative, 10_000)),
+      damagePercent: optional(max(nonNegative, 500)),
+      damageReductionPercent: optional(max(nonNegative, 90)),
+      moveSpeedPercent: optional(max(nonNegative, 100)),
+    }),
+  ),
   /** What drinking it restores (potions only). */
   potion: optional(
     z.strictObject({
