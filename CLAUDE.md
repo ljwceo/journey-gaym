@@ -299,7 +299,7 @@ Definition of Done:
 Status: afgesloten op de pc (2026-10-09): Mid 60 fps en High 120 fps zonder haperingen. iPhone niet gemeten (overgeslagen op verzoek). Details in `docs/PROGRESS.md`.
 
 ### Fase 2 – Solo-gevecht en de eerste dag
-Status: bezig (plan goedgekeurd 2026-10-09; stap 2.1, 2.2 en 2.3 klaar, zie `docs/PROGRESS.md`).
+Status: bezig (plan goedgekeurd 2026-10-09; stap 2.1 t/m 2.4 klaar, zie `docs/PROGRESS.md`).
 Doel: het speelbare intro-gevecht tegen Lucael en Baelor (onwinbaar, episch en komisch), de eerste dag in Greyhaven spelen (kleine quest per basis-NPC, ±level 3), in de Greenwood vechten tegen slimes en goblins, en Sultan verslaan (beginnersbaas: test of je de basis snapt).
 Bouwen: HP/mana/energie, zwaardaanvallen (muis: links fast hit, rechts heavy hit; telefoon: knoppen), vijanden met AI en spawngebieden (Green Slime, Big Slime, Goblin, Goblin Archer, Goblin Chief, Treewarden), XP en levels, buit en een simpele tas, drankjes, doodgaan en rusten, HUD-regels aan, questsysteem met de quests van de eerste dag (Marco en Hilda in een simpele versie), cutscene-speler, speelbaar intro-gevecht (paneel 4), baasgevecht Sultan met hints de eerste keer.
 Data: `player.json` (aanvallen, regen, level-bonussen), `monsters.json` (gedrag, waarschuwingen, buit), `zones.json` (spawngebieden), `quests.json`, `npcs.json`, `items.json` (drankjes, Slime Gel), `cutscenes.json`, `triggers.json` (poortvoorwaarde), save versie 3.

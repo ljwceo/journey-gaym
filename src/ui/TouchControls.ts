@@ -5,12 +5,14 @@ export interface TouchLabels {
   attack: string;
   heavy: string;
   dash: string;
+  potion: string;
 }
 
 /**
  * On-screen controls for touch screens: the joystick (drawn where the thumb went down, lower
- * left) and the attack, heavy-hit and dash buttons (lower right). Both sit in fixed safe zones that the HUD must
- * never cover (see --joystick-zone-* and --button-zone-* in ui.css).
+ * left) and the attack, heavy-hit, dash and drink buttons (lower right; drink only while you
+ * carry a potion, with the number on it). Both sit in fixed safe zones that the HUD must never
+ * cover (see --joystick-zone-* and --button-zone-* in ui.css).
  * The touch input itself is handled by Input; this class only draws it.
  */
 export class TouchControls {
@@ -20,6 +22,9 @@ export class TouchControls {
   private readonly dash: HTMLButtonElement;
   private readonly attack: HTMLButtonElement;
   private readonly heavy: HTMLButtonElement;
+  private readonly potion: HTMLButtonElement;
+  private readonly potionCount: HTMLElement;
+  private potionShown = -1;
   private shownJoystick = false;
   private shownButtons = false;
   private knobX = Number.NaN;
@@ -40,6 +45,10 @@ export class TouchControls {
     this.attack = this.actionButton('ui-attack-button', 'attack');
     this.heavy = this.actionButton('ui-heavy-button', 'heavy');
     this.dash = this.actionButton('ui-dash-button', 'dash');
+    this.potion = this.actionButton('ui-potion-button', 'potion');
+    this.potionCount = el('span', { className: 'ui-potion-count' });
+    this.potion.append(this.potionCount);
+    this.setPotions(0);
     this.setLabels(labels);
     this.root = el(
       'div',
@@ -48,6 +57,7 @@ export class TouchControls {
       this.attack,
       this.heavy,
       this.dash,
+      this.potion,
     );
     // Phones and tablets show the buttons from the start; other devices after the first touch.
     this.shownButtons = window.matchMedia('(pointer: coarse)').matches;
@@ -62,6 +72,16 @@ export class TouchControls {
     set(this.attack, labels.attack);
     set(this.heavy, labels.heavy);
     set(this.dash, labels.dash);
+    // The drink button shows a flask and the count; the label is for screen readers.
+    this.potion.setAttribute('aria-label', labels.potion);
+  }
+
+  /** Number of potions the drink key would use; the button hides at 0. */
+  setPotions(count: number): void {
+    if (count === this.potionShown) return;
+    this.potionShown = count;
+    this.potion.hidden = count <= 0;
+    this.potionCount.textContent = String(count);
   }
 
   /** Call once per rendered frame; only touches the DOM when something changed. */

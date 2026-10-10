@@ -403,6 +403,13 @@ class CrossChecker {
         this.issue(f, `start.equipment.${slot}`, `"${itemId}" is equipped but not in start.items`);
       }
     }
+    player.potions.quickOrder.forEach((itemId, i) => {
+      this.ref('item', f, `potions.quickOrder[${i}]`, itemId);
+      const item = this.data.items.items.find((entry) => entry.id === itemId);
+      if (item && item.type !== 'potion') {
+        this.issue(f, `potions.quickOrder[${i}]`, `"${itemId}" is not a potion`);
+      }
+    });
     if (player.xpToNextLevel.length > player.maxLevel - 1) {
       this.issue(f, 'xpToNextLevel', 'more XP steps than levels');
     }
@@ -489,6 +496,9 @@ class CrossChecker {
       }
       if ((item.type === 'crystal') !== (item.crystal !== undefined)) {
         this.issue(f, `${p}.crystal`, 'crystal settings belong to (and are required for) crystals');
+      }
+      if ((item.type === 'potion') !== (item.potion !== undefined)) {
+        this.issue(f, `${p}.potion`, 'potion settings belong to (and are required for) potions');
       }
       if (item.slot !== undefined && item.type !== 'armor') {
         this.issue(f, `${p}.slot`, 'only armor has a slot');

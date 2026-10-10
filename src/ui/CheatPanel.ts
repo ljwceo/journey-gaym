@@ -13,6 +13,8 @@ export interface CheatPanelHandlers {
   importSave(code: string): boolean;
   /** Forgets the automatic preset, so the benchmark runs again (Settings back to "Auto"). */
   rerunBenchmark(): void;
+  /** Gives XP, gold or potions (testing levels, dying and drinking). */
+  grant(kind: 'xp' | 'gold' | 'potions'): void;
 }
 
 type SaveTool = 'none' | 'export' | 'import';
@@ -22,7 +24,7 @@ const MEASURE_SECONDS = 20;
 
 /**
  * Debug-only cheat menu for quick testing: walk faster, fly through walls, teleport to a zone,
- * show chunk borders. Opens with F6 or the "Cheats" button (both only in debug mode). It is a
+ * show chunk borders, give XP, gold or potions. Opens with F6 or the "Cheats" button (both only in debug mode). It is a
  * small panel at the side, so the game keeps running behind it. While flying on a touch screen,
  * ▲ / ▼ buttons appear next to the dash button.
  */
@@ -191,6 +193,16 @@ export class CheatPanel {
           cheats.monsters = on;
           this.changed();
         }),
+      ),
+      section(
+        t('cheats.grant'),
+        el(
+          'div',
+          { className: 'ui-chips' },
+          chip(t('cheats.grantXp'), false, () => this.handlers.grant('xp')),
+          chip(t('cheats.grantGold'), false, () => this.handlers.grant('gold')),
+          chip(t('cheats.grantPotions'), false, () => this.handlers.grant('potions')),
+        ),
       ),
       section(
         t('cheats.chunkLines'),

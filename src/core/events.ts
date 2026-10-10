@@ -13,8 +13,17 @@ export interface GameEvents {
   /** The first time the player talks to (or pets) this NPC. */
   npcMet: { npcId: string };
   checkpointSet: { checkpointId: string };
-  /** The player's HP reached 0 (step 2.4 turns this into dying: gold loss, cutscene). */
-  playerKnockedOut: Record<string, never>;
+  /** The player's HP reached 0: some gold is lost, they wake up at their checkpoint. */
+  playerDied: { goldLost: number };
+  /** A monster was defeated by the player (quests listen to this). */
+  monsterDefeated: { monsterId: string };
+  xpGained: { amount: number };
+  levelUp: { level: number };
+  /** Items (or gold, as item "gold") went into the bag: loot, rewards, purchases. */
+  itemsGained: { itemId: string; count: number };
+  potionDrunk: { itemId: string };
+  /** Rested in the bed at a checkpoint: HP and mana are full. */
+  playerRested: { checkpointId: string };
   /** The UI language changed; screens rebuild their text. */
   languageChanged: { language: string };
   /** A setting in the save changed (applied by main.ts). */

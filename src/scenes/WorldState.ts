@@ -13,9 +13,10 @@ import {
   Scene,
 } from 'three';
 import type { GameContext } from '../core/GameContext';
+import { Random } from '../core/Random';
 import { Input, type LookDelta } from '../core/Input';
 import type { GameState } from '../core/StateMachine';
-import type { GameData, QualityPreset } from '../data/types';
+import type { GameData, ItemDef, QualityPreset } from '../data/types';
 import { chosenLevel, presetFor } from '../render/quality';
 import type { FollowTarget } from '../entities/Companion';
 import type { Enemy } from '../entities/Enemy';
@@ -38,6 +39,16 @@ import {
   swordConfig,
 } from '../systems/Combat';
 import { Enemies, type EnemiesWorld } from '../systems/Enemies';
+import {
+  addItem,
+  countItem,
+  type DrinkResult,
+  drinkPotion,
+  GOLD_ITEM,
+  type ItemStack,
+  rollDrops,
+} from '../systems/Inventory';
+import { addXp, deathGoldLoss, xpFraction, xpToNext } from '../systems/Progression';
 import type { EnemyTarget } from '../systems/EnemyAI';
 import { ARROW_HEIGHT, Projectiles, type ProjectileWorld } from '../systems/Projectiles';
 import { EnemyRenderer } from '../render/EnemyRenderer';
@@ -57,7 +68,9 @@ import { Dialog } from '../ui/Dialog';
 import { HUD } from '../ui/HUD';
 import { StructureLabels } from '../ui/StructureLabels';
 import { el } from '../ui/dom';
+import { bagPanel } from '../ui/menus/BagPanel';
 import { pausePanel } from '../ui/menus/PausePanel';
+import type { Panel } from '../ui/Overlays';
 import { TouchControls } from '../ui/TouchControls';
 import { Checkpoints, checkpointsOf } from '../world/Checkpoints';
 import { ChunkDebug } from '../world/ChunkDebug';
@@ -115,6 +128,14 @@ const TALK_BREAK_RANGES = 3;
 const PROTECTED_MESSAGE_SECONDS = 4;
 /** Arrows stop at colliders; this is their thickness (m) for that test. */
 const ARROW_COLLIDE_RADIUS = 0.05;
+/** Loot texts above a defeated monster stack this far (m) apart. */
+const LOOT_TEXT_SPACING = 0.45;
+/** What the cheat menu gives (debug only). */
+const CHEAT_XP = 100;
+const CHEAT_GOLD = 50;
+const CHEAT_POTIONS = 5;
+/** Not dying (the death timer is off). */
+const NOT_DYING = -1;
 
 /**
  * The open world: terrain chunks stream in around the player from a Web Worker (WorldStreamer),
@@ -161,6 +182,19 @@ export class WorldState implements GameState, InstanceHost {
   private projectileWorld: ProjectileWorld | null = null;
   /** HP reached 0 during this step; handled once the monsters finished their step. */
   private knockedOut = false;
+  /** Seconds since dying started (fade to black, wake up, fade in); NOT_DYING otherwise. */
+  private deathTimer = NOT_DYING;
+  /** Gold lost by this death (taken from the save at once, shown when you wake up). */
+  private deathGoldLost = 0;
+  /** Where you wake up after dying. */
+  private readonly respawn = { x: 0, z: 0 };
+  private deathTitle = '';
+  private deathText = '';
+  /** Seconds until the next potion may be drunk. */
+  private potionCooldown = 0;
+  /** Rolls loot; a new seed every time the world is entered. */
+  private lootRng = new Random(1);
+  private items: ReadonlyMap<string, ItemDef> = new Map();
   /** Seconds until "protected here" may show again. */
   private protectedMessageTimer = 0;
   /** Seconds since the world was entered (drawing only: pulsing warnings). */
@@ -194,6 +228,7 @@ export class WorldState implements GameState, InstanceHost {
   private readonly cheats = new Cheats();
   private surface: HTMLElement | null = null;
   private pauseButton: HTMLButtonElement | null = null;
+  private bagButton: HTMLButtonElement | null = null;
   private lookHint: HTMLElement | null = null;
   private lookHintShown = false;
   /** Phones and tablets: no "click to look around" hint (there is no mouse). */
@@ -223,6 +258,8 @@ export class WorldState implements GameState, InstanceHost {
     viewYaw: 0,
   };
   private readonly arrowProbe = { x: 0, z: 0 };
+  private readonly drops: ItemStack[] = [];
+  private readonly healed = { item: '', hp: 0, mana: 0 };
   private readonly stats: StreamerStats = {
     near: 0,
     far: 0,
@@ -286,6 +323,13 @@ export class WorldState implements GameState, InstanceHost {
     ctx.ui.append(this.damageNumbers.root);
     this.hudInCombat = false;
     this.knockedOut = false;
+    this.deathTimer = NOT_DYING;
+    this.potionCooldown = 0;
+    this.lootRng = new Random((Date.now() >>> 0) ^ 0x5eed);
+    this.items = new Map(data.items.items.map((item) => [item.id, item]));
+    this.hud.setGold(session.character?.gold ?? 0);
+    this.hud.setXp(xpFraction(data.player, session.progress), false);
+    this.refreshPotions();
     this.time = 0;
     this.talkingTo = null;
     this.targetNpc = null;
@@ -303,6 +347,7 @@ export class WorldState implements GameState, InstanceHost {
         exportSave: () => this.exportSave(),
         importSave: (code) => this.importSave(code),
         rerunBenchmark: () => this.rerunBenchmark(),
+        grant: (kind) => this.grant(kind),
       },
     );
     // Next to the UI layer (not inside it), so it can sit above the debug overlay.
@@ -316,6 +361,12 @@ export class WorldState implements GameState, InstanceHost {
       onClick: () => this.pause(),
     });
     ctx.ui.append(this.pauseButton);
+    this.bagButton = el('button', {
+      className: 'ui-bag-button',
+      attrs: { type: 'button', 'aria-label': t('bag.title') },
+      onClick: () => this.openBag(),
+    });
+    ctx.ui.append(this.bagButton);
     // Mouse only: "click to look around" until the mouse is captured.
     this.lookHint = el('div', { className: 'ui-look-hint', text: t('controls.clickToLook') });
     this.lookHintShown = false;
@@ -327,6 +378,7 @@ export class WorldState implements GameState, InstanceHost {
       ctx.events.on('languageChanged', () => {
         this.touch?.setLabels(this.touchLabels());
         this.pauseButton?.setAttribute('aria-label', ctx.i18n.t('pause.title'));
+        this.bagButton?.setAttribute('aria-label', ctx.i18n.t('bag.title'));
         if (this.lookHint) this.lookHint.textContent = ctx.i18n.t('controls.clickToLook');
         this.cheatPanel?.updateTexts();
         this.dialog?.updateTexts();
@@ -377,6 +429,8 @@ export class WorldState implements GameState, InstanceHost {
     this.surface = null;
     this.pauseButton?.remove();
     this.pauseButton = null;
+    this.bagButton?.remove();
+    this.bagButton = null;
     this.lookHint?.remove();
     this.lookHint = null;
     this.hud?.dispose();
@@ -413,6 +467,8 @@ export class WorldState implements GameState, InstanceHost {
       // A click both confirms and attacks; while talking it only shows the next line.
       input.consumePressed('attack');
       input.consumePressed('heavy');
+      input.consumePressed('potion');
+      input.consumePressed('bag');
       if (input.consumePressed('confirm') || next || dash) this.dialog.advance();
       this.swordInput.fast = false;
       this.swordInput.heavy = false;
@@ -423,6 +479,21 @@ export class WorldState implements GameState, InstanceHost {
       // Fast hit: left mouse button or the attack button (held = keeps attacking).
       this.swordInput.fast = input.consumePressed('attack') || input.isPressed('attack');
       this.swordInput.heavy = input.consumePressed('heavy');
+      if (input.consumePressed('potion')) this.drink(null);
+      if (input.consumePressed('bag')) {
+        this.openBag();
+        return;
+      }
+    }
+    this.potionCooldown = Math.max(0, this.potionCooldown - dt);
+    if (this.deathTimer !== NOT_DYING) {
+      // Dying: you can do nothing until you wake up at your checkpoint.
+      this.command.x = 0;
+      this.command.z = 0;
+      input.consumePressed('dash');
+      this.swordInput.fast = false;
+      this.swordInput.heavy = false;
+      this.stepDeath(dt);
     }
 
     player.beginStep();
@@ -521,11 +592,12 @@ export class WorldState implements GameState, InstanceHost {
         this.showProtected(e);
         continue;
       }
-      enemies.hit(e, result.damage);
+      const defeated = enemies.hit(e, result.damage);
       hitAny = true;
       const top = e.y + (enemyRenderer?.heightOf(e) ?? 1.5);
       const kind = result.landed === 'heavy' ? 'heavy' : result.combo ? 'combo' : 'normal';
       this.damageNumbers?.spawn(e.x, top, e.z, result.damage, kind);
+      if (defeated) this.defeated(e, top);
     }
     if (hitAny) player.combat.sinceCombat = 0;
   }
@@ -548,11 +620,11 @@ export class WorldState implements GameState, InstanceHost {
     t.x = player.state.x;
     t.z = player.state.z;
     t.radius = movement.radius;
-    t.hostile = this.cheats.monsters && !this.cheats.fly;
+    t.hostile = this.cheats.monsters && !this.cheats.fly && this.deathTimer === NOT_DYING;
     enemies.step(dt, t, enemiesWorld);
     if (projectiles && projectileWorld) projectiles.step(dt, t, projectileWorld, this.hurtPlayer);
     this.protectedMessageTimer = Math.max(0, this.protectedMessageTimer - dt);
-    if (this.knockedOut) this.knockOut();
+    if (this.knockedOut) this.startDying();
   }
 
   /** A monster or an arrow hits the player: HP down, a red number and glow, maybe knocked out. */
@@ -561,7 +633,7 @@ export class WorldState implements GameState, InstanceHost {
     if (!player || damage <= 0) return;
     const c = player.combat;
     const s = player.state;
-    if (this.knockedOut) return;
+    if (this.knockedOut || this.deathTimer !== NOT_DYING) return;
     c.hp = Math.max(0, c.hp - damage);
     c.sinceCombat = 0;
     this.damageNumbers?.spawn(s.x, s.y + 2, s.z, damage, 'player');
@@ -570,29 +642,224 @@ export class WorldState implements GameState, InstanceHost {
   };
 
   /**
-   * HP reached 0. For now (until dying arrives in step 2.4): you wake up at your checkpoint
-   * with full HP and the monsters are back at full strength.
+   * HP reached 0 (concept "Doodgaan"): the screen fades to black, you lose 10% of your gold
+   * (items, gear and resources stay), and you wake up at your last checkpoint with full HP
+   * and mana. The monsters are back at full strength. The save gets the result at once (gold,
+   * checkpoint, full health), so leaving or reloading during the black screen changes nothing.
    */
-  private knockOut(): void {
-    const { player, checkpoints, enemies } = this;
+  private startDying(): void {
+    this.knockedOut = false;
     const session = this.ctx.session;
     const data = this.ctx.data;
-    this.knockedOut = false;
-    if (!player || !session || !data) return;
-    const checkpoint = checkpoints?.byId(session.world.checkpoint);
+    const player = this.player;
+    if (!session || !data || !player || this.deathTimer !== NOT_DYING) return;
+    const t = this.ctx.i18n;
+    this.deathTimer = 0;
+    this.deathGoldLost = deathGoldLoss(
+      session.character?.gold ?? 0,
+      data.player.death.goldLossFraction,
+    );
+    if (session.character) session.character.gold -= this.deathGoldLost;
+    // From now on the save holds where you will wake up (syncSave waits until then).
+    const checkpoint = this.checkpoints?.byId(session.world.checkpoint);
     const zone = data.zones.zones.find((entry) => entry.id === data.player.start.zone);
     const start = zone?.spawnPoints.find((point) => point.id === data.player.start.spawnPoint);
-    const x = checkpoint?.x ?? start?.x ?? player.state.x;
-    const z = checkpoint?.z ?? start?.z ?? player.state.z;
+    this.respawn.x = checkpoint?.x ?? start?.x ?? player.state.x;
+    this.respawn.z = checkpoint?.z ?? start?.z ?? player.state.z;
+    session.world.position = { x: this.respawn.x, y: 0, z: this.respawn.z };
+    session.world.zone =
+      this.zones?.zoneAt(this.respawn.x, this.respawn.z)?.id ?? session.world.zone;
+    session.progress.hp = null;
+    session.progress.mana = null;
+    this.ctx.persist();
+    this.deathTitle = t.t('death.title');
+    this.deathText =
+      this.deathGoldLost > 0
+        ? t.t('death.goldLost', { amount: this.deathGoldLost, gold: this.goldName() })
+        : t.t('death.wakeUp');
+    this.dialog?.close();
+  }
+
+  /** One step of dying: fade out, (black) wake up at the checkpoint, fade back in. */
+  private stepDeath(dt: number): void {
+    const death = this.ctx.data?.player.death;
+    if (!death) return;
+    const before = this.deathTimer;
+    this.deathTimer += dt;
+    const wakeAt = death.fadeSeconds + death.blackSeconds;
+    if (before < wakeAt && this.deathTimer >= wakeAt) this.wakeUpAfterDeath();
+    if (this.deathTimer >= wakeAt + death.fadeSeconds) this.deathTimer = NOT_DYING;
+  }
+
+  private wakeUpAfterDeath(): void {
+    const { player, enemies } = this;
+    const session = this.ctx.session;
+    const data = this.ctx.data;
+    if (!player || !session || !data) return;
     enemies?.resetAll();
     this.projectiles?.clear();
-    this.placePlayer(x, z);
+    this.placePlayer(this.respawn.x, this.respawn.z);
     const c = player.combat;
     c.hp = c.maxHp;
     c.mana = c.maxMana;
     c.sinceCombat = Infinity;
-    this.ctx.events.emit('playerKnockedOut', {});
-    this.hud?.showMessage(this.ctx.i18n.t('hud.knockedOut'));
+    c.heavyWindup = 0;
+    c.swing = 'none';
+    player.state.energy = data.player.base.energy;
+    const lost = this.deathGoldLost;
+    if (session.character && lost > 0) {
+      this.hud?.setGold(session.character.gold);
+      this.hud?.rules.goldChanged();
+    }
+    this.ctx.events.emit('playerDied', { goldLost: lost });
+    this.syncSave(true);
+    this.ctx.persist();
+  }
+
+  /** The screen during dying (drawn every frame from the simulation's death timer). */
+  private updateBlackout(): void {
+    const death = this.ctx.data?.player.death;
+    const hud = this.hud;
+    if (!death || !hud) return;
+    const time = this.deathTimer;
+    if (time === NOT_DYING) {
+      hud.setBlackout(0, '', '');
+      return;
+    }
+    const fade = Math.max(1e-3, death.fadeSeconds);
+    const wakeAt = death.fadeSeconds + death.blackSeconds;
+    const opacity = time < wakeAt ? time / fade : 1 - (time - wakeAt) / fade;
+    hud.setBlackout(opacity, this.deathTitle, this.deathText);
+  }
+
+  /**
+   * The player defeated a monster: XP (maybe a level up) and its loot straight into the bag,
+   * with short texts above the monster. Quests listen to `monsterDefeated`.
+   */
+  private defeated(e: Enemy, top: number): void {
+    const data = this.ctx.data;
+    const session = this.ctx.session;
+    const player = this.player;
+    if (!data || !session || !player) return;
+    this.ctx.events.emit('monsterDefeated', { monsterId: e.def.id });
+    let y = top + LOOT_TEXT_SPACING;
+    if (e.def.xp > 0) {
+      this.gainXp(e.def.xp);
+      this.damageNumbers?.spawnText(e.x, y, e.z, `+${e.def.xp} XP`, 'xp');
+      y += LOOT_TEXT_SPACING;
+    }
+    const drops = rollDrops(e.def, this.lootRng, this.drops);
+    for (let i = 0; i < drops.length; i++) {
+      const drop = drops[i] as ItemStack;
+      this.gainItem(drop.item, drop.count);
+      const name =
+        drop.item === GOLD_ITEM ? this.goldName() : (this.items.get(drop.item)?.name ?? drop.item);
+      this.damageNumbers?.spawnText(e.x, y, e.z, `+${drop.count} ${name}`, 'loot');
+      y += LOOT_TEXT_SPACING;
+    }
+  }
+
+  /** Adds XP; every new level gives more HP, mana and sword damage (and fills HP and mana). */
+  private gainXp(amount: number): void {
+    const data = this.ctx.data;
+    const session = this.ctx.session;
+    const player = this.player;
+    if (!data || !session || !player || amount <= 0) return;
+    const progress = session.progress;
+    const levels = addXp(data.player, progress, amount);
+    this.ctx.events.emit('xpGained', { amount });
+    this.hud?.rules.xpGained();
+    this.hud?.setXp(xpFraction(data.player, progress), levels > 0);
+    if (levels <= 0) return;
+    const c = player.combat;
+    applyLevel(c, data.player, progress.level);
+    if (data.player.levelUpRefill) {
+      c.hp = c.maxHp;
+      c.mana = c.maxMana;
+    }
+    this.conditionContext.level = progress.level;
+    this.hud?.showMessage(this.ctx.i18n.t('hud.levelUp', { level: progress.level }));
+    this.ctx.events.emit('levelUp', { level: progress.level });
+    this.syncSave();
+    this.ctx.persist();
+  }
+
+  /** Puts loot (or a reward) in the bag; gold goes to the gold counter (shown for a moment). */
+  private gainItem(itemId: string, count: number): void {
+    const character = this.ctx.session?.character;
+    if (!character || count <= 0) return;
+    if (itemId === GOLD_ITEM) {
+      character.gold += count;
+      this.hud?.setGold(character.gold);
+      this.hud?.rules.goldChanged();
+    } else {
+      addItem(character.inventory, itemId, count);
+      this.refreshPotions();
+    }
+    this.ctx.events.emit('itemsGained', { itemId, count });
+  }
+
+  /**
+   * Drinks a potion: `itemId`, or with null the first one from player.json `potions.quickOrder`
+   * (Q / the drink button). Says why when it cannot.
+   */
+  private drink(itemId: string | null): DrinkResult {
+    const data = this.ctx.data;
+    const character = this.ctx.session?.character;
+    const player = this.player;
+    if (!data || !character || !player || this.deathTimer !== NOT_DYING) return 'none';
+    const order = itemId ? [itemId] : data.player.potions.quickOrder;
+    const result = drinkPotion(
+      character.inventory,
+      order,
+      this.items,
+      player.combat,
+      this.potionCooldown,
+      this.healed,
+    );
+    const t = this.ctx.i18n;
+    if (result === 'drunk') {
+      this.potionCooldown = data.player.potions.cooldownSeconds;
+      const s = player.state;
+      if (this.healed.hp > 0)
+        this.damageNumbers?.spawnText(s.x, s.y + 2, s.z, `+${Math.round(this.healed.hp)}`, 'heal');
+      this.hud?.rules.healed();
+      this.refreshPotions();
+      this.ctx.events.emit('potionDrunk', { itemId: this.healed.item });
+    } else if (result === 'none') {
+      this.hud?.showMessage(t.t('hud.noPotion'));
+    } else if (result === 'full') {
+      this.hud?.showMessage(t.t('hud.alreadyFull'));
+    }
+    return result;
+  }
+
+  /** The number on the drink button: potions the drink key would use. */
+  private refreshPotions(): void {
+    const data = this.ctx.data;
+    const bag = this.ctx.session?.character?.inventory;
+    if (!data || !bag || !this.touch) return;
+    let count = 0;
+    for (const id of data.player.potions.quickOrder) count += countItem(bag, id);
+    this.touch.setPotions(count);
+  }
+
+  /** "Gold" is a temporary name: it comes from items.json, not from the code. */
+  private goldName(): string {
+    return this.items.get(GOLD_ITEM)?.name ?? GOLD_ITEM;
+  }
+
+  /** "Level 3 · 40 / 220 XP" for the bag. */
+  private xpLine(): string {
+    const data = this.ctx.data;
+    const progress = this.ctx.session?.progress;
+    if (!data || !progress) return '';
+    const need = xpToNext(data.player, progress.level);
+    return this.ctx.i18n.t(Number.isFinite(need) ? 'bag.level' : 'bag.levelMax', {
+      level: progress.level,
+      xp: progress.xp,
+      need,
+    });
   }
 
   /** HP and mana bars, the "in a fight" rule and the low-HP rule (HUD rules from the concept). */
@@ -610,12 +877,13 @@ export class WorldState implements GameState, InstanceHost {
     hud.rules.setHpFraction(c.maxHp > 0 ? c.hp / c.maxHp : 1);
   }
 
-  private touchLabels(): { attack: string; heavy: string; dash: string } {
+  private touchLabels(): { attack: string; heavy: string; dash: string; potion: string } {
     const t = this.ctx.i18n;
     return {
       attack: t.t('controls.attack'),
       heavy: t.t('controls.heavy'),
       dash: t.t('controls.dash'),
+      potion: t.t('controls.potion'),
     };
   }
 
@@ -673,18 +941,25 @@ export class WorldState implements GameState, InstanceHost {
   }
 
   /**
-   * E or a tap on the icon: talk to or pet the nearest NPC, otherwise rest at a checkpoint
-   * (health and mana follow in phase 2).
+   * E or a tap on the icon: talk to or pet the nearest NPC, otherwise rest in the bed at a
+   * checkpoint (full HP and mana, and a save).
    */
   private interact(): void {
-    if (this.paused || this.dialog?.isOpen) return;
+    if (this.paused || this.dialog?.isOpen || this.deathTimer !== NOT_DYING) return;
     const npc = this.targetNpc;
     if (npc) {
       this.interactWith(npc);
       return;
     }
-    if (!this.checkpoints?.near) return;
+    const near = this.checkpoints?.near;
+    const c = this.player?.combat;
+    if (!near || !c) return;
+    c.hp = c.maxHp;
+    c.mana = c.maxMana;
     this.hud?.showMessage(this.ctx.i18n.t('hud.rested'));
+    this.ctx.events.emit('playerRested', { checkpointId: near.id });
+    this.syncSave();
+    this.ctx.persist();
   }
 
   private interactWith(npc: Npc): void {
@@ -773,6 +1048,7 @@ export class WorldState implements GameState, InstanceHost {
       s.x,
       s.z,
     );
+    this.updateBlackout();
     this.hud?.update(frameSeconds);
     this.damageNumbers?.update(
       this.paused ? 0 : frameSeconds,
@@ -877,11 +1153,13 @@ export class WorldState implements GameState, InstanceHost {
     this.lookHint.classList.toggle('ui-look-hint-visible', show);
   }
 
-  /** Copies the player's position into the save (numbers only; no allocation). */
-  private syncSave(): void {
+  /** Copies the player's position, HP and mana into the save (numbers only; no allocation). */
+  private syncSave(force = false): void {
     const world = this.ctx.session?.world;
     const player = this.player;
     if (!world || !player) return;
+    // While dying the save already says where you wake up (see startDying).
+    if (this.deathTimer !== NOT_DYING && !force) return;
     const s = player.state;
     if (world.position) {
       world.position.x = s.x;
@@ -891,9 +1169,34 @@ export class WorldState implements GameState, InstanceHost {
       world.position = { x: s.x, y: s.y, z: s.z };
     }
     world.heading = s.heading;
+    const progress = this.ctx.session?.progress;
+    if (progress) {
+      progress.hp = player.combat.hp;
+      progress.mana = player.combat.mana;
+    }
   }
 
   private pause(): void {
+    this.openMenu((resume) => pausePanel(this.ctx, resume));
+  }
+
+  /** The bag (I / B or the bag button); the game waits while it is open. */
+  private openBag(): void {
+    if (this.dialog?.isOpen || this.deathTimer !== NOT_DYING) return;
+    this.openMenu((resume) =>
+      bagPanel(
+        this.ctx,
+        (itemId) => {
+          if (this.drink(itemId) === 'drunk') this.ctx.overlays.refreshTop();
+        },
+        () => this.xpLine(),
+        resume,
+      ),
+    );
+  }
+
+  /** Pauses the game behind a menu panel; closing the panel resumes. */
+  private openMenu(makePanel: (resume: () => void) => Panel): void {
     if (this.paused) return;
     this.paused = true;
     this.ctx.quality.setMeasuring(false);
@@ -903,7 +1206,7 @@ export class WorldState implements GameState, InstanceHost {
     this.syncSave();
     this.ctx.persist();
     this.ctx.overlays.open(
-      pausePanel(this.ctx, () => {
+      makePanel(() => {
         // Keys pressed in the menus (Space, E) must not act once the game resumes.
         this.input?.releaseAll();
         this.paused = false;
@@ -988,6 +1291,13 @@ export class WorldState implements GameState, InstanceHost {
     ctx.events.emit('settingsChanged', {});
     ctx.goto('title');
     return true;
+  }
+
+  /** Debug: XP, gold or potions for testing levels, dying and drinking. */
+  private grant(kind: 'xp' | 'gold' | 'potions'): void {
+    if (kind === 'xp') this.gainXp(CHEAT_XP);
+    else if (kind === 'gold') this.gainItem(GOLD_ITEM, CHEAT_GOLD);
+    else this.gainItem(this.ctx.data?.player.potions.quickOrder[0] ?? '', CHEAT_POTIONS);
   }
 
   /** Debug: back to "Auto" without a chosen preset, so the benchmark runs again right away. */
@@ -1110,10 +1420,15 @@ export class WorldState implements GameState, InstanceHost {
     this.sword = swordConfig(data.player);
     const combat = player.combat;
     combat.lingerSeconds = this.sword.combatLingerSeconds;
-    // Levels and saved HP come with XP in step 2.4; for now you start full at level 1.
-    applyLevel(combat, data.player, 1);
-    combat.hp = combat.maxHp;
-    combat.mana = combat.maxMana;
+    // Level, HP and mana from the save (null = full).
+    const progress = session?.progress;
+    const level = Math.min(data.player.maxLevel, Math.max(1, progress?.level ?? 1));
+    applyLevel(combat, data.player, level);
+    combat.hp = Math.min(combat.maxHp, progress?.hp ?? combat.maxHp);
+    combat.mana = Math.min(combat.maxMana, progress?.mana ?? combat.maxMana);
+    // Waking up with 0 HP would be dying again at once.
+    if (combat.hp <= 0) combat.hp = combat.maxHp;
+    this.conditionContext.level = level;
     player.model.root.traverse((object) => {
       object.castShadow = true;
     });
@@ -1345,7 +1660,9 @@ export class WorldState implements GameState, InstanceHost {
     const c = player.combat;
     debug.lines.set(
       'combat',
-      `hp ${Math.ceil(c.hp)}/${c.maxHp} · mana ${Math.round(c.mana)} · lvl ${c.level} · ` +
+      `hp ${Math.ceil(c.hp)}/${c.maxHp} · mana ${Math.round(c.mana)} · lvl ${c.level} ` +
+        `(${this.ctx.session?.progress.xp ?? 0} xp) · gold ${this.ctx.session?.character?.gold ?? 0} · ` +
+        `${this.deathTimer !== NOT_DYING ? 'dying · ' : ''}` +
         `${c.heavyWindup > 0 ? 'heavy windup' : c.swing} · combo ${c.comboCount} · ` +
         `${c.inCombat ? 'in fight' : 'calm'}`,
     );

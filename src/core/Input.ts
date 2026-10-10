@@ -1,7 +1,8 @@
 /** Game actions, independent of key, button or (later) gamepad. */
 /** `down` only matters while flying (debug cheat): Shift or C. */
 /** `confirm`: Enter, or a left click while the mouse is captured (e.g. next dialogue line). */
-export type Action = 'dash' | 'interact' | 'down' | 'confirm' | 'attack' | 'heavy';
+export type Action =
+  'dash' | 'interact' | 'down' | 'confirm' | 'attack' | 'heavy' | 'potion' | 'bag';
 
 /** Turning and zoom gathered since the camera last read them. */
 export interface LookDelta {
@@ -39,6 +40,9 @@ const KEY_RIGHT = ['KeyD', 'ArrowRight'] as const;
 const ACTION_KEYS: Readonly<Record<string, Action>> = {
   Space: 'dash',
   KeyE: 'interact',
+  KeyQ: 'potion',
+  KeyI: 'bag',
+  KeyB: 'bag',
   Enter: 'confirm',
   NumpadEnter: 'confirm',
   ShiftLeft: 'down',
@@ -64,7 +68,8 @@ const JOYSTICK_ZONE_TOP = 0.5;
  * (`getMoveVector`, `isPressed`, `consumePressed`), never for keys, so a gamepad can be added
  * here later without touching game code.
  *
- * - Keyboard: WASD / arrows to walk, Space to dash, E to interact, Enter to confirm.
+ * - Keyboard: WASD / arrows to walk, Space to dash, E to interact, Enter to confirm, Q to drink
+ *   a potion, I or B for the bag.
  * - Mouse (like Genshin Impact): click once to capture the mouse (pointer lock); from then on
  *   moving the mouse turns the camera without holding a button. Escape releases it (the browser
  *   does that itself). Without the lock, dragging with the right button also turns. Wheel zooms.

@@ -7,9 +7,9 @@
 | | |
 |---|---|
 | **Huidige fase** | Fase 2 – Solo-gevecht en de eerste dag (plan goedgekeurd) |
-| **Status** | Stap 2.3 klaar (vijanden in de Greenwood met AI en spawngebieden, Pringle zwerft om je heen) |
-| **Volgende stap** | Stap 2.4: XP, levels, buit, drankjes, doodgaan en rusten (save versie 3) |
-| **Laatste sessie** | 2026-10-10: stap 2.3 vijanden + Pringle |
+| **Status** | Stap 2.4 klaar (XP, levels, buit, tas, drankjes, doodgaan en rusten; save versie 3) |
+| **Volgende stap** | Stap 2.5: quests van de eerste dag (Brother Ansel, Marco, Hilda, Rose, Old Bertha) |
+| **Laatste sessie** | 2026-10-10: stap 2.4 XP, levels, buit, doodgaan |
 
 ---
 
@@ -248,7 +248,7 @@ Doel: het spel begint met een speelbaar, episch (en komisch) gevecht tegen Lucae
 ---
 
 ### Fase 2 – Solo-gevecht en de eerste dag
-**Status:** bezig, stap 2.1, 2.2 en 2.3 klaar.
+**Status:** bezig, stap 2.1 t/m 2.4 klaar.
 **Gebouwd:**
 - 2.1 Gevechtskern:
   - **Zwaard** (`src/systems/Combat.ts`, puur en getest): fast hit met de **linkermuisknop** (10 schade, 10 energie, max 3 per seconde, elke 3e slag op rij +50% en goud gekleurd), heavy hit met de **rechtermuisknop** (25 energie vooraf, 0,9 s uithalen, dan 25 schade, daarna 0,35 s herstel). Zonder genoeg energie: fast hits nog wel, maar half zo snel; geen heavy hit. Per level +2 (fast) en +5 (heavy) schade. Alles op de vaste tijdstap: 60 en 120 Hz geven dezelfde slagen (test).
@@ -278,6 +278,17 @@ Doel: het spel begint met een speelbaar, episch (en komisch) gevecht tegen Lucae
   - **Tekenen:** placeholder-modellen voor slime, goblin (speer), archer (kap en boog), chief (kroon en knots) en Treewarden in `EnemyFactory.ts`; pijlen en rode cirkels (die de grond volgen) in `src/render/CombatEffects.ts`.
   - **Debug:** regel `enemies` (getoond / in de wereld / pool, vechtend, pijlen, dichtstbijzijnde vijand met zijn toestand en HP). Cheatmenu: **Monsters vallen aan** aan/uit.
   - Getest: 270 tests (o.a. slime raakt even vaak op 60 en 120 Hz, ontwijken tijdens de windup, terug naar huis, groepje komt mee, splitsen en terugkomen, archer en ontwijken, elke 3e aanval van de Chief, Treewarden alleen terug en niet in de elfenstad, Pringle nooit vóór je en niet steeds even ver). Headless Chromium: slime valt aan en doet 5 schade, goblinkamp slaat je knock-out → wakker bij het Monastery, rode cirkel van de Big Swing onder speler en Chief, 3× wereld in/uit: geometrie terug naar 0. Geen fouten. Gevonden en opgelost: een slimeveld lag op de oever van een beek (slimes liepen vast; nu verplaatst, en vastgelopen vijanden geven het op), en Pringle liep soms vlak langs je voeten (nu niet meer).
+- 2.4 XP, levels, buit, tas, drankjes, doodgaan en rusten:
+  - **XP en levels** (`src/systems/Progression.ts`): een verslagen vijand geeft zijn XP uit `monsters.json` (Green Slime 10, Goblin 20, ...), met "+10 XP" boven de vijand. XP-curve uit `player.json` (100/150/220/300/400/520/660 = level 8 bij 2350 XP). Level omhoog: +10 HP, +5 mana, fast hit +2 en heavy hit +5 schade, HP en mana vol, melding "Level omhoog! Je bent nu level 3." De XP-balk verschijnt volgens de HUD-regels, loopt rustig vol (bij een level eerst helemaal), en daarna faden alle balken weer uit.
+  - **Buit** (`src/systems/Inventory.ts`): de `drops` uit `monsters.json` gaan meteen in je tas, met "+3 Gold" / "+1 Slime Gel" boven de vijand. Gold rechtsboven verschijnt even als het verandert. Nieuw: Health Potion als buit (Big Slime 15%, Goblin en Goblin Archer 10%, Goblin Chief altijd 1–2).
+  - **Tas** (I of B, of het tas-knopje naast pauze; ook op de telefoon): gold, level en XP, alle spullen met aantal en uitleg, "Gedragen" bij je zwaard en mantel, "Drinken" bij drankjes. Het spel wacht zolang de tas open is.
+  - **Drankjes:** Q op de pc, op de telefoon een drankknop met het aantal erop (alleen als je drankjes hebt). Health Potion = +50 HP, Greater Health Potion = +120 HP (in `items.json`), 1 s tussen twee drankjes, niet bij volle HP. Groen "+50" boven je hoofd en de HP-balk verschijnt even.
+  - **Doodgaan:** bij 0 HP wordt het scherm zwart: "Je bent verslagen" en "Je bent 5 Gold kwijt. Je wordt wakker bij je checkpoint." Je verliest 10% van je gold (naar beneden afgerond); alle spullen houd je. Je wordt wakker bij je laatste checkpoint met volle HP en mana, de vijanden zijn weer heel, en de game slaat meteen op (herladen helpt dus niet). Tijden in `player.json` → `death`.
+  - **Rusten** bij een checkpoint (E of tikken op "Rusten"): HP en mana vol, en de game slaat op.
+  - **Save versie 3** (`progress`: level, XP, HP en mana). Een oude save wordt level 1 met 0 XP en volle HP; gold en tas blijven. HP en mana worden onthouden (ook halfvol).
+  - **Events voor de quests van stap 2.5:** `monsterDefeated`, `xpGained`, `levelUp`, `itemsGained`, `potionDrunk`, `playerRested`, `playerDied` (vervangt `playerKnockedOut`).
+  - **Cheatmenu:** "Geven": +100 XP, +50 Gold, +5 Health Potion. Debugregel `combat` toont nu ook XP, gold en "dying".
+  - Getest: 291 tests (o.a. XP-curve en level 8 bij 2350 XP, meerdere levels tegelijk, max level, 10% gold, buitkansen, drankjes, save v2 → v3, validator voor drankjes). Headless Chromium (pc 1100×700 en telefoon 844×390, EN en NL): slime verslaan → +10 XP in de tas; goblinkamp → zwart scherm, 57 → 52 gold, wakker bij het heiligdom, opgeslagen als v3; Q en de drankknop (+50 HP, knop verdwijnt bij 0); "Drinken" in de tas; rusten → 100 HP; 3× +100 XP → level 3 met 120 HP en 60 mana; nieuw spel vanaf de taalkeuze → save v3 op level 1. Geen fouten.
 
 ## Besluiten
 
@@ -383,6 +394,15 @@ Doel: het spel begint met een speelbaar, episch (en komisch) gevecht tegen Lucae
 | 2026-10-10 | Een verslagen groepje komt pas terug als je minstens 35 m weg bent | Zo verschijnt er nooit een vijand vlak voor je neus |
 | 2026-10-10 | Pringle: geen vaste afstand meer (1,8–4,5 m), zit en wandelt als je stilstaat, draaft schuin naast je als je loopt, nooit vóór je of tussen jou en de camera | Verzoek: "om je heen, niet irritant, niet in de weg, een beetje wanderen, niet steeds dezelfde afstand" |
 | 2026-10-10 | Pringle gaat pas meelopen als je langer dan ~1,2 s loopt | Anders liep hij weg als je naar hem toe liep om hem te aaien |
+| 2026-10-10 | Buit gaat meteen in je tas (niets op de grond om op te rapen) | Simpel, en in raids krijgt iedereen toch zijn eigen buit (concept). Zeg het als je buit wilt oprapen |
+| 2026-10-10 | Level omhoog maakt HP en mana vol (`levelUpRefill` in `player.json`) | Voorstel; voelt als een beloning. Uit te zetten in de data |
+| 2026-10-10 | Na level 8 kost elk level 660 XP (de laatste stap uit het concept) | Concept geeft de curve alleen tot level 8; aan te passen in `xpToNextLevel` |
+| 2026-10-10 | Health Potion +50 HP, Greater Health Potion +120 HP, 1 s tussen twee drankjes | Voorstel; concept noemt geen getallen |
+| 2026-10-10 | Health Potions vallen soms uit Big Slimes en goblins, altijd uit de Goblin Chief | Anders zijn er tot stap 2.5 (Marco verkoopt ze) geen drankjes te krijgen |
+| 2026-10-10 | Drinken: Q op de pc, een drankknop (met aantal) linksboven de knoppen op de telefoon | Q ligt naast WASD; de knop zit in de knoppenzone, dus nooit onder de HUD |
+| 2026-10-10 | De tas pauzeert het spel (I of B, of het tas-knopje naast pauze) | Simpel en veilig op de telefoon; drinken tijdens een gevecht gaat snel met Q of de drankknop. In raids (fase 5) kan de tas niet pauzeren; dan passen we het aan |
+| 2026-10-10 | Doodgaan: 0,8 s naar zwart, 1,6 s zwart met tekst, 0,8 s terug (`death` in `player.json`) | Voorstel; de "cutscene" bij doodgaan uit het plan is nu dit korte zwarte scherm |
+| 2026-10-10 | Doodgaan en een level omhoog slaan meteen op | Anders kun je de goldstraf ontlopen door te herladen |
 
 ## Sessielog
 
@@ -410,3 +430,4 @@ Doel: het spel begint met een speelbaar, episch (en komisch) gevecht tegen Lucae
 
 ### 2026-10-10
 - Stap 2.3 gebouwd: vijanden in de Greenwood (Green Slime, Big Slime, Goblin, Goblin Archer, Goblin Chief in een goblinkamp, Treewarden) uit één pool, met AI, spawngebieden en terugkomen; pijlen en rode waarschuwingscirkels; knock-out bij 0 HP (voorlopig); debugregel en cheat "Monsters vallen aan". Op verzoek: Pringle zwerft om je heen in plaats van op vaste afstand te volgen. 270 tests, headless Chromium zonder fouten. Tijdelijke namen gebruikt (alleen in data): Treewarden, de elfenstad (`elven_city`), Big Swing, Heavy Slam, Gold, Slime Gel; nieuw: "Goblin tent" en "Campfire" (alleen labels in debug). Volgende stap: 2.4 (XP, levels, buit, doodgaan).
+- Stap 2.4 gebouwd: XP en levels, buit in de tas, tas-venster, drankjes (Q / drankknop), doodgaan met 10% goldverlies en zwart scherm, rusten bij een checkpoint, save versie 3 met migratie, nieuwe events voor de quests, cheats "Geven". 291 tests, headless Chromium (pc en telefoon, EN en NL) zonder fouten. Tijdelijke namen gebruikt (alleen in data): Gold, Health Potion, Greater Health Potion, Slime Gel. Volgende stap: 2.5 (quests van de eerste dag).

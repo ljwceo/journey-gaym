@@ -400,7 +400,20 @@ export const playerFileSchema = z.strictObject({
     /** You count as "in a fight" until this long after the last hit given or taken. */
     lingerSeconds: max(positive, 60),
   }),
-  death: z.strictObject({ goldLossFraction: fraction }),
+  /** Reaching a new level fills HP and mana. */
+  levelUpRefill: z.boolean(),
+  potions: z.strictObject({
+    /** Seconds before the next potion can be drunk. */
+    cooldownSeconds: max(nonNegative, 60),
+    /** The drink key / button takes the first of these potions you have. */
+    quickOrder: atLeast(z.array(id)),
+  }),
+  death: z.strictObject({
+    goldLossFraction: fraction,
+    /** The screen fades to black in this time, stays black, then fades back in. */
+    fadeSeconds: max(nonNegative, 10),
+    blackSeconds: max(nonNegative, 10),
+  }),
   lowHpThreshold: fraction,
   /** Subtle HUD (seconds): things fade in when needed and fade out again. */
   hud: z.strictObject({
@@ -562,6 +575,13 @@ const itemSchema = z.strictObject({
     }),
   ),
   crystal: optional(z.strictObject({ elements: atLeast(z.array(id)), size: id })),
+  /** What drinking it restores (potions only). */
+  potion: optional(
+    z.strictObject({
+      hp: optional(max(nonNegative, 100_000)),
+      mana: optional(max(nonNegative, 100_000)),
+    }),
+  ),
 });
 
 export const itemsFileSchema = z.strictObject({

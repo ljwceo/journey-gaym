@@ -3,7 +3,7 @@ import { qualityLevelSchema } from '../data/schemas';
 import { LANGUAGES, type Language } from '../i18n/I18n';
 
 /** Current save format. Bump it and add `migrations[old]` whenever the shape changes. */
-export const SAVE_VERSION = 2;
+export const SAVE_VERSION = 3;
 
 /** Camera sensitivity for new saves (1 = 100%); the allowed range is in player.json. */
 export const DEFAULT_CAMERA_SENSITIVITY = 0.7;
@@ -44,6 +44,14 @@ export const saveDataSchema = z.object({
       equipment: z.record(z.string(), id),
     }),
   ),
+  /** Level, XP and how much HP / mana is left (null = full, e.g. a fresh game). */
+  progress: z.object({
+    level: z.int().check(z.minimum(1)),
+    /** XP collected towards the next level. */
+    xp: z.int().check(z.nonnegative()),
+    hp: z.nullable(z.number().check(z.nonnegative())),
+    mana: z.nullable(z.number().check(z.nonnegative())),
+  }),
   /** Chosen in the main quest "Your Resolve" (phase 3); null until then. */
   path: z.nullable(z.enum(['sword', 'light', 'dark'])),
   world: z.object({
@@ -60,6 +68,12 @@ export const saveDataSchema = z.object({
 export type SaveData = z.infer<typeof saveDataSchema>;
 export type SaveSettings = SaveData['settings'];
 export type SaveCharacter = NonNullable<SaveData['character']>;
+export type SaveProgress = SaveData['progress'];
+
+/** Level 1, no XP, full HP and mana. */
+export function freshProgress(): SaveProgress {
+  return { level: 1, xp: 0, hp: null, mana: null };
+}
 
 /** A fresh save, created right after the language choice (character comes later). */
 export function createNewSave(language: Language, now: Date = new Date()): SaveData {
@@ -78,6 +92,7 @@ export function createNewSave(language: Language, now: Date = new Date()): SaveD
       debug: false,
     },
     character: null,
+    progress: freshProgress(),
     path: null,
     world: { zone: null, position: null, heading: 0, checkpoint: null },
     visitedPlaces: [],
@@ -103,6 +118,8 @@ export const migrations: Readonly<Record<number, Migration>> = {
       settings: { ...settings, cameraSensitivity: DEFAULT_CAMERA_SENSITIVITY },
     };
   },
+  // v3 (step 2.4): level, XP and HP / mana left; everyone starts at level 1 with full health.
+  2: (save) => ({ ...save, version: 3, progress: freshProgress() }),
 };
 
 export type MigrateResult =

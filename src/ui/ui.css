@@ -435,7 +435,7 @@
   background: color-mix(in srgb, var(--gh-lantaarnamber) 45%, transparent);
 }
 
-/* Attack (big, in the corner), heavy hit to its left, dash above it. */
+/* Attack (big, in the corner), heavy hit to its left, dash above it, drink potion diagonally. */
 .ui-attack-button {
   width: 84px;
   height: 84px;
@@ -458,6 +458,39 @@
 .ui-dash-button {
   right: calc(var(--button-right) + 11px);
   bottom: calc(var(--button-bottom) + 96px);
+}
+
+/* Drink potion: a small flask with the number of potions; hidden without potions. */
+.ui-potion-button {
+  width: 52px;
+  height: 52px;
+  right: calc(var(--button-right) + 100px);
+  bottom: calc(var(--button-bottom) + 100px);
+}
+
+.ui-potion-button::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 18px;
+  height: 18px;
+  transform: translate(-50%, -30%);
+  border-radius: 50%;
+  background: var(--gh-zonsondergang);
+  box-shadow: 0 -9px 0 -5px var(--gh-tekst-zacht);
+}
+
+.ui-potion-count {
+  position: absolute;
+  right: -4px;
+  top: -4px;
+  min-width: 20px;
+  padding: 1px 4px;
+  font: 600 12px var(--gh-font-stats);
+  color: var(--gh-nachtinkt);
+  background: var(--gh-ornamentgoud);
+  border-radius: 999px;
 }
 
 /* ------------------------------------------------------------ HUD (subtle, fades in and out) */
@@ -553,6 +586,15 @@
   height: 100%;
   transform-origin: left center;
   transition: transform 0.25s ease-out;
+}
+
+/* The XP bar fills slowly ("loopt een stukje vol"); after a level up it jumps back once. */
+.ui-hud-bar-xp .ui-hud-bar-fill {
+  transition-duration: 0.8s;
+}
+
+.ui-hud-bar-instant .ui-hud-bar-fill {
+  transition: none;
 }
 
 .ui-hud-bar-hp .ui-hud-bar-fill {
@@ -895,7 +937,7 @@
 .ui-cheats-button {
   position: absolute;
   top: max(12px, env(safe-area-inset-top));
-  right: calc(max(12px, env(safe-area-inset-right)) + 52px);
+  right: calc(max(12px, env(safe-area-inset-right)) + 104px);
   height: 44px;
   padding: 0 12px;
   font: 600 14px var(--gh-font-stats);
@@ -1030,6 +1072,155 @@
 
 .ui-damage-player {
   color: var(--gh-zonsondergang);
+}
+
+/* Healing, XP and loot: smaller, calm texts. */
+.ui-damage-heal {
+  color: color-mix(in srgb, var(--gh-terrein-mosgroen) 35%, var(--gh-tekst));
+}
+
+.ui-damage-xp,
+.ui-damage-loot {
+  font: 600 15px var(--gh-font-stats);
+  white-space: nowrap;
+}
+
+.ui-damage-xp {
+  color: var(--gh-spreukviolet);
+}
+
+.ui-damage-loot {
+  color: var(--gh-ornamentgoud);
+}
+
+/* Dying: the screen goes black with a short text, then fades back in at the checkpoint. */
+.ui-hud-blackout {
+  position: absolute;
+  inset: 0;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 24px;
+  text-align: center;
+  background: var(--gh-nachtinkt);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.ui-hud-blackout.ui-hud-blackout-on {
+  display: flex;
+  pointer-events: auto;
+}
+
+.ui-hud-blackout-title {
+  margin: 0;
+  font: 32px var(--gh-font-titel);
+  color: var(--gh-zonsondergang);
+}
+
+.ui-hud-blackout-text {
+  margin: 0;
+  font: 18px var(--gh-font-tekst);
+  color: var(--gh-tekst);
+}
+
+/* ------------------------------------------------------------ bag */
+
+/* Next to the pause button (top right): a small bag shape. */
+.ui-bag-button {
+  position: absolute;
+  top: max(12px, env(safe-area-inset-top));
+  right: calc(max(12px, env(safe-area-inset-right)) + 52px);
+  width: 44px;
+  height: 44px;
+  background: color-mix(in srgb, var(--gh-panel) 70%, transparent);
+  border: 1px solid var(--gh-koper);
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.ui-bag-button::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 54%;
+  width: 18px;
+  height: 15px;
+  transform: translate(-50%, -50%);
+  border: 2px solid var(--gh-ornamentgoud);
+  border-radius: 3px 3px 6px 6px;
+  box-shadow: 0 -7px 0 -4px var(--gh-ornamentgoud);
+}
+
+.ui-bag {
+  width: min(420px, 100%);
+}
+
+.ui-bag-stats {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font: 600 14px var(--gh-font-stats);
+  color: var(--gh-tekst-zacht);
+}
+
+.ui-bag-gold {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--gh-zonlicht);
+}
+
+.ui-bag-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: min(50vh, 360px);
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.ui-bag-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--gh-rand);
+  border-radius: 6px;
+}
+
+.ui-bag-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 8px;
+  min-width: 0;
+}
+
+.ui-bag-name {
+  font: 600 16px var(--gh-font-tekst);
+  color: var(--gh-tekst);
+}
+
+.ui-bag-count {
+  font: 600 14px var(--gh-font-stats);
+  color: var(--gh-ornamentgoud);
+}
+
+.ui-bag-desc {
+  flex-basis: 100%;
+  font: 14px var(--gh-font-tekst);
+  color: var(--gh-tekst-zacht);
+}
+
+.ui-bag-equipped {
+  font: 13px var(--gh-font-tekst);
+  color: var(--gh-tekst-zacht);
 }
 
 /* ------------------------------------------------------------ intro fight */

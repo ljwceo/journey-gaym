@@ -168,7 +168,7 @@
   },
   "hud": {
     "checkpointSet": "Checkpoint set",
-    "rested": "You rest for a while.",
+    "rested": "You rest in your bed. HP and mana are full again.",
     "qualityLowered": "Graphics lowered to {quality} to keep the game smooth.",
     "interact": "Interact",
     "dash": "Dash",
@@ -176,8 +176,10 @@
     "talkTo": "Talk to {name}",
     "pet": "Pet {name}",
     "qualityChosen": "Graphics set to {quality} for this device. You can change it in Settings.",
-    "knockedOut": "You were knocked out… You wake up at your checkpoint.",
-    "protected": "{name} is protected here."
+    "protected": "{name} is protected here.",
+    "levelUp": "Level up! You are now level {level}.",
+    "noPotion": "You have no potions.",
+    "alreadyFull": "Your HP is already full."
   },
   "dialog": {
     "next": "Continue",
@@ -267,6 +269,12 @@
     },
     "slime_gel": {
       "desc": "Sticky gel left behind by a slime."
+    },
+    "health_potion": {
+      "desc": "Restores 50 HP."
+    },
+    "greater_health_potion": {
+      "desc": "Restores 120 HP."
     }
   },
   "quest": {
@@ -295,7 +303,8 @@
     "dash": "Dash",
     "clickToLook": "Click to look around · Esc for the menu",
     "attack": "Attack",
-    "heavy": "Heavy"
+    "heavy": "Heavy",
+    "potion": "Drink potion"
   },
   "cheats": {
     "title": "Cheats (debug)",
@@ -326,6 +335,23 @@
     "measure": "Measure fps",
     "measureNote": "Walk around normally for {seconds} s. The result appears in the debug overlay (line \"measure\").",
     "measureStart": "Measure {seconds} s",
-    "monsters": "Monsters attack"
+    "monsters": "Monsters attack",
+    "grant": "Give",
+    "grantXp": "+100 XP",
+    "grantGold": "+50 Gold",
+    "grantPotions": "+5 Health Potion"
+  },
+  "bag": {
+    "title": "Bag",
+    "drink": "Drink",
+    "equipped": "Equipped",
+    "empty": "Your bag is empty.",
+    "level": "Level {level} · {xp} / {need} XP",
+    "levelMax": "Level {level} (highest level)"
+  },
+  "death": {
+    "title": "You were defeated",
+    "goldLost": "You lost {amount} {gold}. You wake up at your checkpoint.",
+    "wakeUp": "You wake up at your checkpoint."
   }
 }
