@@ -299,7 +299,7 @@ Definition of Done:
 Status: afgesloten op de pc (2026-10-09): Mid 60 fps en High 120 fps zonder haperingen. iPhone niet gemeten (overgeslagen op verzoek). Details in `docs/PROGRESS.md`.
 
 ### Fase 2 – Solo-gevecht en de eerste dag
-Status: alle stappen gebouwd (2.1 t/m 2.7, 2026-10-10); wacht op spelen en fps meten op de pc door Bo en Lucas. Details en de Definition of Done in `docs/PROGRESS.md`.
+Status: alle stappen gebouwd (2.1 t/m 2.7, 2026-10-10); wacht op spelen en fps meten op de pc door Bo en Lucas. Extra (2026-10-10, Bo): Greyhaven uit Blender als eerste zone, dag-en-nachtcyclus en mobs bij nacht. Details en de Definition of Done in `docs/PROGRESS.md`.
 Doel: het speelbare intro-gevecht tegen Lucael en Baelor (onwinbaar, episch en komisch), de eerste dag in Greyhaven spelen (kleine quest per basis-NPC, ±level 3), in de Greenwood vechten tegen slimes en goblins, en Sultan verslaan (beginnersbaas: test of je de basis snapt).
 Bouwen: HP/mana/energie, zwaardaanvallen (muis: links fast hit, rechts heavy hit; telefoon: knoppen), vijanden met AI en spawngebieden (Green Slime, Big Slime, Goblin, Goblin Archer, Goblin Chief, Treewarden), XP en levels, buit en een simpele tas, drankjes, doodgaan en rusten, HUD-regels aan, questsysteem met de quests van de eerste dag (Marco en Hilda in een simpele versie), cutscene-speler, speelbaar intro-gevecht (paneel 4), baasgevecht Sultan met hints de eerste keer.
 Data: `player.json` (aanvallen, regen, level-bonussen), `monsters.json` (gedrag, waarschuwingen, buit), `zones.json` (spawngebieden), `quests.json`, `npcs.json`, `items.json` (drankjes, Slime Gel), `cutscenes.json`, `triggers.json` (poortvoorwaarde), save versie 3.
@@ -317,7 +317,7 @@ Definition of Done:
 - [ ] Tests (gevechtsformules, XP, quests, save-migratie) en de DataValidator slagen.
 
 ### Fase 3 – Je pad, Entrance Exam en gear
-Status: plan goedgekeurd (2026-10-10); stap 3.0, 3.1 en 3.2 gebouwd. Details, keuzes en stappen in `docs/PROGRESS.md`.
+Status: plan goedgekeurd (2026-10-10); stap 3.0, 3.1, 3.2 en 3.3 gebouwd (3.3 op Bo's Greyhaven-branch: toren van Brink en kelder van Sam als instances uit het Blender-model). Details, keuzes en stappen in `docs/PROGRESS.md`.
 Doel: na Sultan kies je in de Academy je pad (Sir Garrick, Master Brink of Wizard Sam), doet zijn Entrance Exam tot level 5 en kunt daarna de stad uit. Je draagt gear met gewicht (draaglast zoals Elden Ring) en ezel Biscuit draagt je extra spullen. Een mage vecht met staf, kristal, Arcane Shard en één spell, met lock-on.
 Bouwen: debugvenster in groottes + cheats zonder venster; gear (6 slots, 4 zeldzaamheden, stats) en draaglast (licht/middel/zwaar/overbelast); Biscuit met pakdier-tas (spullen erop zijn niet bruikbaar tot je ze eruit haalt); instances via deur/portaal (Academy-hal, kelder van Sam) met cutscene bij de eerste keer; keuzedialoog Your Resolve; staf-gevecht (Arcane Shard, 5 spells met reisafstand, lock-on, richthulp in het cheatmenu); Entrance Exams, pad-effecten, Crystal Ceremony, poort open.
 Data: `items.json` (gear, staven, zwaarden, gewicht, stats), `player.json` (draaglast, perks, lock-on, richthulp), `npcs.json` (Biscuit, keuzes), `quests.json` (Your Resolve + exams), `spells.json`, `monsters.json` (gear-buit), `cutscenes.json` (Crystal Ceremony, uitleg Brink/Sam), `instances.json` (nieuw), `triggers.json` (poort, deuren), save versie 6+.

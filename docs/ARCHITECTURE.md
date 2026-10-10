@@ -191,3 +191,40 @@ Alleen data in `public/data/zones.json`:
 - **Gevecht:** gear zet op `CombatState` `gearHp`, `gearMana`, `damageFactor` en `damageTakenFactor`; `applyLevel` telt de HP/mana mee, `stepSword` vermenigvuldigt de schade, `damageTaken` verzacht inkomende schade (minstens 1).
 - **Wereld:** `WorldState.applyGear` rekent alles opnieuw uit bij aandoen/uitdoen, nieuwe gear in de tas, een level omhoog en een quest-beloning; bij een andere stand verschijnt de uitleg uit `load.tiers[].message`. Aan- en uitdoen kan alleen buiten een gevecht. Het poppetje toont hoed en amulet in hun zeldzaamheidskleur, de mantel alleen als je hem draagt, en een zwaarder zwaard groter (`CharacterModel.setGear`).
 
+
+## Blender-zones: Greyhaven (2026-10-10)
+
+Een zone met een blok `scene` in `zones.json` komt uit Blender in plaats van uit het gestreamde terrein.
+
+| Bestand | Wat |
+|---|---|
+| `public/zones/greyhaven/` | De export uit Blender: `greyhaven.glb` (Y-up, KHR_mesh_quantization, één mesh per materiaal, bomen als losse `Tree*`-nodes), `player.glb`, `materials.json` (hoe elk materiaal eruitziet, terreinkaart, spawn), `tex/`. Niet met de hand aanpassen: een nieuwe export overschrijft ze |
+| `src/world/scene/SceneAssets.ts` | Laadt alles async met voortgang (laadscherm in `WorldState`) |
+| `src/world/scene/SceneZone.ts` | Maakt de meshes (toon-materiaal per Blender-materiaal), bomen als InstancedMesh per materiaal per 60 m-cel, één MeshBVH voor de botsing (zonder water, klimop en gloeiende materialen), stamcirkels, lantaarnposities. Is `Ground`, `Mover` en `CameraOccluder`, dus de bestaande spelercontroller, NPC's en camera werken er gewoon mee |
+| `src/world/scene/ScenePlayerModel.ts` | `player.glb` met de toon-shader en de kleuren uit de character creator (`CharacterModel.useModel`) |
+| `src/render/toon/ToonMaterial.ts`, `SkyDome.ts` | De toon-shader (triplanar, terreinkaart, twee tinten, gloed, water, mist, lantaarnlichten) en de lucht. Licht- en luchtkleuren zijn **gedeelde uniforms** |
+
+- **Coördinaten:** de Blender-oorsprong ligt op `scene.offset` in de wereld. Blender (x, y, z-up) = wereld (x + offset.x, z + offset.y, −y + offset.z). Alle data (spawnpunten, NPC's, triggers, veilige zones) blijft in wereldcoördinaten. De debugregel `chunks` toont in een Blender-zone je positie in Blender-coördinaten.
+- **Lopen:** een capsule duwt je alleen zijwaarts uit muren; een straal naar beneden vanaf `stepHeight` (0,55 m) zet je op de grond, dus trappen werken. Van een rand val je met zwaartekracht. Onder de zee (`respawnBelowWater`) of buiten de kaart: terug naar het eerste spawnpunt.
+- **Overgang:** een `exit` in `scene` laadt de open wereld (`travel` in `WorldState`: bestemming in de save, dan wordt de wereld opnieuw opgebouwd). Loop je in de open wereld een zone met `scene` binnen, dan laadt die (aankomst bij het dichtstbijzijnde spawnpunt). In een Blender-zone horen alleen de NPC's, triggers, checkpoints en monsters van die zone erbij; in de open wereld juist die van de andere zones.
+- **Nieuwe Blender-zone:** export in `public/zones/<id>/`, een blok `scene` + spawnpunten in `zones.json`. De validator controleert kleuren, mist en uitgangen.
+
+## Dag en nacht (2026-10-10)
+
+- **Klok** (`src/services/DayNightService.ts`): tijd van de dag = (`Date.now()`) modulo de lengte van een dag uit `public/data/daynight.json` (nu 40 min: dag 20, schemer 3, nacht 14, ochtendschemer 3). Iedereen ziet dezelfde tijd zonder server. Testmodus (cheatmenu): naar een fase springen, sneller laten lopen, terug naar de echte klok. Getest in `DayNightService.test.ts`.
+- **Licht** (`src/render/DayNightLighting.ts`): per fase een *look* (kleuren zijn stijlgids-tokens, groep `licht`). Rond elke wissel mengen twee looks vloeiend (`blendMinutes`). Elke frame worden de gedeelde uniforms bijgewerkt (toon-materialen, lucht) en de Three.js-lichten en mist van de open wereld. Een zone met `"lighting": "goldenHour"` krijgt altijd de look `golden_hour`.
+- **Lantaarns:** de gloed van lantaarns/kristallen en ramen volgt de look; op High krijgen de dichtstbijzijnde lantaarns echte lichten (`lanternLights`).
+
+## Mobs bij nacht (2026-10-10)
+
+- **Data:** per zone `safeZones` (NPC-gebieden, daar verschijnt nooit iets) en `nightSpawns` (gebied, monsters met gewicht, `maxAlive`, levels, `respawnSeconds`, eventueel `testOnly`); regels in `world.nightSpawning`; welke fases in `daynight.json` (`spawnPhases`).
+- **Systeem:** `Enemies.stepSpawning` op de vaste stap, in **dezelfde pool** als alle andere vijanden (geen eigen vijandcode). Per gebied en per monster in de lijst staan `maxAlive` groepjes klaar (`Pack` met `night: true`); er zijn er nooit meer dan `maxAlive` tegelijk in de wereld. Elke `checkSeconds` kiest een gebied een monster op gewicht en zet een vrij groepje neer op een willekeurige plek: in het gebied, buiten elke veilige zone, tussen min- en max-afstand van de speler, op droge grond. Daarna doen AI, aanvallen, splitsen (Big Slime), liggen na verslaan (`monsters.json` → `settings.corpseSeconds`) en tekenen precies hetzelfde als bij de vijanden overdag. Is een groepje helemaal weg, dan komt zijn plek na `respawnSeconds` weer vrij. Overdag blijven bestaande monsters staan (open vraag). Getest in `NightSpawns.test.ts`.
+
+## Instances: Brink's toren en Sams kelder (stap 3.3, 2026-10-11)
+
+- **Data** (`zones.json`, `instances` van een zone met `scene`): een instance met een blok `scene` wordt uit het Blender-model van de zone geknipt. `door` (vorm in de stad: daar loop je naar binnen), `region` (doos in wereldcoördinaten: alleen de driehoeken die er helemaal in liggen horen bij de instance, behalve `exclude`-materialen), `cut` (doos: deze driehoeken laat de stad weg, eventueel alleen `materials`), `spawn` (waar je binnenkomt, met hoogte, want een toren heeft verdiepingen), `exit` (vorm binnen + waar je buiten weer staat) en `cutscene` (de eerste keer, `cutscenes.json`). NPC's met `instance` staan alleen in die instance.
+- **Knippen** (`src/world/scene/SceneFilter.ts`, getest): `instanceFilter` / `zoneFilter` maken een filter; `SceneZone` filtert bij het bouwen per mesh de index (de vertices worden gedeeld, er wordt niets gekopieerd). Ook bomen, lantaarns en de BVH-botsing volgen het filter. In een instance is de kaart (`onMap`) de doos van de instance.
+- **Flow** (`WorldState.enterInstance` / `exitInstance`): door de deur → `world.instance` in de save → de wereld wordt opnieuw opgebouwd met alleen de instance (laadscherm met de naam van de instance), de stad wordt opgeruimd. De eerste keer speelt de cutscene (`seenCutscenes`). Door de uitgang → terug in de stad op `exit.to`. Herladen in een instance zet je weer in de instance (save versie 7). Event `instanceEntered` voor quests.
+- **Nu:** `brink_tower` (de toren met het paarse dak en de vier elementkristallen; de stad houdt de buitenkant, het interieur zit in de instance) en `sam_cellar` (de kelder onder de oostvleugel van de Academy, via de trap; de stad laat de hele kelder weg).
+- **Een nieuwe instance** = alleen data: dozen opmeten in Blender (wereld = Blender x + offset.x, z-hoogte, −y), deur, spawn, uitgang en eventueel een cutscene.
+

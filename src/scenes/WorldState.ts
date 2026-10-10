@@ -1,5 +1,6 @@
 import {
   type Camera,
+  CircleGeometry,
   Color,
   Vector3,
   DirectionalLight,
@@ -8,11 +9,28 @@ import {
   HemisphereLight,
   InstancedMesh,
   Mesh,
+  MeshBasicMaterial,
   MeshLambertMaterial,
+  NeutralToneMapping,
   PlaneGeometry,
   Scene,
+  SphereGeometry,
+  type ToneMapping,
 } from 'three';
 import type { GameContext } from '../core/GameContext';
+import { publicUrl } from '../data/DataLoader';
+import { DayNightLighting, type ZoneLighting } from '../render/DayNightLighting';
+import { createSkyDome } from '../render/toon/SkyDome';
+import { MAX_LAMPS } from '../render/toon/ToonMaterial';
+import type { SpawnWorld } from '../systems/Enemies';
+import type { DayPhase } from '../services/DayNightService';
+import type { Mover } from '../systems/Movement';
+import { disposeSceneAssets, loadSceneAssets, type SceneAssets } from '../world/scene/SceneAssets';
+import { buildPlayerModel, type ScenePlayerModel } from '../world/scene/ScenePlayerModel';
+import { instanceFilter, zoneFilter } from '../world/scene/SceneFilter';
+import { SceneZone } from '../world/scene/SceneZone';
+import { ComicCutscene } from '../ui/ComicCutscene';
+import { pointInShape } from '../world/Shapes';
 import { Random } from '../core/Random';
 import { Input, type LookDelta } from '../core/Input';
 import type { GameState } from '../core/StateMachine';
@@ -114,7 +132,7 @@ import { Triggers } from '../world/Triggers';
 import { type StreamerStats, WorldStreamer } from '../world/WorldStreamer';
 import { ZoneLocator } from '../world/ZoneLocator';
 import { normalizeAppearance } from './creator';
-import type { Zone } from '../data/types';
+import type { InstanceDef, SceneDef, Zone } from '../data/types';
 import { placeAtStart } from './flow';
 
 const DEG = Math.PI / 180;
@@ -132,10 +150,21 @@ const DEBUG_KEYS = [
   'enemies',
   'quests',
   'camera',
+  'daynight',
   'cheats',
 ] as const;
-/** Direction the sun shines from (normalized below); low and warm (style guide L1). */
-const SUN_DIRECTION = new Vector3(-2, 3, 1.5).normalize();
+/** Light intensities of the open world's Three.js lights at the golden hour look. */
+const HEMI_INTENSITY = 1.8;
+const SUN_INTENSITY = 2;
+/** Tone mapping in Blender-built zones (as in the Blender test page); restored on leaving. */
+const SCENE_EXPOSURE = 1.05;
+/** Arriving in a Blender-built zone from elsewhere: find the ground from high above. */
+const ARRIVE_FROM_ABOVE = 10_000;
+/** The sky dome sits just inside the camera's far plane. */
+const SKY_FRACTION = 0.92;
+/** Soft round shadow under the player in Blender-built zones (the toon shader has no shadows). */
+const BLOB_RADIUS = 0.42;
+const BLOB_OPACITY = 0.28;
 /** The shadow camera sits this far (m) from the player towards the sun. */
 const SUN_DISTANCE = 150;
 /** No attack this step (while a dash finishes). */
@@ -189,14 +218,53 @@ const NOT_DYING = -1;
  * chunk info, building labels and a cheat menu (F6) for faster testing.
  */
 export class WorldState implements GameState, InstanceHost {
-  readonly currentInstance: string | null = null;
+  /** The instance being played (Master Brink's tower), null in a zone or the open world. */
+  private instanceDef: InstanceDef | null = null;
+  /** The first-visit cutscene of an instance, while it plays. */
+  private comic: ComicCutscene | null = null;
+
+  get currentInstance(): string | null {
+    return this.instanceDef?.id ?? null;
+  }
 
   private scene: Scene | null = null;
   private worldRoot: Group | null = null;
   private rig: CameraRig | null = null;
   private player: Player | null = null;
   private collision: CollisionWorld | null = null;
-  private mover: GroundedMover | null = null;
+  /** Walls and ground for walking: GroundedMover (open world) or the SceneZone. */
+  private mover: Mover | null = null;
+  /** A Blender-built zone being played (zones.json `scene`), or null in the open world. */
+  private sceneZone: SceneZone | null = null;
+  private sceneZoneDef: Zone | null = null;
+  private sceneAssets: SceneAssets | null = null;
+  private scenePlayer: ScenePlayerModel | null = null;
+  private blob: Mesh | null = null;
+  /** Day and night: shared light uniforms, Three.js lights, fog and sky follow it. */
+  private lighting: DayNightLighting | null = null;
+  private lightingMode: ZoneLighting = 'cycle';
+  private hemi: HemisphereLight | null = null;
+  private sky: Mesh | null = null;
+  private loadingScreen: HTMLElement | null = null;
+  private loadingFill: HTMLElement | null = null;
+  /** Bumped on every (re)load, so a load that finishes after leaving is thrown away. */
+  private loadToken = 0;
+  /** Set while switching between a Blender-built zone and the open world (new position saved). */
+  private travelling = false;
+  private savedToneMapping: ToneMapping | null = null;
+  /** Fog color of the zone you are in (open world), before day and night mix in. */
+  private readonly zoneFog = new Color();
+  private readonly dayPhase: DayPhase = { index: 0, id: '', label: '', remainingMs: 0 };
+  /** Nearest lanterns this frame (indexes and squared distances), for real lights on High. */
+  private readonly lampBest: number[] = new Array<number>(MAX_LAMPS).fill(0);
+  private readonly lampBestD: number[] = new Array<number>(MAX_LAMPS).fill(0);
+  /** What night spawning needs from the world (reused every step). */
+  private readonly spawnWorld: SpawnWorld = {
+    spawning: false,
+    testAreas: false,
+    heightAt: (x, z) => this.groundHeight(x, z),
+    canStand: (x, z) => this.canStand(x, z),
+  };
   private streamer: WorldStreamer | null = null;
   private props: PropLibrary | null = null;
   private chunkDebug: ChunkDebug | null = null;
@@ -368,7 +436,17 @@ export class WorldState implements GameState, InstanceHost {
     this.touch = new TouchControls(this.input, this.touchLabels(), controls.joystickRadiusPx);
     ctx.ui.append(this.touch.root);
 
-    this.buildScene(data);
+    this.travelling = false;
+    const zone = data.zones.zones.find((entry) => entry.id === session.world.zone);
+    // Inside an instance of a Blender-built zone (a reload keeps you there)?
+    const instance = zone?.scene
+      ? zone.instances.find((entry) => entry.id === session.world.instance && entry.scene)
+      : undefined;
+    this.instanceDef = instance ?? null;
+    session.world.instance = this.instanceDef?.id ?? null;
+    // A Blender-built zone loads first (loading screen); the open world builds right away.
+    if (zone?.scene) this.loadSceneZone(data, zone);
+    else this.buildScene(data, null);
     this.paused = false;
     this.gateBlocked = false;
     if (this.labels) ctx.ui.append(this.labels.root);
@@ -401,7 +479,8 @@ export class WorldState implements GameState, InstanceHost {
     this.talkingTo = null;
     this.targetNpc = null;
     this.iconLabelFor = null;
-    this.showZoneName(session.world.zone);
+    if (this.instanceDef) this.hud.showZone(this.instanceDef.name);
+    else this.showZoneName(session.world.zone);
 
     this.cheatPanel = new CheatPanel(
       ctx,
@@ -414,6 +493,7 @@ export class WorldState implements GameState, InstanceHost {
         exportSave: () => this.exportSave(),
         importSave: (code) => this.importSave(code),
         rerunBenchmark: () => this.rerunBenchmark(),
+        nightMonsters: () => this.enemies?.nightAlive ?? 0,
         grant: (kind) => this.grant(kind),
         bossFight: () => {
           this.cheatPanel?.toggle();
@@ -495,12 +575,17 @@ export class WorldState implements GameState, InstanceHost {
       }),
     );
     this.debugTimer = window.setInterval(this.updateDebug, DEBUG_REFRESH_MS);
-    // From now on frames count for the benchmark / auto-downgrade.
-    ctx.quality.setMeasuring(true);
+    // From now on frames count for the benchmark / auto-downgrade (not while a zone loads).
+    ctx.quality.setMeasuring(this.loadingScreen === null);
   }
 
   exit(): void {
     this.ctx.quality.setMeasuring(false);
+    this.comic?.dispose();
+    this.comic = null;
+    // A zone still loading is thrown away when it arrives.
+    this.loadToken++;
+    this.hideLoading();
     window.removeEventListener('keydown', this.onKeyDown);
     document.removeEventListener('visibilitychange', this.onVisibilityChange);
     window.clearInterval(this.debugTimer);
@@ -509,7 +594,8 @@ export class WorldState implements GameState, InstanceHost {
     for (const key of DEBUG_KEYS) this.ctx.debug.lines.delete(key);
     this.ctx.overlays.closeAll();
     if (!this.keepSessionOnExit) {
-      this.syncSave();
+      // Travelling already put the destination in the save; the old position must not win.
+      if (!this.travelling) this.syncSave();
       this.ctx.persist();
     }
     this.keepSessionOnExit = false;
@@ -548,9 +634,10 @@ export class WorldState implements GameState, InstanceHost {
   }
 
   update(dt: number): void {
-    const { player, input, mover, movement, rig, streamer } = this;
-    if (this.paused || this.cutscenePlaying) return;
-    if (!player || !input || !mover || !movement || !rig || !streamer) return;
+    const { player, input, mover, movement, rig, streamer, sceneZone } = this;
+    if (this.paused || this.travelling || this.cutscenePlaying) return;
+    if (!player || !input || !mover || !movement || !rig) return;
+    if (!streamer && !sceneZone) return;
     const session = this.ctx.session;
     if (session) session.playTimeSeconds += dt;
 
@@ -620,22 +707,36 @@ export class WorldState implements GameState, InstanceHost {
       if (this.command.dash && !movement.canDash) this.sayTooHeavy();
       this.stepSwordAndMove(dt);
       // You cannot walk through people (or Treewardens, or monsters).
-      if (this.npcs?.pushOut(s, movement.radius)) this.collision?.resolve(s, movement.radius);
-      if (this.enemies?.pushOut(s, movement.radius)) this.collision?.resolve(s, movement.radius);
+      if (this.npcs?.pushOut(s, movement.radius)) this.resolveCircle(s, movement.radius);
+      if (this.enemies?.pushOut(s, movement.radius)) this.resolveCircle(s, movement.radius);
       // A boss fight: nobody leaves the ring.
       const arena = this.encounter?.arena;
       if (arena) keepInArena(s, arena, movement.radius);
       this.checkGate(fromX, fromZ);
-      s.y = streamer.heightAt(s.x, s.z);
+      if (sceneZone) {
+        // Stairs, ledges and falling; under the water or off the map: back to the spawn.
+        if (sceneZone.settle(s, dt) === 'lost') this.respawnInScene();
+        sceneZone.setReferenceHeight(s.y);
+      } else if (streamer) {
+        s.y = streamer.heightAt(s.x, s.z);
+      }
     }
     // Position first: entering a zone autosaves, and that save must have the new position.
     this.syncSave();
-    this.checkZone();
+    if (sceneZone) {
+      if (this.checkSceneExits() || this.checkInstanceDoors()) return;
+    } else if (this.checkZone()) {
+      return;
+    }
     if (session) {
       this.triggers?.update(s.x, s.z, session.visitedPlaces);
       this.checkpoints?.update(s.x, s.z, session.world);
     }
     this.updateNpcs(dt);
+    // Monsters appear at dusk and at night; test areas only in debug mode.
+    this.spawnWorld.spawning = this.ctx.dayNight?.spawning() ?? false;
+    this.spawnWorld.testAreas = this.ctx.debug.isEnabled;
+    this.enemies?.stepSpawning(dt, s.x, s.z, this.spawnWorld);
     this.updateEnemies(dt);
     this.encounter?.step(dt);
     this.updateCombatHud();
@@ -1021,17 +1122,78 @@ export class WorldState implements GameState, InstanceHost {
     this.gateBlocked = true;
   }
 
-  /** Instances (interiors, dungeons) come in a later phase; every entrance is still closed. */
+  /**
+   * Goes into an instance of the Blender-built zone you are in (through its door): the save
+   * remembers it, then the world is built again with only the instance's part of the scene
+   * (loading screen). False when there is no such instance.
+   */
   enterInstance(id: string): boolean {
-    const exists = this.ctx.data?.zones.zones.some((zone) =>
-      zone.instances.some((instance) => instance.id === id && instance.enabled),
-    );
-    if (exists) this.ctx.reportProblem(`Instance "${id}" is enabled but not built yet`);
+    const session = this.ctx.session;
+    const instance = this.sceneZoneDef?.instances.find((entry) => entry.id === id);
+    const scene = instance?.scene;
+    if (!session || !instance?.enabled || !scene || this.travelling) return false;
+    this.travelling = true;
+    session.world.instance = id;
+    session.world.position = { x: scene.spawn.x, y: scene.spawn.y, z: scene.spawn.z };
+    session.world.heading = scene.spawn.headingDegrees * DEG;
+    this.dialog?.close();
+    this.ctx.events.emit('instanceEntered', { instanceId: id });
+    this.ctx.persist();
+    this.ctx.goto('world');
+    return true;
+  }
+
+  /** Back to the zone, just outside the instance's door (loading screen). */
+  exitInstance(): void {
+    const session = this.ctx.session;
+    const scene = this.instanceDef?.scene;
+    if (!session || !scene || this.travelling) return;
+    this.travelling = true;
+    const to = scene.exit.to;
+    session.world.instance = null;
+    session.world.position = { x: to.x, y: to.y, z: to.z };
+    session.world.heading = to.headingDegrees * DEG;
+    this.dialog?.close();
+    this.ctx.persist();
+    this.ctx.goto('world');
+  }
+
+  /** In a zone: walking into an instance's door goes in. In an instance: its exit goes out. */
+  private checkInstanceDoors(): boolean {
+    const player = this.player;
+    if (!player || this.cheats.fly) return false;
+    const s = player.state;
+    const inside = this.instanceDef?.scene;
+    if (inside) {
+      if (!pointInShape(inside.exit.shape, s.x, s.z)) return false;
+      this.exitInstance();
+      return true;
+    }
+    for (const instance of this.sceneZoneDef?.instances ?? []) {
+      const door = instance.scene?.door;
+      if (door && pointInShape(door, s.x, s.z) && this.enterInstance(instance.id)) return true;
+    }
     return false;
   }
 
-  exitInstance(): void {
-    // Nothing to leave yet: the player is always in the open world.
+  /** The first time in an instance: its cutscene (Master Brink explains his magic). */
+  private playInstanceCutscene(): void {
+    const session = this.ctx.session;
+    const id = this.instanceDef?.scene?.cutscene;
+    const cutscene = this.ctx.data?.cutscenes.cutscenes.find((entry) => entry.id === id);
+    if (!session || !id || !cutscene || session.seenCutscenes.includes(id) || this.comic) return;
+    this.setCutscenePlaying(true);
+    this.comic = new ComicCutscene(
+      cutscene,
+      (key) => this.ctx.i18n.t(key),
+      () => {
+        this.comic = null;
+        if (!session.seenCutscenes.includes(id)) session.seenCutscenes.push(id);
+        this.ctx.persist();
+        this.setCutscenePlaying(false);
+      },
+    );
+    this.ctx.ui.append(this.comic.root);
   }
 
   /** NPCs move, the conversation ends when you are far away, the interaction target updates. */
@@ -1309,6 +1471,19 @@ export class WorldState implements GameState, InstanceHost {
   }
 
   /** What the boss fight may use from this scene. */
+  /** A cutscene starts or ends: the world waits, the mouse is freed, talking stops. */
+  private setCutscenePlaying(playing: boolean): void {
+    this.cutscenePlaying = playing;
+    this.input?.releaseAll();
+    // The mouse stays free afterwards: one click captures it again ("click to look
+    // around"). Capturing it by itself can turn the camera with a jump.
+    if (playing) {
+      this.input?.releasePointerLock();
+      this.dialog?.close();
+      this.hud?.setInteraction(null, 0, 0, false);
+    }
+  }
+
   private encounterHost(): ConstructorParameters<typeof BossEncounter>[0] {
     return {
       ctx: this.ctx,
@@ -1320,17 +1495,7 @@ export class WorldState implements GameState, InstanceHost {
         this.refreshNpcPresence();
       },
       placePlayer: (x, z, heading) => this.placePlayer(x, z, heading),
-      setCutscenePlaying: (playing) => {
-        this.cutscenePlaying = playing;
-        this.input?.releaseAll();
-        // The mouse stays free afterwards: one click captures it again ("click to look
-        // around"). Capturing it by itself can turn the camera with a jump.
-        if (playing) {
-          this.input?.releasePointerLock();
-          this.dialog?.close();
-          this.hud?.setInteraction(null, 0, 0, false);
-        }
-      },
+      setCutscenePlaying: (playing) => this.setCutscenePlaying(playing),
       canStart: () =>
         !this.paused && this.deathTimer === NOT_DYING && !this.dialog?.isOpen && !this.cheats.fly,
       floatText: (x, y, z, text) => this.damageNumbers?.spawnText(x, y, z, text, 'dodged'),
@@ -1490,20 +1655,26 @@ export class WorldState implements GameState, InstanceHost {
   }
 
   render(alpha: number, frameSeconds: number): void {
-    const { scene, rig, player, input, streamer, origin, worldRoot } = this;
-    if (!scene || !rig || !player || !input || !streamer || !origin || !worldRoot) return;
+    const { scene, rig, player, input, streamer, origin, worldRoot, sceneZone } = this;
+    if (!scene || !rig || !player || !input || !origin || !worldRoot) {
+      // Still loading a zone: only the loading screen shows.
+      if (this.loadingScreen) this.ctx.renderer.clear();
+      return;
+    }
     // While paused the simulation stands still, so draw the last state without interpolating.
     const waiting = this.paused || this.cutscenePlaying;
     const a = waiting ? 1 : alpha;
     const s = player.state;
 
-    // Streaming: plan, request and build chunks within the frame budget.
-    const dirX = s.moving ? Math.sin(s.heading) : 0;
-    const dirZ = s.moving ? Math.cos(s.heading) : 0;
-    streamer.update(s.x, s.z, dirX, dirZ);
-
-    // Floating origin: the world is drawn shifted so the player stays near (0, 0, 0).
-    origin.update(s.x, s.z);
+    if (streamer) {
+      // Streaming: plan, request and build chunks within the frame budget.
+      const dirX = s.moving ? Math.sin(s.heading) : 0;
+      const dirZ = s.moving ? Math.cos(s.heading) : 0;
+      streamer.update(s.x, s.z, dirX, dirZ);
+      // Floating origin: the world is drawn shifted so the player stays near (0, 0, 0).
+      // (A Blender-built zone is small and stays around its own origin.)
+      origin.update(s.x, s.z);
+    }
     worldRoot.position.set(-origin.x, 0, -origin.z);
 
     player.syncModel(a);
@@ -1530,10 +1701,14 @@ export class WorldState implements GameState, InstanceHost {
       turning,
       this.ctx.session?.settings.cameraSensitivity ?? 1,
     );
-    rig.apply(origin.x, origin.z, streamer, this.structures ?? undefined);
+    this.applyCamera();
+    this.updateLighting(this.paused ? 0 : frameSeconds);
     this.updateSun(root.position.x - origin.x, root.position.y, root.position.z - origin.z);
     // The sea follows the player (one plane, always under the view).
     this.water?.position.set(root.position.x, this.water.position.y, root.position.z);
+    // The sky stays around the camera.
+    this.sky?.position.copy(rig.camera.position);
+    if (sceneZone) this.updateLamps(s.x, s.y, s.z, origin.x, origin.z);
     this.touch?.update();
     this.updateLookHint(input);
     this.updateFog(scene, frameSeconds);
@@ -1561,12 +1736,93 @@ export class WorldState implements GameState, InstanceHost {
     this.ctx.renderer.render(scene, rig.camera);
   }
 
-  /** Fog and sky drift towards the color of the zone you are in. */
+  /** Places the camera: kept above the terrain and in front of walls (open world or BVH). */
+  private applyCamera(): void {
+    const { rig, origin } = this;
+    if (!rig || !origin) return;
+    if (this.sceneZone) rig.apply(origin.x, origin.z, undefined, this.sceneZone);
+    else rig.apply(origin.x, origin.z, this.streamer ?? undefined, this.structures ?? undefined);
+  }
+
+  /**
+   * Fog and sky: in the open world they drift towards the color of the zone you are in, mixed
+   * with the time of day; in a Blender-built zone they follow the time of day directly. The sky's
+   * horizon always matches the fog, so the land fades into the sky.
+   */
   private updateFog(scene: Scene, seconds: number): void {
     const fog = scene.fog as Fog;
-    const amount = 1 - Math.exp(-FOG_SHARPNESS * seconds);
-    fog.color.lerp(this.fogTarget, amount);
+    const lighting = this.lighting;
+    if (this.sceneZone && lighting) {
+      fog.color.copy(lighting.fog);
+    } else {
+      const amount = 1 - Math.exp(-FOG_SHARPNESS * seconds);
+      this.zoneFog.lerp(this.fogTarget, amount);
+      fog.color.copy(this.zoneFog);
+      if (lighting) {
+        fog.color.lerp(lighting.fog, lighting.worldFogMix);
+        lighting.uniforms.skyHorizon.value.copy(fog.color);
+      }
+    }
     (scene.background as Color).copy(fog.color);
+  }
+
+  /**
+   * Day and night for this frame: the shared uniforms (toon materials, sky) and the Three.js
+   * lights of NPCs, monsters and the open world.
+   */
+  private updateLighting(seconds: number): void {
+    const { lighting, hemi, sun } = this;
+    const clock = this.ctx.dayNight;
+    if (!lighting || !clock) return;
+    lighting.update(clock, this.lightingMode, seconds);
+    if (hemi) {
+      hemi.color.copy(lighting.shadow);
+      hemi.intensity = (HEMI_INTENSITY * lighting.shadowStrength) / lighting.refShadowStrength;
+    }
+    if (sun) {
+      sun.color.copy(lighting.sun);
+      sun.intensity = (SUN_INTENSITY * lighting.sunStrength) / lighting.refSunStrength;
+    }
+  }
+
+  /**
+   * High preset only: real lights at the lanterns nearest to the player (dusk and night), at most
+   * `lanternLights.max` for the frame rate. Allocation-free: a small insertion sort.
+   */
+  private updateLamps(x: number, y: number, z: number, originX: number, originZ: number): void {
+    const { lighting, sceneZone, preset } = this;
+    if (!lighting || !sceneZone || !preset) return;
+    const u = lighting.uniforms;
+    const cfg = lighting.config.lanternLights;
+    const max = Math.min(cfg.max, MAX_LAMPS);
+    if (preset.id !== 'high' || !lighting.lanternsOn || max === 0) {
+      u.lampCount.value = 0;
+      return;
+    }
+    const best = this.lampBest;
+    const bestD = this.lampBestD;
+    let count = 0;
+    const lanterns = sceneZone.lanterns;
+    for (let i = 0; i < lanterns.length; i++) {
+      const l = lanterns[i] as Vector3;
+      const d = (l.x - x) ** 2 + (l.y - y) ** 2 + (l.z - z) ** 2;
+      if (count === max && d >= (bestD[max - 1] as number)) continue;
+      let k = count < max ? count++ : max - 1;
+      while (k > 0 && (bestD[k - 1] as number) > d) {
+        bestD[k] = bestD[k - 1] as number;
+        best[k] = best[k - 1] as number;
+        k--;
+      }
+      bestD[k] = d;
+      best[k] = i;
+    }
+    for (let k = 0; k < count; k++) {
+      const l = lanterns[best[k] as number] as Vector3;
+      (u.lampPos.value[k] as Vector3).set(l.x - originX, l.y, l.z - originZ);
+    }
+    u.lampCount.value = count;
+    const fade = Math.min(1, lighting.glow - cfg.minGlow + 0.2);
+    u.lampCol.value.setHex(resolveColorToken(cfg.color)).multiplyScalar(cfg.strength * fade);
   }
 
   /** The interaction icon above the checkpoint you stand at (projected to the screen). */
@@ -1581,7 +1837,7 @@ export class WorldState implements GameState, InstanceHost {
     const near = npc ? null : this.checkpoints?.near;
     const data = this.ctx.data;
     if (!hud) return;
-    if ((!npc && !near) || !data || this.paused || !this.streamer || this.dialog?.isOpen) {
+    if ((!npc && !near) || !data || this.paused || this.dialog?.isOpen) {
       hud.setInteraction(null, 0, 0, false);
       return;
     }
@@ -1595,7 +1851,7 @@ export class WorldState implements GameState, InstanceHost {
     } else if (near) {
       wx = near.x;
       wz = near.z;
-      wy = this.streamer.heightAt(near.x, near.z) + data.player.hud.interactHeight;
+      wy = this.groundHeight(near.x, near.z) + data.player.hud.interactHeight;
     } else {
       return;
     }
@@ -1625,19 +1881,166 @@ export class WorldState implements GameState, InstanceHost {
     return this.iconLabel;
   }
 
-  private readonly groundHeight = (x: number, z: number): number =>
-    this.streamer ? this.streamer.heightAt(x, z) : 0;
+  private readonly groundHeight = (x: number, z: number): number => {
+    if (this.sceneZone) return this.sceneZone.heightAt(x, z);
+    return this.streamer ? this.streamer.heightAt(x, z) : 0;
+  };
 
-  /** Seamless zone change: remember the zone and announce it (autosave, later name banner). */
-  private checkZone(): void {
+  /** Pushes a circle out of walls: the open world's colliders or the Blender zone's BVH. */
+  private resolveCircle(p: { x: number; z: number }, radius: number): void {
+    if (this.sceneZone) this.sceneZone.resolve(p, radius);
+    else this.collision?.resolve(p, radius);
+  }
+
+  /** Can a night monster appear here: on dry ground (not water, not off the map)? */
+  private canStand(x: number, z: number): boolean {
+    const zone = this.sceneZone;
+    if (zone) return zone.hasGround(x, z) && zone.heightAt(x, z) > zone.waterY + 0.1;
+    const terrain = this.ctx.data?.zones.world.terrain;
+    return this.groundHeight(x, z) > (terrain?.seaLevel ?? 0) + 0.1;
+  }
+
+  /**
+   * Seamless zone change: remember the zone and announce it (autosave, name banner). Walking
+   * into a Blender-built zone loads it (loading screen); returns true then.
+   */
+  private checkZone(): boolean {
     const session = this.ctx.session;
     const player = this.player;
-    if (!session || !player || !this.zones) return;
-    const zone = this.zones.zoneAt(player.state.x, player.state.z);
+    if (!session || !player || !this.zones) return false;
+    const s = player.state;
+    const zone = this.zones.zoneAt(s.x, s.z);
     // Over the open sea (flying) there is no zone; keep the last one.
-    if (!zone || zone.id === session.world.zone) return;
+    if (!zone || zone.id === session.world.zone) return false;
+    if (zone.scene) {
+      // Arrive at the zone's spawn point nearest to where you walked in (e.g. the city gate).
+      let best = zone.spawnPoints[0];
+      let bestD = Infinity;
+      for (const spawn of zone.spawnPoints) {
+        const d = (spawn.x - s.x) ** 2 + (spawn.z - s.z) ** 2;
+        if (d < bestD) {
+          bestD = d;
+          best = spawn;
+        }
+      }
+      if (!best) return false;
+      this.travel(zone.id, best.x, best.z, (best.headingDegrees ?? 0) * DEG);
+      return true;
+    }
     session.world.zone = zone.id;
     this.ctx.events.emit('zoneEntered', { zoneId: zone.id });
+    return false;
+  }
+
+  /** Leaving a Blender-built zone through an exit (e.g. the land gate) loads the open world. */
+  private checkSceneExits(): boolean {
+    const def = this.sceneZoneDef?.scene;
+    const player = this.player;
+    if (!def || !player) return false;
+    const s = player.state;
+    for (const exit of def.exits) {
+      if (!pointInShape(exit.shape, s.x, s.z)) continue;
+      const to = this.zones?.zoneAt(exit.to.x, exit.to.z);
+      const zoneId = to?.id ?? this.sceneZoneDef?.neighbors[0];
+      if (!zoneId) return false;
+      this.travel(zoneId, exit.to.x, exit.to.z, exit.to.headingDegrees * DEG);
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Switches between a Blender-built zone and the open world: the destination goes into the save
+   * (autosave, zone banner), then the world is built again for it, with a loading screen when
+   * it is a Blender-built zone.
+   */
+  private travel(zoneId: string, x: number, z: number, heading: number): void {
+    const session = this.ctx.session;
+    if (!session || this.travelling) return;
+    this.travelling = true;
+    session.world.zone = zoneId;
+    session.world.instance = null;
+    // A Blender-built zone finds its ground from above; the open world from its terrain.
+    session.world.position = { x, y: ARRIVE_FROM_ABOVE, z };
+    session.world.heading = heading;
+    this.dialog?.close();
+    this.ctx.events.emit('zoneEntered', { zoneId });
+    this.ctx.persist();
+    this.ctx.goto('world');
+  }
+
+  // ------------------------------------------------------------ loading a Blender-built zone
+
+  /** Loads a Blender-built zone's files behind a loading screen, then builds the world. */
+  private loadSceneZone(data: GameData, zone: Zone): void {
+    const def = zone.scene;
+    if (!def) return;
+    const token = ++this.loadToken;
+    this.showLoading(this.instanceDef?.name ?? zone.name);
+    loadSceneAssets(def, publicUrl(''), __BUILD_ID__, (fraction) => this.setLoading(fraction))
+      .then((assets) => {
+        if (token !== this.loadToken) {
+          disposeSceneAssets(assets);
+          return;
+        }
+        this.sceneAssets = assets;
+        this.buildScene(data, zone);
+        // enter() ran before the player and NPCs existed (this zone loads async): gear,
+        // who is present (Biscuit, Sultan) and quest markers are set now.
+        this.applyGear(false);
+        this.updatePlayerGear();
+        this.refreshNpcPresence();
+        this.refreshQuestMarkers();
+        if (this.labels) this.ctx.ui.append(this.labels.root);
+        this.hideLoading();
+        // Building took a while; measuring frames for the auto preset starts now.
+        this.ctx.quality.setMeasuring(!this.paused);
+        this.playInstanceCutscene();
+      })
+      .catch((error: unknown) => {
+        if (token !== this.loadToken) return;
+        this.ctx.reportProblem(`could not load ${zone.name}: ${String(error)}`);
+        this.showLoadError();
+      });
+  }
+
+  private showLoading(zoneName: string): void {
+    this.hideLoading();
+    const t = this.ctx.i18n;
+    this.loadingFill = el('div', { className: 'ui-loading-fill', attrs: { style: 'width: 0%' } });
+    this.loadingScreen = el(
+      'div',
+      { className: 'ui-zone-loading', attrs: { role: 'status' } },
+      el('h1', { className: 'ui-title', text: zoneName }),
+      el('div', { className: 'ui-loading', attrs: { role: 'progressbar' } }, this.loadingFill),
+      el('p', { className: 'ui-note', text: t.t('world.loading') }),
+    );
+    this.ctx.ui.append(this.loadingScreen);
+  }
+
+  private setLoading(fraction: number): void {
+    if (this.loadingFill) this.loadingFill.style.width = `${Math.round(fraction * 100)}%`;
+  }
+
+  private showLoadError(): void {
+    const screen = this.loadingScreen;
+    if (!screen) return;
+    const t = this.ctx.i18n;
+    screen.append(
+      el('p', { className: 'ui-text ui-error', text: t.t('world.loadFailed') }),
+      el('button', {
+        className: 'ui-button',
+        text: t.t('pause.toTitle'),
+        attrs: { type: 'button' },
+        onClick: () => this.ctx.goto('title'),
+      }),
+    );
+  }
+
+  private hideLoading(): void {
+    this.loadingScreen?.remove();
+    this.loadingScreen = null;
+    this.loadingFill = null;
   }
 
   /** Shows "click to look around" on mouse devices while the mouse is not captured. */
@@ -1793,12 +2196,13 @@ export class WorldState implements GameState, InstanceHost {
 
   /** Applies the cheat settings: walking speed, landing after flying, chunk borders. */
   private applyCheats(): void {
-    const { movement, player, streamer, collision } = this;
+    const { movement, player } = this;
     if (movement) movement.walkSpeed = this.baseWalkSpeed * this.cheats.speed;
-    if (player && streamer && collision && !this.cheats.fly) {
+    if (player && (this.streamer || this.sceneZone) && !this.cheats.fly) {
       // Landing: back on the ground, pushed out of anything we flew into.
-      collision.resolve(player.state, movement?.radius ?? 0.4);
-      player.state.y = streamer.heightAt(player.state.x, player.state.z);
+      this.resolveCircle(player.state, movement?.radius ?? 0.4);
+      if (this.sceneZone) this.sceneZone.placeOnGround(player.state);
+      else player.state.y = this.groundHeight(player.state.x, player.state.z);
     }
     this.input?.releaseAll();
     if (this.chunkDebug) {
@@ -1807,27 +2211,42 @@ export class WorldState implements GameState, InstanceHost {
     }
   }
 
-  /** Teleports to the first spawn point of a zone (debug cheat menu). */
+  /**
+   * Teleports to the first spawn point of a zone (debug cheat menu). Going into or out of a
+   * Blender-built zone loads it (loading screen), like walking through its gate.
+   */
   private teleport(zoneId: string): void {
     const data = this.ctx.data;
     const zone = data?.zones.zones.find((entry) => entry.id === zoneId);
     const spawn = zone?.spawnPoints[0];
-    if (!spawn) return;
+    if (!zone || !spawn) return;
     this.encounter?.abort();
+    const heading = (spawn.headingDegrees ?? 0) * DEG;
+    if (zone.scene || this.sceneZone) {
+      if (zone.id !== this.sceneZoneDef?.id || this.instanceDef) {
+        this.travel(zone.id, spawn.x, spawn.z, heading);
+        return;
+      }
+      this.respawnInScene();
+      this.syncSave();
+      return;
+    }
     this.placePlayer(spawn.x, spawn.z);
   }
 
   /**
    * Puts the player at (x, z) on the ground (teleport, waking up at the checkpoint, a boss
-   * fight). With a `heading` the player faces that way and the camera turns behind them.
+   * fight), in the open world or in a Blender-built zone. With a `heading` the player faces
+   * that way and the camera turns behind them.
    */
   private placePlayer(x: number, z: number, heading?: number): void {
     const data = this.ctx.data;
-    const { player, streamer, collision, rig, origin } = this;
-    if (!player || !streamer || !collision || !rig || !origin || !data) return;
-    player.place(x, streamer.heightAt(x, z), z, heading ?? player.state.heading);
-    collision.resolve(player.state, data.player.movement.radius);
-    player.state.y = streamer.heightAt(player.state.x, player.state.z);
+    const { player, rig, origin, sceneZone } = this;
+    if (!player || !rig || !origin || !data || (!this.streamer && !sceneZone)) return;
+    player.place(x, this.groundHeight(x, z), z, heading ?? player.state.heading);
+    this.resolveCircle(player.state, data.player.movement.radius);
+    if (sceneZone) sceneZone.placeOnGround(player.state);
+    else player.state.y = this.groundHeight(player.state.x, player.state.z);
     player.place(player.state.x, player.state.y, player.state.z, player.state.heading);
     origin.reset(player.state.x, player.state.z);
     rig.orbit.snap(player.state.x, player.state.y, player.state.z, heading ?? rig.orbit.yaw);
@@ -1920,21 +2339,35 @@ export class WorldState implements GameState, InstanceHost {
 
   // ------------------------------------------------------------ scene
 
-  private buildScene(data: GameData): void {
+  /**
+   * Builds the world being played. `sceneZone` = a Blender-built zone whose assets are loaded
+   * (Greyhaven): its meshes, BVH ground and walls, its own NPCs, places and monsters. Without it
+   * the open world: streamed terrain, structures, sea and rivers, and everything outside
+   * Blender-built zones. Player, camera, lights and day-night are the same for both.
+   */
+  private buildScene(data: GameData, sceneZone: Zone | null): void {
     const session = this.ctx.session;
     const zone = data.zones.zones.find((entry) => entry.id === session?.world.zone);
     const spawn = session?.world.position ?? { x: 0, y: 0, z: 0 };
     const preset = this.activePreset(data);
     this.preset = preset;
     const fogColor = resolveColorToken(zone?.fogColor ?? data.zones.world.outsideZoneFog);
+    this.zoneFog.set(fogColor);
+    const def = sceneZone?.scene ?? null;
+    this.sceneZoneDef = sceneZone;
+    this.lightingMode = (sceneZone ?? zone)?.lighting ?? 'cycle';
 
     const scene = new Scene();
     scene.background = new Color(fogColor);
-    scene.fog = new Fog(fogColor, preset.fogFar * 0.35, preset.fogFar);
-    // Warm low sun, cool twilight sky (style guide L1–L3).
-    scene.add(new HemisphereLight(palette.mistpaars, palette.schemerviolet, 1.8));
-    const sun = new DirectionalLight(palette.zonsondergang, 2);
-    sun.position.copy(SUN_DIRECTION);
+    scene.fog = def
+      ? new Fog(fogColor, def.fogNear, def.fogFar)
+      : new Fog(fogColor, preset.fogFar * 0.35, preset.fogFar);
+    // Day and night drive these lights, the fog, the sky and the toon materials.
+    this.lighting = new DayNightLighting(data.daynight, resolveColorToken);
+    const hemi = new HemisphereLight(palette.mistpaars, palette.schemerviolet, HEMI_INTENSITY);
+    scene.add(hemi);
+    this.hemi = hemi;
+    const sun = new DirectionalLight(palette.zonsondergang, SUN_INTENSITY);
     scene.add(sun, sun.target);
     this.sun = sun;
     // Everything with world coordinates hangs under this group (shifted by the floating origin).
@@ -1945,12 +2378,178 @@ export class WorldState implements GameState, InstanceHost {
     const world = data.zones.world;
     const b = shapeBounds(world.bounds, emptyBox());
     this.worldBounds = b;
-    const hash = new SpatialHash(8);
-    this.collision = new CollisionWorld(hash, b);
     this.zones = new ZoneLocator(data.zones.zones);
     this.origin = new FloatingOrigin(world.originShiftDistance, world.chunkSize);
-    this.origin.reset(spawn.x, spawn.z);
+    // A Blender-built zone is drawn around its own origin (never shifted while inside).
+    this.origin.reset(def ? def.offset.x : spawn.x, def ? def.offset.z : spawn.z);
+    // Places, checkpoints, NPCs and monsters of the world being played only.
+    // An instance has none of these (only its own NPCs).
+    const instance = sceneZone ? this.instanceDef : null;
+    const playedZones = instance
+      ? []
+      : data.zones.zones.filter((entry) => (sceneZone ? entry.id === sceneZone.id : !entry.scene));
+    const playedIds = new Set(playedZones.map((entry) => entry.id));
+    this.triggers = new Triggers(
+      data.triggers.triggers.filter((trigger) => playedIds.has(trigger.zone)),
+      data.triggers.conditions,
+      this.ctx.events,
+    );
+    this.checkpoints = new Checkpoints(checkpointsOf(playedZones), this.ctx.events);
+    this.fogTarget.set(fogColor);
 
+    if (def && this.sceneAssets && this.lighting) {
+      this.buildSceneZone(def, worldRoot);
+    } else {
+      this.buildOpenWorld(data, preset, worldRoot);
+    }
+    const viewDistance = def ? def.viewDistance : preset.fogFar + 20;
+    this.sky = createSkyDome(this.lighting.uniforms, viewDistance * SKY_FRACTION);
+    scene.add(this.sky);
+
+    const appearance = normalizeAppearance(
+      session?.character?.appearance ?? data.appearance.defaults,
+      data.appearance,
+    );
+    const player = new Player(data.appearance, appearance);
+    player.place(spawn.x, spawn.y, spawn.z, session?.world.heading ?? 0);
+    // A save could put the player inside an obstacle (e.g. after the course changed).
+    this.resolveCircle(player.state, data.player.movement.radius);
+    if (this.sceneZone) {
+      this.sceneZone.placeOnGround(player.state);
+      if (!this.sceneZone.onMap(player.state.x, player.state.z)) this.placeAtSceneSpawn(player);
+      player.place(player.state.x, player.state.y, player.state.z, player.state.heading);
+      this.sceneZone.setReferenceHeight(player.state.y);
+    } else {
+      player.place(
+        player.state.x,
+        this.groundHeight(player.state.x, player.state.z),
+        player.state.z,
+        player.state.heading,
+      );
+    }
+    player.state.energy = data.player.base.energy;
+    player.state.sinceEnergySpent = data.player.regen.energyDelaySeconds;
+    this.sword = swordConfig(data.player);
+    const combat = player.combat;
+    combat.lingerSeconds = this.sword.combatLingerSeconds;
+    // Level, HP and mana from the save (null = full).
+    const progress = session?.progress;
+    const level = Math.min(data.player.maxLevel, Math.max(1, progress?.level ?? 1));
+    this.applyGearStats(combat);
+    applyLevel(combat, data.player, level);
+    combat.hp = Math.min(combat.maxHp, progress?.hp ?? combat.maxHp);
+    combat.mana = Math.min(combat.maxMana, progress?.mana ?? combat.maxMana);
+    // Waking up with 0 HP would be dying again at once.
+    if (combat.hp <= 0) combat.hp = combat.maxHp;
+    this.conditionContext.level = level;
+    if (def && this.sceneAssets && this.lighting) {
+      // The Blender character in the creator's colors; a soft round shadow under the feet.
+      this.scenePlayer = buildPlayerModel(
+        this.sceneAssets,
+        def,
+        this.lighting.uniforms,
+        resolveColorToken,
+        player.model.colors,
+      );
+      player.model.useModel(this.scenePlayer.root);
+      const blob = new Mesh(
+        new CircleGeometry(BLOB_RADIUS, 24),
+        new MeshBasicMaterial({
+          color: palette.nachtinkt,
+          transparent: true,
+          opacity: BLOB_OPACITY,
+          depthWrite: false,
+        }),
+      );
+      blob.rotation.x = -Math.PI / 2;
+      blob.position.y = 0.03;
+      player.model.root.add(blob);
+      this.blob = blob;
+    } else {
+      player.model.root.traverse((object) => {
+        object.castShadow = true;
+      });
+    }
+    worldRoot.add(player.model.root);
+    this.player = player;
+
+    this.npcWorld = {
+      mover: this.mover as Mover,
+      heightAt: this.groundHeight,
+      resolve: (p, radius) => this.resolveCircle(p, radius),
+    };
+    this.npcs = new Npcs(
+      data.npcs,
+      this.ctx.seasons?.currentId() ?? '',
+      resolveColorToken,
+      (npc) => (instance ? npc.instance === instance.id : playedIds.has(npc.zone) && !npc.instance),
+    );
+    this.npcRenderer = new NpcRenderer(this.npcs.list, worldRoot, {
+      offer: resolveColorToken('zonlicht'),
+      handIn: resolveColorToken('magieblauw'),
+    });
+    const safeAreas = new Map(
+      data.zones.zones.flatMap((entry) => entry.areas.map((area) => [area.id, area.shape])),
+    );
+    // Monsters appear at the same distance as NPCs, on every graphics preset.
+    this.enemies = new Enemies(
+      playedZones,
+      data.monsters,
+      { showRadius: data.npcs.settings.showRadius, hideMargin: data.npcs.settings.hideMargin },
+      safeAreas,
+      world.nightSpawning,
+      world.seed,
+    );
+    this.enemyRenderer = new EnemyRenderer(this.enemies.list, worldRoot);
+    this.warningRenderer = new WarningRenderer(worldRoot, this.groundHeight);
+    const projectiles = new Projectiles();
+    this.projectiles = projectiles;
+    this.projectileRenderer = new ProjectileRenderer(projectiles.list, worldRoot);
+    const enemies = this.enemies;
+    this.enemiesWorld = {
+      mover: this.mover as Mover,
+      heightAt: this.groundHeight,
+      hitPlayer: (_e, damage) => this.hurtPlayer(damage),
+      shoot: (e, tx, tz, speed, damage) =>
+        projectiles.fire(
+          e.x,
+          e.y + ARROW_HEIGHT * (e.def.scale ?? 1),
+          e.z,
+          tx,
+          tz,
+          speed,
+          damage,
+          e.def.ai?.attack.range ?? 12,
+        ),
+      alert: (e) => enemies.alert(e),
+      bossEvent: (e, kind, attack) => this.encounter?.onBossEvent(e, kind, attack),
+    };
+    const probe = this.arrowProbe;
+    this.projectileWorld = {
+      heightAt: this.groundHeight,
+      blocked: (x, z) => {
+        probe.x = x;
+        probe.z = z;
+        this.resolveCircle(probe, ARROW_COLLIDE_RADIUS);
+        return probe.x !== x || probe.z !== z;
+      },
+    };
+
+    this.rig = new CameraRig(data.player.camera, viewDistance);
+    this.rig.orbit.snap(player.state.x, player.state.y, player.state.z, player.state.heading);
+    this.applyCamera();
+    this.ctx.renderer.setCamera(this.rig.camera);
+    this.worldRoot = worldRoot;
+    this.scene = scene;
+    this.applyShadows(preset);
+    this.updateLighting(0);
+  }
+
+  /** The open world: streamed terrain, placeholder structures, sea, rivers, chunk debug. */
+  private buildOpenWorld(data: GameData, preset: QualityPreset, worldRoot: Group): void {
+    const world = data.zones.world;
+    const hash = new SpatialHash(8);
+    this.collision = new CollisionWorld(hash, this.worldBounds);
     // Terrain: the same TerrainField runs in the worker (meshes) and here (unloaded ground).
     const genConfig = buildWorldGenConfig(data.zones, resolveColorToken, preset.density.props);
     const field = new TerrainField(genConfig.terrain);
@@ -1964,9 +2563,6 @@ export class WorldState implements GameState, InstanceHost {
     );
     this.structures = new StructureLayer(placed, worldRoot, hash, resolveColorToken);
     this.labels = new StructureLabels(this.structures);
-    this.triggers = new Triggers(data.triggers.triggers, data.triggers.conditions, this.ctx.events);
-    this.checkpoints = new Checkpoints(checkpointsOf(data.zones.zones), this.ctx.events);
-    this.fogTarget.set(fogColor);
     this.streamer = new WorldStreamer({
       config: genConfig,
       field,
@@ -2008,106 +2604,58 @@ export class WorldState implements GameState, InstanceHost {
     this.chunkDebug = new ChunkDebug(this.streamer, (maxUnload * 2 + 1) ** 2);
     this.chunkDebug.lines.visible = false;
     worldRoot.add(this.chunkDebug.lines);
+  }
 
-    const appearance = normalizeAppearance(
-      session?.character?.appearance ?? data.appearance.defaults,
-      data.appearance,
-    );
-    const player = new Player(data.appearance, appearance);
-    player.place(spawn.x, 0, spawn.z, session?.world.heading ?? 0);
-    // A save could put the player inside an obstacle (e.g. after the course changed).
-    this.collision.resolve(player.state, data.player.movement.radius);
-    player.place(
-      player.state.x,
-      field.heightAt(player.state.x, player.state.z),
-      player.state.z,
-      player.state.heading,
-    );
-    player.state.energy = data.player.base.energy;
-    player.state.sinceEnergySpent = data.player.regen.energyDelaySeconds;
-    this.sword = swordConfig(data.player);
-    const combat = player.combat;
-    combat.lingerSeconds = this.sword.combatLingerSeconds;
-    // Level, HP and mana from the save (null = full).
-    const progress = session?.progress;
-    const level = Math.min(data.player.maxLevel, Math.max(1, progress?.level ?? 1));
-    this.applyGearStats(combat);
-    applyLevel(combat, data.player, level);
-    combat.hp = Math.min(combat.maxHp, progress?.hp ?? combat.maxHp);
-    combat.mana = Math.min(combat.maxMana, progress?.mana ?? combat.maxMana);
-    // Waking up with 0 HP would be dying again at once.
-    if (combat.hp <= 0) combat.hp = combat.maxHp;
-    this.conditionContext.level = level;
-    player.model.root.traverse((object) => {
-      object.castShadow = true;
-    });
-    worldRoot.add(player.model.root);
-    this.player = player;
+  /** A Blender-built zone from its loaded assets: meshes, collision, toon look. */
+  private buildSceneZone(def: SceneDef, worldRoot: Group): void {
+    const assets = this.sceneAssets;
+    const lighting = this.lighting;
+    const origin = this.origin;
+    if (!assets || !lighting || !origin) return;
+    // An instance is only its region of the scene; the zone leaves its instances' parts out.
+    const instance = this.instanceDef?.scene;
+    const filter = instance
+      ? instanceFilter(instance, def.offset)
+      : zoneFilter(this.sceneZoneDef?.instances ?? [], def.offset);
+    const zone = new SceneZone(def, assets, lighting.uniforms, resolveColorToken, filter);
+    zone.setRenderOrigin(origin.x, origin.z);
+    worldRoot.add(zone.group);
+    lighting.uniforms.fogNear.value = def.fogNear;
+    lighting.uniforms.fogFar.value = def.fogFar;
+    lighting.uniforms.windowCol.value.setHex(resolveColorToken(def.windowColor));
+    this.sceneZone = zone;
+    this.mover = zone;
+    // Tone mapping as in the Blender test page (lanterns glow without burning out).
+    const three = this.ctx.renderer.three;
+    this.savedToneMapping = three.toneMapping;
+    three.toneMapping = NeutralToneMapping;
+    three.toneMappingExposure = SCENE_EXPOSURE;
+  }
 
-    const collision = this.collision;
-    this.npcWorld = {
-      mover: this.mover,
-      heightAt: this.groundHeight,
-      resolve: (p, radius) => collision.resolve(p, radius),
-    };
-    this.npcs = new Npcs(data.npcs, this.ctx.seasons?.currentId() ?? '', resolveColorToken);
-    this.npcRenderer = new NpcRenderer(this.npcs.list, worldRoot, {
-      offer: resolveColorToken('zonlicht'),
-      handIn: resolveColorToken('magieblauw'),
-    });
-    const safeAreas = new Map(
-      data.zones.zones.flatMap((entry) => entry.areas.map((area) => [area.id, area.shape])),
-    );
-    // Monsters appear at the same distance as NPCs, on every graphics preset.
-    this.enemies = new Enemies(
-      data.zones.zones,
-      data.monsters,
-      { showRadius: data.npcs.settings.showRadius, hideMargin: data.npcs.settings.hideMargin },
-      safeAreas,
-    );
-    this.enemyRenderer = new EnemyRenderer(this.enemies.list, worldRoot);
-    this.warningRenderer = new WarningRenderer(worldRoot, this.groundHeight);
-    const projectiles = new Projectiles();
-    this.projectiles = projectiles;
-    this.projectileRenderer = new ProjectileRenderer(projectiles.list, worldRoot);
-    const enemies = this.enemies;
-    const mover = this.mover;
-    this.enemiesWorld = {
-      mover,
-      heightAt: this.groundHeight,
-      hitPlayer: (_e, damage) => this.hurtPlayer(damage),
-      shoot: (e, tx, tz, speed, damage) =>
-        projectiles.fire(
-          e.x,
-          e.y + ARROW_HEIGHT * (e.def.scale ?? 1),
-          e.z,
-          tx,
-          tz,
-          speed,
-          damage,
-          e.def.ai?.attack.range ?? 12,
-        ),
-      alert: (e) => enemies.alert(e),
-      bossEvent: (e, kind, attack) => this.encounter?.onBossEvent(e, kind, attack),
-    };
-    const probe = this.arrowProbe;
-    this.projectileWorld = {
-      heightAt: this.groundHeight,
-      blocked: (x, z) => {
-        probe.x = x;
-        probe.z = z;
-        collision.resolve(probe, ARROW_COLLIDE_RADIUS);
-        return probe.x !== x || probe.z !== z;
-      },
-    };
+  /** Puts the player at the zone's first spawn point (on the ground), e.g. after falling off. */
+  private placeAtSceneSpawn(player: Player): void {
+    const inside = this.instanceDef?.scene?.spawn;
+    const spawn = inside ?? this.sceneZoneDef?.spawnPoints[0];
+    if (!spawn || !this.sceneZone) return;
+    player.state.x = spawn.x;
+    player.state.z = spawn.z;
+    // An instance has floors above each other (a tower): arrive at the spawn's own height.
+    player.state.y = inside ? inside.y : ARRIVE_FROM_ABOVE;
+    player.state.heading = (spawn.headingDegrees ?? 0) * DEG;
+    this.sceneZone.placeOnGround(player.state);
+  }
 
-    this.rig = new CameraRig(data.player.camera, preset.fogFar + 20);
-    this.rig.orbit.snap(player.state.x, player.state.y, player.state.z, player.state.heading);
-    this.rig.apply(this.origin.x, this.origin.z, this.streamer, this.structures);
-    this.ctx.renderer.setCamera(this.rig.camera);
-    this.worldRoot = worldRoot;
-    this.scene = scene;
-    this.applyShadows(preset);
+  /** Under the water or off the map in a Blender-built zone: back at the spawn point. */
+  private respawnInScene(): void {
+    const { player, rig, sceneZone, npcWorld } = this;
+    if (!player || !rig || !sceneZone) return;
+    this.placeAtSceneSpawn(player);
+    const s = player.state;
+    player.place(s.x, s.y, s.z, s.heading);
+    s.dashTime = 0;
+    rig.orbit.snap(s.x, s.y, s.z, s.heading);
+    this.damageNumbers?.clear();
+    if (npcWorld) this.npcs?.snapCompanions(s.x, s.z, s.heading, npcWorld);
   }
 
   /** The graphics preset in use (chosen by the QualityManager). */
@@ -2120,12 +2668,13 @@ export class WorldState implements GameState, InstanceHost {
 
   /**
    * Shadows of the preset: none, small and crisp, or larger and softer. Only how it looks;
-   * nothing in the gameplay depends on them (§2.3).
+   * nothing in the gameplay depends on them (§2.3). A Blender-built zone uses the toon look
+   * without shadow maps (a soft blob under the player instead).
    */
   private applyShadows(preset: QualityPreset): void {
     const sun = this.sun;
     if (!sun) return;
-    const on = preset.shadows !== 'off' && preset.shadowDistance > 0;
+    const on = preset.shadows !== 'off' && preset.shadowDistance > 0 && !this.sceneZone;
     sun.castShadow = on;
     const shadow = sun.shadow;
     if (shadow.mapSize.x !== preset.shadowMapSize) {
@@ -2151,45 +2700,61 @@ export class WorldState implements GameState, InstanceHost {
   }
 
   /**
-   * Keeps the shadow area centred on the player (in drawing coordinates, after the floating
-   * origin). The centre moves in whole shadow texels, so shadow edges do not crawl.
+   * Keeps the light shining from the time of day's direction, and the shadow area centred on the
+   * player (in drawing coordinates, after the floating origin). The centre moves in whole shadow
+   * texels, so shadow edges do not crawl.
    */
   private updateSun(x: number, y: number, z: number): void {
     const sun = this.sun;
     const preset = this.preset;
-    if (!sun || !preset || !sun.castShadow) return;
-    const texel = (2 * preset.shadowDistance) / preset.shadowMapSize;
+    const dir = this.lighting?.uniforms.lightDir.value;
+    if (!sun || !preset || !dir) return;
+    const texel = sun.castShadow ? (2 * preset.shadowDistance) / preset.shadowMapSize : 1;
     const cx = Math.round(x / texel) * texel;
     const cz = Math.round(z / texel) * texel;
     sun.target.position.set(cx, y, cz);
     sun.position.set(
-      cx + SUN_DIRECTION.x * SUN_DISTANCE,
-      y + SUN_DIRECTION.y * SUN_DISTANCE,
-      cz + SUN_DIRECTION.z * SUN_DISTANCE,
+      cx + dir.x * SUN_DISTANCE,
+      y + dir.y * SUN_DISTANCE,
+      cz + dir.z * SUN_DISTANCE,
     );
   }
 
   /** Applies a changed graphics preset: fog, view distance, chunk rings, shadows, decoration. */
   private applyPreset(): void {
     const data = this.ctx.data;
-    if (!data || !this.scene || !this.rig || !this.streamer) return;
+    if (!data || !this.scene || !this.rig) return;
     const preset = this.activePreset(data);
     if (preset === this.preset) return;
     this.preset = preset;
-    const fog = this.scene.fog as Fog;
-    fog.near = preset.fogFar * 0.35;
-    fog.far = preset.fogFar;
-    this.rig.camera.far = preset.fogFar + 20;
-    this.rig.camera.updateProjectionMatrix();
-    this.water?.scale.set(preset.fogFar * WATER_SCALE, preset.fogFar * WATER_SCALE, 1);
-    this.streamer.setRings(preset.chunkRings);
-    this.streamer.setDecorDensity(preset.density.props);
+    // A Blender-built zone keeps its own fog and view distance (one loaded city, no rings);
+    // there the preset changes resolution, antialiasing and the lantern lights.
+    if (this.streamer) {
+      const fog = this.scene.fog as Fog;
+      fog.near = preset.fogFar * 0.35;
+      fog.far = preset.fogFar;
+      this.rig.camera.far = preset.fogFar + 20;
+      this.rig.camera.updateProjectionMatrix();
+      this.sky?.scale.setScalar(1);
+      if (this.sky) {
+        this.sky.geometry.dispose();
+        this.sky.geometry = new SphereGeometry((preset.fogFar + 20) * SKY_FRACTION, 32, 16);
+      }
+      this.water?.scale.set(preset.fogFar * WATER_SCALE, preset.fogFar * WATER_SCALE, 1);
+      this.streamer.setRings(preset.chunkRings);
+      this.streamer.setDecorDensity(preset.density.props);
+    }
     this.applyShadows(preset);
   }
 
   private disposeScene(): void {
     this.player?.dispose();
     this.player = null;
+    this.scenePlayer?.dispose();
+    this.scenePlayer = null;
+    this.blob?.geometry.dispose();
+    (this.blob?.material as MeshBasicMaterial | undefined)?.dispose();
+    this.blob = null;
     this.npcRenderer?.dispose();
     this.npcRenderer = null;
     this.enemyRenderer?.dispose();
@@ -2214,7 +2779,17 @@ export class WorldState implements GameState, InstanceHost {
     this.structures = null;
     this.props?.dispose();
     this.props = null;
-    // What is left: the rivers, the sea and the lights.
+    // A Blender-built zone: its meshes, materials, textures and BVH.
+    if (this.sceneZone && this.sceneAssets) this.sceneZone.dispose(this.sceneAssets);
+    this.sceneZone = null;
+    this.sceneAssets = null;
+    this.sceneZoneDef = null;
+    if (this.savedToneMapping !== null) {
+      this.ctx.renderer.three.toneMapping = this.savedToneMapping;
+      this.ctx.renderer.three.toneMappingExposure = 1;
+      this.savedToneMapping = null;
+    }
+    // What is left: the rivers, the sea, the sky and the lights.
     this.scene?.traverse((object) => {
       if (object instanceof Mesh) {
         object.geometry.dispose();
@@ -2227,6 +2802,9 @@ export class WorldState implements GameState, InstanceHost {
     this.scene?.clear();
     this.sun?.shadow.dispose();
     this.sun = null;
+    this.hemi = null;
+    this.sky = null;
+    this.lighting = null;
     this.scene = null;
     this.worldRoot = null;
     this.water = null;
@@ -2244,9 +2822,9 @@ export class WorldState implements GameState, InstanceHost {
     const debug = this.ctx.debug;
     this.cheatPanel?.setDebugVisible(debug.isEnabled);
     this.cheatPanel?.sync();
-    const { player, rig, streamer, origin } = this;
+    const { player, rig, streamer, origin, sceneZone } = this;
     if (this.cheats.chunkLines) this.chunkDebug?.refresh();
-    if (!debug.showsLines || !player || !rig || !streamer || !origin) return;
+    if (!debug.showsLines || !player || !rig || !origin) return;
     const s = player.state;
     const o = rig.orbit;
     debug.lines.set(
@@ -2258,11 +2836,21 @@ export class WorldState implements GameState, InstanceHost {
       'zone',
       `${this.ctx.session?.world.zone ?? '-'} · origin ${origin.x}, ${origin.z} (${origin.shifts} shifts)`,
     );
-    const st = streamer.stats(this.stats);
-    debug.lines.set(
-      'chunks',
-      `near ${st.near} far ${st.far} loading ${st.loading} · worker ${st.workerMs.toFixed(1)} ms · apply max ${st.applyMsMax.toFixed(1)} ms · colliders ${st.colliders} · ${this.preset?.id ?? '?'}`,
-    );
+    if (streamer) {
+      const st = streamer.stats(this.stats);
+      debug.lines.set(
+        'chunks',
+        `near ${st.near} far ${st.far} loading ${st.loading} · worker ${st.workerMs.toFixed(1)} ms · apply max ${st.applyMsMax.toFixed(1)} ms · colliders ${st.colliders} · ${this.preset?.id ?? '?'}`,
+      );
+    } else if (sceneZone) {
+      // Local position = Blender coordinates (x, -z, y), handy to compare with Blender.
+      const def = sceneZone.def.offset;
+      const lamps = this.lighting?.uniforms.lampCount.value ?? 0;
+      debug.lines.set(
+        'chunks',
+        `scene · blender ${(s.x - def.x).toFixed(1)}, ${(def.z - s.z).toFixed(1)}, ${(s.y - def.y).toFixed(1)} · meshes ${sceneZone.meshCount} · lanterns ${sceneZone.lanterns.length} (${lamps} lit) · ${this.preset?.id ?? '?'}`,
+      );
+    }
     const near = this.checkpoints?.near;
     debug.lines.set(
       'places',
@@ -2300,11 +2888,24 @@ export class WorldState implements GameState, InstanceHost {
       'camera',
       `yaw ${Math.round(o.yaw / DEG)}° pitch ${Math.round(o.pitch / DEG)}° dist ${o.distance.toFixed(1)} m · sens ${Math.round((this.ctx.session?.settings.cameraSensitivity ?? 1) * 100)}%`,
     );
+    debug.lines.set('daynight', this.dayNightLine());
     debug.lines.set(
       'cheats',
       `speed ${this.cheats.speed}× · fly ${this.cheats.fly ? 'on' : 'off'} · F6 = cheat menu`,
     );
   };
+
+  /** Debug: phase, time left, clock speed, lighting setting and night monsters. */
+  private dayNightLine(): string {
+    const clock = this.ctx.dayNight;
+    if (!clock) return '-';
+    const phase = clock.phase(this.dayPhase);
+    const seconds = Math.ceil(phase.remainingMs / 1000);
+    const left = `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
+    const speed = clock.overridden ? ` · test ${clock.speed}×` : '';
+    const spawn = clock.spawning() ? 'spawning' : 'no spawning';
+    return `${phase.id} · ${left} left${speed} · ${this.lightingMode} · ${spawn} · night monsters ${this.enemies?.nightAlive ?? 0}`;
+  }
 
   /** Debug: monsters shown / in the world / in the pool, fighting, arrows, the nearest one. */
   private enemyDebugLine(px: number, pz: number): string {

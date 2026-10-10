@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "three": "^0.186.1",
+    "three-mesh-bvh": "^0.9.16",
     "zod": "^4.6.5"
   },
   "devDependencies": {

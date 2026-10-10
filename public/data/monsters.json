@@ -47,14 +47,7 @@
       "speed": "slow",
       "xp": 10,
       "behavior": "melee",
-      "drops": [
-        {
-          "item": "slime_gel",
-          "chance": 0.5,
-          "min": 1,
-          "max": 1
-        }
-      ],
+      "drops": [{ "item": "slime_gel", "chance": 0.5, "min": 1, "max": 1 }],
       "model": "placeholder:slime",
       "radius": 0.45,
       "ai": {
@@ -370,17 +363,17 @@
         "trigger": "sultan_gate",
         "cutscene": "pringle",
         "arena": {
-          "x": -1551,
-          "z": 0,
-          "radius": 15
+          "x": -1561,
+          "z": -50,
+          "radius": 14
         },
         "start": {
-          "x": -1538,
-          "z": 0
+          "x": -1551,
+          "z": -46
         },
         "playerStart": {
-          "x": -1560,
-          "z": 0
+          "x": -1570,
+          "z": -54.5
         },
         "pauseSeconds": [1.0, 2.0],
         "retreatGap": 1.5,
@@ -486,14 +479,7 @@
           "recoverySeconds": 1.6
         }
       ],
-      "drops": [
-        {
-          "item": "wood",
-          "chance": 1,
-          "min": 3,
-          "max": 6
-        }
-      ],
+      "drops": [{ "item": "wood", "chance": 1, "min": 3, "max": 6 }],
       "model": "placeholder:treewarden",
       "radius": 1.1,
       "safeAreas": ["elven_city"],

@@ -1,8 +1,15 @@
 import { hashSeed, Random } from '../core/Random';
 import { Enemy, WOBBLE_SECONDS } from '../entities/Enemy';
-import type { MonsterDef, MonstersFile, Shape, Zone } from '../data/types';
+import type {
+  MonsterDef,
+  MonstersFile,
+  NightSpawnDef,
+  Shape,
+  Zone,
+  ZonesFile,
+} from '../data/types';
 import type { PointXZ } from '../world/Colliders';
-import { pointInShape } from '../world/Shapes';
+import { emptyBox, pointInShape, shapeBounds } from '../world/Shapes';
 import { type BossWorld, BossState, startBoss, stepBoss } from './BossAI';
 import {
   defeat,
@@ -29,6 +36,8 @@ const SPLIT_OFFSET = 0.9;
 /** Monsters push each other apart by this fraction of the overlap per step. */
 const SEPARATION = 0.5;
 const DEFAULT_SPEED = 2;
+/** Random spots tried per night spawn attempt (some fall in safe zones, water or too close). */
+const SPAWN_TRIES = 8;
 
 /** Distances (m) for showing monsters: the same on every graphics preset (§2.3). */
 export interface EnemyRanges {
@@ -54,6 +63,39 @@ interface Pack {
   /** Fixed spots (training dummy, Treewarden, chief) never move to a new spot. */
   fixed: boolean;
   wanderRadius: number;
+  /** Filled by night spawning (stepSpawning), not by the normal respawn. */
+  night: boolean;
+}
+
+/** Night spawning rules (zones.json `world.nightSpawning`). */
+export type NightSpawnRules = ZonesFile['world']['nightSpawning'];
+
+/** What night spawning needs from the world each step. */
+export interface SpawnWorld {
+  /** True while monsters appear (dusk and night). */
+  spawning: boolean;
+  /** Also use test-only areas (debug mode). */
+  testAreas: boolean;
+  heightAt(x: number, z: number): number;
+  /** Can a monster stand here (ground, not deep water, loaded)? */
+  canStand(x: number, z: number): boolean;
+}
+
+/**
+ * One night spawn area (zones.json `nightSpawns`): per monster in its list `maxAlive` pooled
+ * packs, of which at most `maxAlive` are in the world at once.
+ */
+interface NightArea {
+  def: NightSpawnDef;
+  /** The pooled packs per monster entry (same order as `def.monsters`). */
+  packs: Pack[][];
+  totalWeight: number;
+  timer: number;
+  rng: Random;
+  minX: number;
+  minZ: number;
+  maxX: number;
+  maxZ: number;
 }
 
 /** The world as monsters see it: walking (EnemyWorld), boss events and the ground height. */
@@ -62,12 +104,15 @@ export interface EnemiesWorld extends EnemyWorld, Pick<BossWorld, 'bossEvent'> {
 }
 
 /**
- * All monsters of the open world, in one pool built from zones.json (`spawns` and
- * `spawnAreas`) and monsters.json. Monsters are drawn within `showRadius` of the player (with
+ * All monsters, in one pool built from zones.json (`spawns`, `spawnAreas` and the night
+ * areas `nightSpawns`) and monsters.json. Monsters are drawn within `showRadius` of the player (with
  * a margin before they hide) and move and fight within `settings.simulateRadius`, the same on
  * every graphics preset. Packs (goblins in twos and threes) notice you together; a defeated
  * pack comes back after `respawnSeconds`, once you are away. A Big Slime splits into two
  * Green Slimes from slots kept for it. Training dummies stand still and get up again.
+ * Night areas fill at dusk and at night (stepSpawning): a pack appears at a random spot,
+ * never inside a safe zone, not too close to the player; once gone, its place is free again
+ * after `respawnSeconds`. What happens to them by day is still open: for now they simply stay.
  * Allocation-free on the fixed step.
  */
 export class Enemies {
@@ -78,6 +123,8 @@ export class Enemies {
   /** Bosses (monsters with `boss`): one slot each, only in the world during their fight. */
   readonly bosses: Enemy[] = [];
   private readonly packs: Pack[] = [];
+  private readonly nightAreas: NightArea[] = [];
+  private readonly safeZones: Shape[] = [];
   private readonly packOf = new Map<Enemy, Pack>();
   private readonly speeds: Readonly<Record<string, number>>;
   private readonly simulateRadius: number;
@@ -92,6 +139,8 @@ export class Enemies {
     monsters: MonstersFile,
     private readonly ranges: EnemyRanges,
     private readonly safeAreas: ReadonlyMap<string, Shape> = new Map(),
+    private readonly rules: NightSpawnRules | null = null,
+    seed = 0,
   ) {
     this.ai = enemyAiConfig(monsters);
     this.speeds = monsters.speedClasses;
@@ -113,6 +162,7 @@ export class Enemies {
           wanderRadius: spawn.wanderRadius ?? 0,
           respawnSeconds: spawn.respawnSeconds ?? Infinity,
           fixed: true,
+          night: false,
         });
       }
       for (const area of zone.spawnAreas ?? []) {
@@ -125,11 +175,19 @@ export class Enemies {
             wanderRadius: def.groupSize ? PACK_WANDER : area.radius * AREA_WANDER_FRACTION,
             respawnSeconds: area.respawnSeconds,
             fixed: false,
+            night: false,
           });
         }
       }
+      for (const safe of zone.safeZones ?? []) this.safeZones.push(safe.shape);
+      if (rules) {
+        for (const area of zone.nightSpawns ?? []) this.addNightArea(zone, area, find, byId, seed);
+      }
     }
-    for (const pack of this.packs) this.spawnPack(pack);
+    for (const pack of this.packs) {
+      if (pack.night) this.clearPack(pack);
+      else this.spawnPack(pack);
+    }
     for (const def of monsters.monsters) {
       if (!def.boss) continue;
       const boss = new Enemy(`boss_${def.id}`, def, def.boss.start.x, def.boss.start.z, 0xb055);
@@ -250,6 +308,59 @@ export class Enemies {
     this.stepPacks(dt, px, pz);
   }
 
+  /** Night monsters alive right now (debug). */
+  get nightAlive(): number {
+    let n = 0;
+    for (let i = 0; i < this.packs.length; i++) {
+      const pack = this.packs[i] as Pack;
+      if (pack.night) n += countAlive(pack.members) + countAlive(pack.children);
+    }
+    return n;
+  }
+
+  /** True when (x, z) is in a safe zone (city, village, Monastery, shrine). */
+  inSafeZone(x: number, z: number): boolean {
+    for (let i = 0; i < this.safeZones.length; i++) {
+      if (pointInShape(this.safeZones[i] as Shape, x, z)) return true;
+    }
+    return false;
+  }
+
+  /**
+   * Night spawning, once per fixed step: every `checkSeconds` each area brings one more pack
+   * (up to `maxAlive`), picked by weight, at a random spot: inside the area, outside every safe
+   * zone, between min and max distance from the player, on ground. A pack whose monsters are
+   * all gone frees its place after the area's `respawnSeconds`.
+   */
+  stepSpawning(dt: number, px: number, pz: number, world: SpawnWorld): void {
+    const rules = this.rules;
+    if (!rules) return;
+    for (let a = 0; a < this.nightAreas.length; a++) {
+      const area = this.nightAreas[a] as NightArea;
+      let taken = 0;
+      for (let m = 0; m < area.packs.length; m++) {
+        const list = area.packs[m] as Pack[];
+        for (let p = 0; p < list.length; p++) {
+          const pack = list[p] as Pack;
+          if (anyActive(pack.members) || anyActive(pack.children)) {
+            pack.timer = pack.respawnSeconds;
+            taken++;
+          } else if (pack.timer > 0) {
+            // Gone, but its place stays taken until the respawn time has passed.
+            pack.timer = Math.max(0, pack.timer - dt);
+            taken++;
+          }
+        }
+      }
+      area.timer -= dt;
+      if (area.timer > 0) continue;
+      area.timer += rules.checkSeconds;
+      if (!world.spawning || (area.def.testOnly && !world.testAreas)) continue;
+      if (taken >= area.def.maxAlive) continue;
+      this.trySpawn(area, px, pz, world);
+    }
+  }
+
   /**
    * Deals damage to an enemy. Returns true when this hit defeated it. A hit monster fights
    * back (with its pack); a defeated Big Slime splits.
@@ -324,7 +435,10 @@ export class Enemies {
    * calm, split slimes gone, dummies standing.
    */
   resetAll(): void {
-    for (const pack of this.packs) this.spawnPack(pack);
+    for (const pack of this.packs) {
+      if (pack.night) this.clearPack(pack);
+      else this.spawnPack(pack);
+    }
     for (const boss of this.bosses) this.endBoss(boss);
   }
 
@@ -332,8 +446,8 @@ export class Enemies {
     id: string,
     def: MonsterDef,
     byId: ReadonlyMap<string, MonsterDef>,
-    where: Pick<Pack, 'x' | 'z' | 'radius' | 'wanderRadius' | 'respawnSeconds' | 'fixed'>,
-  ): void {
+    where: Pick<Pack, 'x' | 'z' | 'radius' | 'wanderRadius' | 'respawnSeconds' | 'fixed' | 'night'>,
+  ): Pack {
     const seed = hashSeed(...Array.from(id, (c) => c.charCodeAt(0)));
     const size = def.groupSize?.max ?? 1;
     const pack: Pack = {
@@ -360,6 +474,7 @@ export class Enemies {
       }
     }
     this.packs.push(pack);
+    return pack;
   }
 
   private addEnemy(id: string, def: MonsterDef, pack: Pack, seed: number): Enemy {
@@ -418,7 +533,9 @@ export class Enemies {
   private stepPacks(dt: number, px: number, pz: number): void {
     for (let i = 0; i < this.packs.length; i++) {
       const pack = this.packs[i] as Pack;
-      if (pack.def.behavior === 'static' || !Number.isFinite(pack.respawnSeconds)) continue;
+      if (pack.night || pack.def.behavior === 'static' || !Number.isFinite(pack.respawnSeconds)) {
+        continue;
+      }
       if (anyActive(pack.members) || anyActive(pack.children)) {
         pack.timer = pack.respawnSeconds;
         continue;
@@ -431,6 +548,100 @@ export class Enemies {
       if (dx * dx + dz * dz < away * away) continue;
       this.spawnPack(pack);
     }
+  }
+
+  /** A night area: `maxAlive` pooled packs per monster entry, all out of the world at first. */
+  private addNightArea(
+    zone: Zone,
+    def: NightSpawnDef,
+    find: (zone: Zone, id: string) => MonsterDef,
+    byId: ReadonlyMap<string, MonsterDef>,
+    seed: number,
+  ): void {
+    const rules = this.rules;
+    if (!rules) return;
+    const packs = def.monsters.map((entry, m) => {
+      const monster = find(zone, entry.monster);
+      const list: Pack[] = [];
+      for (let i = 0; i < def.maxAlive; i++) {
+        list.push(
+          this.addPack(`${def.id}_${m}_${i}`, monster, byId, {
+            x: 0,
+            z: 0,
+            radius: 0,
+            wanderRadius: rules.wanderRadius,
+            respawnSeconds: def.respawnSeconds,
+            fixed: true,
+            night: true,
+          }),
+        );
+      }
+      return list;
+    });
+    const box = shapeBounds(def.shape, emptyBox());
+    this.nightAreas.push({
+      def,
+      packs,
+      totalWeight: def.monsters.reduce((sum, entry) => sum + entry.weight, 0),
+      // Spread the first attempts so areas do not all try in the same step.
+      timer: (this.nightAreas.length * 0.37) % rules.checkSeconds,
+      rng: new Random(hashSeed(seed, this.nightAreas.length, def.maxAlive)),
+      ...box,
+    });
+  }
+
+  /** A pack out of the world (night packs before they appear, or after a knock-out). */
+  private clearPack(pack: Pack): void {
+    for (const e of pack.members) e.active = false;
+    for (const child of pack.children) child.active = false;
+    pack.timer = 0;
+  }
+
+  /** Tries a few random spots; the first good one gets a free pack of a monster picked by weight. */
+  private trySpawn(area: NightArea, px: number, pz: number, world: SpawnWorld): void {
+    const rules = this.rules;
+    if (!rules) return;
+    const rng = area.rng;
+    const min2 = rules.minPlayerDistance ** 2;
+    const max2 = rules.maxPlayerDistance ** 2;
+    for (let i = 0; i < SPAWN_TRIES; i++) {
+      const x = rng.range(area.minX, area.maxX);
+      const z = rng.range(area.minZ, area.maxZ);
+      if (!pointInShape(area.def.shape, x, z) || this.inSafeZone(x, z)) continue;
+      const d2 = (x - px) ** 2 + (z - pz) ** 2;
+      if (d2 < min2 || d2 > max2 || !world.canStand(x, z)) continue;
+      const pack = this.freeNightPack(area);
+      if (!pack) return;
+      pack.x = x;
+      pack.z = z;
+      this.spawnPack(pack);
+      for (const e of pack.members) {
+        if (!e.active) continue;
+        e.y = world.heightAt(e.x, e.z);
+        e.settleY();
+      }
+      return;
+    }
+  }
+
+  /** A pack of a monster picked by weight that is out of the world (null when all are in use). */
+  private freeNightPack(area: NightArea): Pack | null {
+    const monsters = area.def.monsters;
+    let roll = area.rng.next() * area.totalWeight;
+    let pick = monsters.length - 1;
+    for (let m = 0; m < monsters.length; m++) {
+      roll -= (monsters[m] as { weight: number }).weight;
+      if (roll <= 0) {
+        pick = m;
+        break;
+      }
+    }
+    const list = area.packs[pick] as Pack[];
+    for (let p = 0; p < list.length; p++) {
+      const pack = list[p] as Pack;
+      if (pack.timer <= 0 && !anyActive(pack.members) && !anyActive(pack.children)) return pack;
+    }
+    return null;
   }
 
   /** A dying Big Slime becomes two Green Slimes that go straight for the player. */
@@ -517,6 +728,12 @@ export class Enemies {
       e.hp = e.maxHp;
     }
   }
+}
+
+function countAlive(list: readonly Enemy[]): number {
+  let n = 0;
+  for (let i = 0; i < list.length; i++) if ((list[i] as Enemy).alive) n++;
+  return n;
 }
 
 function anyActive(list: readonly Enemy[]): boolean {

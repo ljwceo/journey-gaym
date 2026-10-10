@@ -3,7 +3,7 @@ import { qualityLevelSchema } from '../data/schemas';
 import { LANGUAGES, type Language } from '../i18n/I18n';
 
 /** Current save format. Bump it and add `migrations[old]` whenever the shape changes. */
-export const SAVE_VERSION = 6;
+export const SAVE_VERSION = 7;
 
 /** Camera sensitivity for new saves (1 = 100%); the allowed range is in player.json. */
 export const DEFAULT_CAMERA_SENSITIVITY = 0.7;
@@ -58,6 +58,8 @@ export const saveDataSchema = z.object({
   path: z.nullable(z.enum(['sword', 'light', 'dark'])),
   world: z.object({
     zone: z.nullable(id),
+    /** The instance of the zone you are in (Master Brink's tower), null outside. */
+    instance: z.nullable(id),
     position: z.nullable(z.object({ x: finite, y: finite, z: finite })),
     heading: finite,
     checkpoint: z.nullable(id),
@@ -108,7 +110,7 @@ export function createNewSave(language: Language, now: Date = new Date()): SaveD
     character: null,
     progress: freshProgress(),
     path: null,
-    world: { zone: null, position: null, heading: 0, checkpoint: null },
+    world: { zone: null, instance: null, position: null, heading: 0, checkpoint: null },
     visitedPlaces: [],
     metNpcs: [],
     quests: { active: [], completed: [] },
@@ -146,6 +148,11 @@ export const migrations: Readonly<Record<number, Migration>> = {
   5: (save) => {
     const character = save.character as Record<string, unknown> | null | undefined;
     return { ...save, version: 6, character: character ? { ...character, pack: [] } : null };
+  },
+  // v7 (step 3.3): instances; everyone is outside.
+  6: (save) => {
+    const world = (save.world ?? {}) as Record<string, unknown>;
+    return { ...save, version: 7, world: { ...world, instance: null } };
   },
 };
 

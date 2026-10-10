@@ -41,6 +41,59 @@
       ]
     },
     {
+      "id": "brink_tower",
+      "skippable": true,
+      "playOnce": true,
+      "panels": [
+        {
+          "id": "tower",
+          "caption": "cutscene.brink_tower.caption1",
+          "background": "magieblauw",
+          "lines": [{ "speaker": "Master Brink", "text": "cutscene.brink_tower.1" }]
+        },
+        {
+          "id": "crystals",
+          "caption": "cutscene.brink_tower.caption2",
+          "background": "ornamentgoud",
+          "zoom": true,
+          "lines": [{ "speaker": "Master Brink", "text": "cutscene.brink_tower.2" }]
+        },
+        {
+          "id": "patience",
+          "caption": "cutscene.brink_tower.caption3",
+          "background": "schemerviolet",
+          "lines": [{ "speaker": "Master Brink", "text": "cutscene.brink_tower.3" }]
+        }
+      ]
+    },
+    {
+      "id": "sam_cellar",
+      "skippable": true,
+      "playOnce": true,
+      "panels": [
+        {
+          "id": "cellar",
+          "caption": "cutscene.sam_cellar.caption1",
+          "background": "nachtinkt",
+          "lines": [{ "speaker": "Wizard Sam", "text": "cutscene.sam_cellar.1" }]
+        },
+        {
+          "id": "circle",
+          "caption": "cutscene.sam_cellar.caption2",
+          "background": "spreukviolet",
+          "shake": true,
+          "lines": [{ "speaker": "Wizard Sam", "text": "cutscene.sam_cellar.2" }]
+        },
+        {
+          "id": "warning",
+          "caption": "cutscene.sam_cellar.caption3",
+          "background": "schemerviolet",
+          "zoom": true,
+          "lines": [{ "speaker": "Wizard Sam", "text": "cutscene.sam_cellar.3" }]
+        }
+      ]
+    },
+    {
       "id": "pringle",
       "skippable": true,
       "playOnce": true,

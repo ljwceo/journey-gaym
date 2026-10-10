@@ -5,6 +5,7 @@ import { formatIssue, validateGameData } from '../data/DataValidator';
 import { dataFileNames } from '../data/schemas';
 import { detectLanguage, isLanguage, type Language } from '../i18n/I18n';
 import { colorTokens } from '../render/palette';
+import { DayNightService } from '../services/DayNightService';
 import { SeasonService } from '../services/SeasonService';
 import { el } from '../ui/dom';
 import { Screen } from '../ui/Screen';
@@ -76,6 +77,7 @@ export class BootState implements GameState {
 
     ctx.data = data;
     ctx.seasons = new SeasonService(data.seasons);
+    ctx.dayNight = new DayNightService(data.daynight);
     const seasonParam = ctx.params.get('season');
     if (seasonParam && data.seasons.order.includes(seasonParam)) ctx.seasons.override = seasonParam;
     // Apply the saved settings (frame cap, debug mode) now that the save is known.

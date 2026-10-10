@@ -1,6 +1,6 @@
 import type { FollowTarget } from '../entities/Companion';
 import { Npc, type NpcSettings } from '../entities/Npc';
-import type { Condition, NpcsFile } from '../data/types';
+import type { Condition, NpcDef, NpcsFile } from '../data/types';
 import { type ConditionContext, evaluateCondition } from '../world/Conditions';
 import type { PointXZ } from '../world/Colliders';
 import type { Mover } from './Movement';
@@ -34,7 +34,16 @@ export class Npcs {
   readonly settings: NpcSettings;
   private readonly turnSpeed: number;
 
-  constructor(file: NpcsFile, season: string, color: (token: string) => number) {
+  /**
+   * @param include which NPCs belong to the world being played (a Blender-built zone has only
+   *   its own NPCs; the open world leaves those out). Companions always come along.
+   */
+  constructor(
+    file: NpcsFile,
+    season: string,
+    color: (token: string) => number,
+    include: (def: NpcDef) => boolean = () => true,
+  ) {
     this.settings = file.settings;
     this.turnSpeed = file.settings.turnDegreesPerSecond * DEG;
     const roles = new Map(file.roles.map((role) => [role.id, role]));
@@ -43,6 +52,7 @@ export class Npcs {
       const role = roles.get(def.role);
       if (!role) continue;
       if (def.season && def.season !== season) continue;
+      if (def.behavior !== 'follow' && !include(def)) continue;
       this.list.push(new Npc(def, role, file.settings, color(role.color)));
     }
   }

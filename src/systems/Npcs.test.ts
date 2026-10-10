@@ -242,14 +242,20 @@ describe('Npcs', () => {
   it('shows NPCs near the player only, with a margin before hiding', () => {
     const npcs = new Npcs(npcsFile(), 'summer', () => 0xffffff);
     const ansel = npcs.byId('brother_ansel');
-    const garrick = npcs.byId('sir_garrick');
-    if (!ansel || !garrick) throw new Error('missing NPCs');
+    if (!ansel) throw new Error('missing NPCs');
     const { x, z } = ansel.def.position;
+    const { showRadius, hideMargin } = npcs.settings;
+    // An NPC well out of sight from Brother Ansel (positions change with the map).
+    const far = npcs.list.find(
+      (npc) =>
+        npc.def.behavior !== 'follow' &&
+        Math.hypot(npc.def.position.x - x - 5, npc.def.position.z - z) > showRadius + hideMargin,
+    );
+    if (!far) throw new Error('no NPC far from Brother Ansel');
     npcs.update(DT, at(x + 5, z, 0), flatWorld, null);
     expect(ansel.shown).toBe(true);
     expect(ansel.state.y).toBe(2);
-    expect(garrick.shown).toBe(false);
-    const { showRadius, hideMargin } = npcs.settings;
+    expect(far.shown).toBe(false);
     npcs.update(DT, at(x + showRadius + hideMargin / 2, z, 0), flatWorld, null);
     expect(ansel.shown).toBe(true);
     npcs.update(DT, at(x + showRadius + hideMargin + 1, z, 0), flatWorld, null);
@@ -329,18 +335,20 @@ describe('Npcs presence (Pringle becomes Sultan)', () => {
 
   it('has Pringle and no Sultan before the fight, and the other way round after it', () => {
     const list = npcs();
+    const spot = list.byId('sultan')?.def.position;
+    if (!spot) throw new Error('missing Sultan');
     const before = { level: 3, completedQuests: new Set<string>() };
     list.refreshPresence(conditions, before);
-    list.update(DT, at(-1510, 5, 0), flatWorld, null);
+    list.update(DT, at(spot.x - 2, spot.z - 1, 0), flatWorld, null);
     expect(shownIds(list)).toContain('pringle');
     expect(shownIds(list)).not.toContain('sultan');
 
     const after = { level: 3, completedQuests: new Set(['defeat_sultan']) };
     list.refreshPresence(conditions, after);
-    list.update(DT, at(-1510, 5, 0), flatWorld, null);
+    list.update(DT, at(spot.x - 2, spot.z - 1, 0), flatWorld, null);
     expect(shownIds(list)).toContain('sultan');
     expect(shownIds(list)).not.toContain('pringle');
-    expect(list.nearestInteractable(-1508, 6)?.id).toBe('sultan');
+    expect(list.nearestInteractable(spot.x, spot.z + 1)?.id).toBe('sultan');
   });
 
   it('hides NPCs for a moment (Pringle during the fight) and brings them back', () => {

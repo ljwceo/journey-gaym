@@ -99,6 +99,103 @@ const riverSchema = z.strictObject({
   points: atLeast(z.array(z.tuple([coord, coord])), 2),
 });
 
+/** A file path inside public/, e.g. "zones/greyhaven/greyhaven.glb". */
+const publicPath = z.string().check(z.regex(/^[a-zA-Z0-9_./-]+$/, 'not a valid file path'));
+
+/**
+ * A zone built in Blender instead of streamed terrain: one glTF scene loaded with a loading
+ * screen. `offset` is where the Blender origin lies in the world (Blender x, y, z-up becomes
+ * world x + offset.x, z + offset.y, -y + offset.z), so all positions in the data stay world
+ * coordinates. Walking into an `exit` loads the open world at `to`.
+ */
+const sceneSchema = z.strictObject({
+  model: publicPath,
+  player: publicPath,
+  materials: publicPath,
+  textures: publicPath,
+  offset: z.strictObject({ x: coord, y: coord, z: coord }),
+  /** Fog of the toon shader (m); it only tints (max 60%), so far mountains stay visible. */
+  fogNear: range(1, 5000),
+  fogFar: range(1, 5000),
+  viewDistance: range(50, 10_000),
+  /** Nodes whose name starts with this are trees: one InstancedMesh per material per cell. */
+  treePrefix: name,
+  treeCellSize: range(10, 1000),
+  /** Trees block like a circle around the trunk (m). */
+  trunkRadius: range(0.05, 5),
+  /** Steps up to this height (m) are walked up (stairs, curbs). */
+  stepHeight: range(0.05, 2),
+  /** Falling this far below the water surface (or off the map) puts you back at the spawn. */
+  respawnBelowWater: range(0.2, 100),
+  waterMaterial: name,
+  /** Materials without collision (besides water and glowing ones), e.g. ivy. */
+  noCollision: z.array(name),
+  /** Materials drawn from both sides (thin leaves like ivy). */
+  doubleSided: z.array(name),
+  /** Materials that get a style guide color instead of their Blender color. */
+  colorOverrides: z.record(z.string(), colorToken),
+  /** Materials that light up like windows at night. */
+  windowMaterials: z.array(name),
+  windowColor: colorToken,
+  /** Glowing material whose pieces get real point lights on High (lanterns). */
+  lanternMaterial: name,
+  exits: z.array(
+    z.strictObject({
+      id,
+      shape: shapeSchema,
+      to: z.strictObject({ x: coord, z: coord, headingDegrees: range(-360, 360) }),
+    }),
+  ),
+});
+
+/** A box in world coordinates (m); a triangle counts as inside when all its corners are. */
+const sceneBoxSchema = z.strictObject({
+  min: z.strictObject({ x: coord, y: coord, z: coord }),
+  max: z.strictObject({ x: coord, y: coord, z: coord }),
+});
+
+/** Where you stand when you arrive (in an instance or back outside), facing `headingDegrees`. */
+const arrivalSchema = z.strictObject({
+  x: coord,
+  y: coord,
+  z: coord,
+  headingDegrees: range(-360, 360),
+});
+
+/**
+ * An instance cut out of the zone's Blender scene (Master Brink's tower, Wizard Sam's cellar):
+ * walking into `door` loads only the triangles inside `region` as a separate map (loading
+ * screen); walking into `exit` there brings you back to `exit.to`. In the zone itself the
+ * triangles inside `cut` (only `cut.materials`, when given) are left out.
+ */
+const instanceSceneSchema = z.strictObject({
+  door: shapeSchema,
+  region: z.strictObject({
+    ...sceneBoxSchema.shape,
+    /** Materials left out of the instance (e.g. the terrain above a cellar). */
+    exclude: z.array(name),
+  }),
+  cut: optional(z.strictObject({ ...sceneBoxSchema.shape, materials: optional(z.array(name)) })),
+  spawn: arrivalSchema,
+  exit: z.strictObject({ shape: shapeSchema, to: arrivalSchema }),
+  /** Plays the first time you come in (cutscenes.json, `playOnce`). */
+  cutscene: optional(id),
+});
+
+/** Monsters that appear at dusk and at night (daynight.json `spawnPhases`). */
+const nightSpawnSchema = z.strictObject({
+  id,
+  shape: shapeSchema,
+  monsters: atLeast(z.array(z.strictObject({ monster: id, weight: max(positive, 1000) }))),
+  /** At most this many alive at once in this area. */
+  maxAlive: intRange(1, 50),
+  levelRange,
+  /** Seconds before a defeated monster's place can be filled again. */
+  respawnSeconds: max(positive, 3600),
+  /** Only in debug mode (a test area to see the system work). */
+  testOnly: optional(z.boolean()),
+});
+
 const zoneSchema = z.strictObject({
   id,
   name,
@@ -110,12 +207,18 @@ const zoneSchema = z.strictObject({
   bounds: shapeSchema,
   terrainColor: colorToken,
   fogColor: colorToken,
+  /** `cycle` follows day and night; `goldenHour` always looks like the golden hour. */
+  lighting: z.enum(['cycle', 'goldenHour']),
+  /** Built in Blender (loaded with a loading screen) instead of streamed terrain. */
+  scene: optional(sceneSchema),
   terrain: z.strictObject({
     baseHeight: range(-100, 500),
     amplitude: max(nonNegative, 500),
   }),
   neighbors: z.array(id),
-  spawnPoints: atLeast(z.array(z.strictObject({ id, x: coord, z: coord }))),
+  spawnPoints: atLeast(
+    z.array(z.strictObject({ id, x: coord, z: coord, headingDegrees: optional(range(-360, 360)) })),
+  ),
   /** Walking within `radius` meters makes this your checkpoint (and lets you rest there). */
   checkpoint: optional(
     z.strictObject({ id, kind: id, x: coord, z: coord, radius: max(positive, 100) }),
@@ -159,7 +262,20 @@ const zoneSchema = z.strictObject({
       }),
     ),
   ),
-  instances: z.array(z.strictObject({ id, name, entrance: pointSchema, enabled: z.boolean() })),
+  /** NPC areas (cities, villages, Monasteries, shrines): no monster ever appears here. */
+  safeZones: optional(z.array(z.strictObject({ id, shape: shapeSchema }))),
+  /** Areas where monsters appear at dusk and at night. */
+  nightSpawns: optional(z.array(nightSpawnSchema)),
+  instances: z.array(
+    z.strictObject({
+      id,
+      name,
+      entrance: pointSchema,
+      enabled: z.boolean(),
+      /** Built from this zone's Blender scene (zones with `scene` only). */
+      scene: optional(instanceSceneSchema),
+    }),
+  ),
   /** Props (trees, rocks) scattered over the zone; `perHectare` before the quality density. */
   scatter: optional(
     z.array(
@@ -221,6 +337,16 @@ export const zonesFileSchema = z.strictObject({
     }),
     props: z.array(propSchema),
     rivers: optional(z.array(riverSchema)),
+    /** Rules for monsters appearing at night (areas are per zone, `nightSpawns`). */
+    nightSpawning: z.strictObject({
+      /** New monsters appear between these distances (m) from the player: not in your face. */
+      minPlayerDistance: range(0, 1000),
+      maxPlayerDistance: range(1, 2000),
+      /** Seconds between spawn attempts per area. */
+      checkSeconds: range(0.1, 60),
+      /** How far (m) a monster wanders around the spot where it appeared. */
+      wanderRadius: range(0, 100),
+    }),
   }),
   startZone: id,
   zones: atLeast(z.array(zoneSchema)),
@@ -233,6 +359,8 @@ const npcSchema = z.strictObject({
   name,
   role: id,
   zone: id,
+  /** Lives inside this instance of its zone (zones.json `instances`), not in the zone itself. */
+  instance: optional(id),
   position: pointSchema,
   /** talk (dialogue), pet (Pringle), pack (opens the pack animal's bag: Biscuit), none. */
   interaction: z.enum(['talk', 'pet', 'pack', 'none']),
@@ -1081,6 +1209,58 @@ export const cutscenesFileSchema = z.strictObject({
 // ---------------------------------------------------------------- manifest
 
 /** Every data file the game loads at boot, keyed by name (file = public/data/<name>.json). */
+// ---------------------------------------------------------------- daynight.json
+
+/** How the world looks at one moment of the day; colors are style guide tokens. */
+const dayLookSchema = z.strictObject({
+  id,
+  skyTop: colorToken,
+  skyHorizon: colorToken,
+  /** Key light (the sun, or the moon at night) and how strong it is. */
+  sun: colorToken,
+  sunStrength: range(0, 5),
+  /** Color of the side facing away from the light (never black). */
+  shadow: colorToken,
+  shadowStrength: range(0, 5),
+  fog: colorToken,
+  /** How far the open world's zone fog moves towards `fog` (0 = zone color only). */
+  worldFogMix: fraction,
+  lightElevationDegrees: range(1, 90),
+  lightAzimuthDegrees: range(0, 360),
+  sunDisk: fraction,
+  moonDisk: fraction,
+  stars: fraction,
+  /** Multiplier for glowing materials (lanterns, crystals): brighter at night. */
+  glow: range(0, 5),
+  /** How much window materials light up (0 = not at all). */
+  windowGlow: fraction,
+});
+
+export const dayNightFileSchema = z.strictObject({
+  /**
+   * The day in order, starting at midnight UTC of the Unix epoch. The time of day comes from the
+   * real clock, so every player sees the same time without a server (like the seasons).
+   */
+  phases: atLeast(z.array(z.strictObject({ id, minutes: max(positive, 1440), label: textKey }))),
+  /** Minutes over which one look blends into the next, around each phase change. */
+  blendMinutes: range(0, 60),
+  /** Phases in which monsters appear (`nightSpawns` in zones.json). */
+  spawnPhases: z.array(id),
+  /** Time speeds offered in the test mode (cheat menu). */
+  testSpeeds: atLeast(z.array(max(positive, 1000))),
+  /** One look per phase (same id), plus `goldenHour` for zones that never change. */
+  looks: atLeast(z.array(dayLookSchema)),
+  /** High preset only: real lights at the lanterns nearest to the player. */
+  lanternLights: z.strictObject({
+    max: intRange(0, 8),
+    rangeMeters: range(1, 100),
+    strength: range(0, 20),
+    color: colorToken,
+    /** Lights only switch on when lanterns glow at least this much (dusk and night). */
+    minGlow: range(0, 5),
+  }),
+});
+
 export const dataSchemas = {
   zones: zonesFileSchema,
   npcs: npcsFileSchema,
@@ -1096,6 +1276,7 @@ export const dataSchemas = {
   skills: skillsFileSchema,
   combos: combosFileSchema,
   cutscenes: cutscenesFileSchema,
+  daynight: dayNightFileSchema,
 } as const;
 
 export type DataFileName = keyof typeof dataSchemas;

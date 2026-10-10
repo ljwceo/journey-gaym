@@ -26,6 +26,16 @@
   --gh-terrein-sneeuw: #d6d3de;
   --gh-terrein-zeewater: #3d4766;
 
+  /* Licht (dag-en-nachtcyclus) */
+  --gh-licht-daglucht: #8da6cf;
+  --gh-licht-daghorizon: #efd8b4;
+  --gh-licht-daglicht: #ffefd2;
+  --gh-licht-dagschaduw: #8e92b8;
+  --gh-licht-schemerroze: #e39a8c;
+  --gh-licht-nachtblauw: #27305a;
+  --gh-licht-maanlicht: #a9b7de;
+  --gh-licht-nachtschaduw: #2b2d4c;
+
   /* Rollen (UI) */
   --gh-bg: #14131d;
   --gh-panel: #1d1b2b;

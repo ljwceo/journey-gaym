@@ -1,6 +1,7 @@
 import {
   BufferGeometry,
   CapsuleGeometry,
+  type Color,
   CylinderGeometry,
   DoubleSide,
   Group,
@@ -287,11 +288,14 @@ export class CharacterModel {
   private body: Object3D | null = null;
   private hair: Object3D | null = null;
   private readonly sword: Object3D;
+  private readonly head: Object3D;
   private readonly mantle: Object3D;
   private readonly hat: Object3D;
   private readonly amulet: Object3D;
   private readonly hatMaterial = new MeshLambertMaterial({ color: palette.steengrijs });
   private readonly amuletMaterial = new MeshLambertMaterial({ color: palette.ornamentgoud });
+  /** A real (glTF) model replacing the placeholder body, or null. */
+  private custom: Object3D | null = null;
 
   constructor(private readonly data: AppearanceFile) {
     const material = (color: number) => new MeshLambertMaterial({ color });
@@ -308,13 +312,40 @@ export class CharacterModel {
     this.materials.mantle.side = DoubleSide;
     this.materials.hair.side = DoubleSide;
     this.sword = sword(this.materials);
+    this.head = head(this.materials);
     this.mantle = mantle(this.materials);
     this.hat = hat(this.hatMaterial);
     this.amulet = amulet(this.amuletMaterial);
     this.hat.visible = false;
     this.amulet.visible = false;
-    this.root.add(head(this.materials), this.mantle, this.sword, this.hat, this.amulet);
+    this.root.add(this.head, this.mantle, this.sword, this.hat, this.amulet);
     this.root.name = 'character';
+  }
+
+  /** The current appearance's colors (hair, skin, mantle, embroidery), for a real model. */
+  get colors(): { hair: Color; skin: Color; mantle: Color; embroidery: Color } {
+    const m = this.materials;
+    return {
+      hair: m.hair.color,
+      skin: m.skin.color,
+      mantle: m.mantle.color,
+      embroidery: m.embroidery.color,
+    };
+  }
+
+  /**
+   * Uses a real model (e.g. player.glb) instead of the placeholder body, head, hair and mantle.
+   * The sword stays, so swings look the same. The model's feet stand at y = 0, facing +z; the
+   * caller owns (and disposes) its geometry and materials.
+   */
+  useModel(model: Object3D): void {
+    this.custom?.removeFromParent();
+    this.custom = model;
+    this.root.add(model);
+    this.head.visible = false;
+    this.mantle.visible = false;
+    if (this.body) this.body.visible = false;
+    if (this.hair) this.hair.visible = false;
   }
 
   setAppearance(appearance: Appearance): void {
@@ -342,7 +373,8 @@ export class CharacterModel {
     if (look.hat !== null) this.hatMaterial.color.setHex(look.hat);
     this.amulet.visible = look.amulet !== null;
     if (look.amulet !== null) this.amuletMaterial.color.setHex(look.amulet);
-    this.mantle.visible = look.mantle;
+    // A real model has its own mantle.
+    this.mantle.visible = look.mantle && this.custom === null;
     this.sword.scale.setScalar(look.swordScale);
   }
 
@@ -353,6 +385,9 @@ export class CharacterModel {
 
   /** Frees every geometry and material (call when the model leaves the scene). */
   dispose(): void {
+    // A real model belongs to whoever loaded it.
+    this.custom?.removeFromParent();
+    this.custom = null;
     const geometries = new Set<BufferGeometry>();
     const collect = (object: Object3D) =>
       object.traverse((child) => {
@@ -386,6 +421,7 @@ export class CharacterModel {
       current?.removeFromParent();
       this.root.add(next);
     }
+    next.visible = this.custom === null;
     return next;
   }
 }

@@ -25,96 +25,96 @@
       "id": "monastery",
       "zone": "greyhaven",
       "kind": "place",
-      "shape": { "type": "circle", "x": -1882, "z": -128, "radius": 18 },
+      "shape": { "type": "circle", "x": -1801.5, "z": 66.4, "radius": 18 },
       "firstVisitText": "place.monastery"
     },
     {
       "id": "market_square",
       "zone": "greyhaven",
       "kind": "place",
-      "shape": { "type": "circle", "x": -1820, "z": 118, "radius": 22 },
+      "shape": { "type": "circle", "x": -1826, "z": -37, "radius": 22 },
       "firstVisitText": "place.market_square"
     },
     {
       "id": "forge",
       "zone": "greyhaven",
       "kind": "place",
-      "shape": { "type": "circle", "x": -1848, "z": 146, "radius": 9 },
+      "shape": { "type": "circle", "x": -1817.5, "z": 5, "radius": 9 },
       "firstVisitText": "place.forge"
     },
     {
       "id": "alchemy_lab",
       "zone": "greyhaven",
       "kind": "place",
-      "shape": { "type": "circle", "x": -1794, "z": 104, "radius": 9 },
+      "shape": { "type": "circle", "x": -1839, "z": -64.5, "radius": 9 },
       "firstVisitText": "place.alchemy_lab"
     },
     {
       "id": "golden_kettle",
       "zone": "greyhaven",
       "kind": "place",
-      "shape": { "type": "circle", "x": -1836, "z": 97, "radius": 9 },
+      "shape": { "type": "circle", "x": -1784.5, "z": -51.5, "radius": 8 },
       "firstVisitText": "place.golden_kettle"
     },
     {
       "id": "garden",
       "zone": "greyhaven",
       "kind": "place",
-      "shape": { "type": "circle", "x": -1780, "z": 208, "radius": 14 },
+      "shape": { "type": "circle", "x": -1785, "z": 45.5, "radius": 10 },
       "firstVisitText": "place.garden"
     },
     {
       "id": "garden_plot",
       "zone": "greyhaven",
       "kind": "place",
-      "shape": { "type": "circle", "x": -1780, "z": 215, "radius": 2.5 }
+      "shape": { "type": "circle", "x": -1781, "z": 45, "radius": 2.5 }
     },
     {
       "id": "academy",
       "zone": "greyhaven",
       "kind": "place",
-      "shape": { "type": "circle", "x": -1725, "z": -15, "radius": 34 },
+      "shape": { "type": "circle", "x": -1658.6, "z": -92.3, "radius": 34 },
       "firstVisitText": "place.academy"
     },
     {
       "id": "training_field",
       "zone": "greyhaven",
       "kind": "place",
-      "shape": { "type": "rect", "minX": -1700, "minZ": 50, "maxX": -1670, "maxZ": 80 },
+      "shape": { "type": "rect", "minX": -1712, "minZ": -90.8, "maxX": -1692.3, "maxZ": -46.5 },
       "firstVisitText": "place.training_field"
     },
     {
       "id": "harbor",
       "zone": "greyhaven",
       "kind": "place",
-      "shape": { "type": "circle", "x": -1915, "z": 150, "radius": 32 },
+      "shape": { "type": "circle", "x": -1870.3, "z": 88.5, "radius": 32 },
       "firstVisitText": "place.harbor"
     },
     {
       "id": "aqueduct",
       "zone": "greyhaven",
       "kind": "place",
-      "shape": { "type": "circle", "x": -1532, "z": 180, "radius": 16 },
+      "shape": { "type": "circle", "x": -1533.4, "z": -36.7, "radius": 16 },
       "firstVisitText": "place.aqueduct"
     },
     {
       "id": "watchtower",
       "zone": "greyhaven",
       "kind": "place",
-      "shape": { "type": "circle", "x": -1880, "z": -355, "radius": 16 },
+      "shape": { "type": "circle", "x": -1894.9, "z": -127.5, "radius": 16 },
       "firstVisitText": "place.watchtower"
     },
     {
       "id": "sultan_gate",
       "zone": "greyhaven",
       "kind": "place",
-      "shape": { "type": "rect", "minX": -1546, "minZ": -11, "maxX": -1524, "maxZ": 11 }
+      "shape": { "type": "rect", "minX": -1551, "minZ": -46, "maxX": -1537, "maxZ": -34 }
     },
     {
       "id": "city_gate",
       "zone": "greyhaven",
       "kind": "gate",
-      "shape": { "type": "rect", "minX": -1530, "minZ": -12, "maxX": -1515, "maxZ": 12 },
+      "shape": { "type": "rect", "minX": -1525, "minZ": -242, "maxX": -1515, "maxZ": 225 },
       "condition": "canLeaveCity",
       "blockedText": "place.city_gate_blocked"
     },

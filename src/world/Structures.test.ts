@@ -75,10 +75,16 @@ describe('structures in zones.json', () => {
 
   it('keep NPCs, spawn points and checkpoints out of solid buildings', () => {
     const npcs = readPublicJson('data/npcs.json') as {
-      npcs: { id: string; position: { x: number; z: number } }[];
+      npcs: { id: string; zone: string; position: { x: number; z: number } }[];
     };
-    const points = npcs.npcs.map((npc) => ({ id: npc.id, ...npc.position }));
+    // A Blender-built zone (Greyhaven) is played in its own scene, without these placeholder
+    // buildings: its NPCs and spawn points stand in the Blender city.
+    const scene = new Set(zones.zones.filter((zone) => zone.scene).map((zone) => zone.id));
+    const points = npcs.npcs
+      .filter((npc) => !scene.has(npc.zone))
+      .map((npc) => ({ id: npc.id, ...npc.position }));
     for (const zone of zones.zones) {
+      if (scene.has(zone.id)) continue;
       for (const spawn of zone.spawnPoints) points.push({ id: spawn.id, x: spawn.x, z: spawn.z });
       if (zone.checkpoint) points.push(zone.checkpoint);
     }

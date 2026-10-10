@@ -170,7 +170,23 @@
       "caption4": "In de rook staat een lange kattenman: kattenoren, een staart, gouden ogen.",
       "caption5": "Sultan springt naar voren. Een flits!"
     },
-    "tapToContinue": "Tik of druk op spatie"
+    "tapToContinue": "Tik of druk op spatie",
+    "brink_tower": {
+      "caption1": "De toren van Master Brink. Planken vol boeken, overal kaarsen, en in het midden een cirkel op de vloer.",
+      "1": "Ah, bezoek in mijn toren. Kom binnen, kom binnen. Pas op voor de kaarsen.",
+      "caption2": "Brink steekt zijn hand op. Vier kristallen lichten één voor één op: water, vuur, natuur en wind.",
+      "2": "Normale magie haalt haar kracht uit de elementen: water, vuur, natuur en wind. Elke mage krijgt er één, via een kristal op zijn staf.",
+      "caption3": "De kristallen doven. Brink glimlacht.",
+      "3": "Het begint langzaam, dat geef ik toe. Maar magie beloont wie geduld heeft. Uiteindelijk is dit de sterkste weg."
+    },
+    "sam_cellar": {
+      "caption1": "Een donkere kelder onder de Academy. Paars licht gloeit op uit een cirkel op de vloer.",
+      "1": "Hm. Niet veel bezoekers vinden de weg naar beneden.",
+      "caption2": "Sam stapt in de cirkel. Zwart-paarse rook kringelt om zijn handen.",
+      "2": "Mijn magie komt van Lucael en Baelor zelf. Ik dien ze niet. Ik gebruik hun eigen kracht tegen ze.",
+      "caption3": "De rook is weg. Sam kijkt je aan.",
+      "3": "Duistere magie is sterk, en snel. Maar onthoud: het is een duistere weg."
+    }
   },
   "hud": {
     "checkpointSet": "Checkpoint ingesteld",
@@ -538,7 +554,12 @@
     "boss": "Baasgevecht",
     "bossSultan": "Vecht tegen Sultan",
     "grantGear": "+ alle gear",
-    "grantPackAnimal": "+ pakdier"
+    "grantPackAnimal": "+ pakdier",
+    "dayNight": "Dag en nacht",
+    "dayNightNow": "{phase} · nog {time}",
+    "dayNightClock": "Echte klok",
+    "dayNightSpeed": "Snelheid",
+    "dayNightMonsters": "Nachtmonsters: {count} · testgebied alleen in debugmodus"
   },
   "bag": {
     "title": "Tas",
@@ -630,5 +651,15 @@
     "emptyBag": "Niets om op te laden.",
     "emptyPack": "{name} draagt nog niets.",
     "note": "Wat {name} draagt telt niet voor jouw draaglast, maar je kunt het pas gebruiken als je het eruit haalt."
+  },
+  "daynight": {
+    "day": "Dag",
+    "dusk": "Schemer",
+    "night": "Nacht",
+    "dawn": "Ochtendschemer"
+  },
+  "world": {
+    "loading": "Laden…",
+    "loadFailed": "Deze plek kon niet geladen worden. Controleer je verbinding en probeer het opnieuw."
   }
 }

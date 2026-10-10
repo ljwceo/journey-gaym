@@ -7,6 +7,8 @@ import { EventBus } from './EventBus';
 export interface GameEvents {
   stateChanged: { from: string | null; to: string };
   zoneEntered: { zoneId: string };
+  /** Went through a door into an instance (Master Brink's tower); quests can listen. */
+  instanceEntered: { instanceId: string };
   triggerEntered: { triggerId: string };
   placeFirstVisited: { triggerId: string };
   npcTalked: { npcId: string };

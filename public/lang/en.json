@@ -170,7 +170,23 @@
       "caption4": "A tall cat man stands in the smoke: cat ears, a tail, golden eyes.",
       "caption5": "Sultan leaps forward. A flash!"
     },
-    "tapToContinue": "Tap or press Space"
+    "tapToContinue": "Tap or press Space",
+    "brink_tower": {
+      "caption1": "Master Brink's tower. Shelves full of books, candles everywhere, and in the middle a circle on the floor.",
+      "1": "Ah, a visitor in my tower. Come in, come in. Mind the candles.",
+      "caption2": "Brink raises his hand. Four crystals light up one by one: water, fire, nature and wind.",
+      "2": "Normal magic draws on the elements: water, fire, nature and wind. Every mage gets one of them, through a crystal on the staff.",
+      "caption3": "The crystals dim. Brink smiles.",
+      "3": "It starts slowly, I won't lie. But magic rewards those who are patient. In the end, this is the strongest path."
+    },
+    "sam_cellar": {
+      "caption1": "A dark cellar under the Academy. Purple light glows from a circle on the floor.",
+      "1": "Hm. Not many visitors find their way down here.",
+      "caption2": "Sam steps into the circle. Black and purple smoke curls around his hands.",
+      "2": "My magic comes from Lucael and Baelor themselves. I don't serve them. I use their own power against them.",
+      "caption3": "The smoke is gone. Sam looks at you.",
+      "3": "Dark magic is strong, and quickly. But remember: it is a dark road."
+    }
   },
   "hud": {
     "checkpointSet": "Checkpoint set",
@@ -538,7 +554,12 @@
     "boss": "Boss fight",
     "bossSultan": "Fight Sultan",
     "grantGear": "+ all gear",
-    "grantPackAnimal": "+ pack animal"
+    "grantPackAnimal": "+ pack animal",
+    "dayNight": "Day and night",
+    "dayNightNow": "{phase} · {time} left",
+    "dayNightClock": "Real clock",
+    "dayNightSpeed": "Speed",
+    "dayNightMonsters": "Night monsters: {count} · test area only in debug mode"
   },
   "bag": {
     "title": "Bag",
@@ -630,5 +651,15 @@
     "emptyBag": "Nothing to load.",
     "emptyPack": "{name} carries nothing yet.",
     "note": "What {name} carries does not count for your load, but you can't use it until you take it out."
+  },
+  "daynight": {
+    "day": "Day",
+    "dusk": "Dusk",
+    "night": "Night",
+    "dawn": "Dawn"
+  },
+  "world": {
+    "loading": "Loading…",
+    "loadFailed": "This place could not be loaded. Check your connection and try again."
   }
 }

@@ -15,7 +15,8 @@ Elke keer dat er iets in `main` komt, bouwt GitHub de game opnieuw en zet hem on
 |---|---|
 | Debug-overlay (fps, draw calls, …) | F3, tik met drie vingers op de iPhone, of zet `?debug=1` achter het adres |
 | Framerate beperken (test of 30/60/120 fps even snel loopt) | zet `?fps=30` achter het adres (combineren: `?debug=1&fps=30`) |
-| Cheatmenu (snelheid, vliegen, teleport, seizoen, save-code, fps meten) | F6 of de knop **Cheats** rechtsboven (alleen in debugmodus) |
+| Cheatmenu (snelheid, vliegen, teleport, seizoen, dag en nacht, save-code, fps meten) | F6 of de knop **Cheats** rechtsboven (alleen in debugmodus) |
+| Dag en nacht testen (fase en resterende tijd, springen naar dag/schemer/nacht, tijd 10× of 60× sneller) | Cheatmenu → **Dag en nacht** (in debugmodus ook het testspawngebied met slimes buiten de oostmuur van Greyhaven) |
 
 **Fps meten per grafische stand (voor de tabel in `docs/PROGRESS.md`)**
 1. Open de game (online of lokaal), zet de debugmodus aan (Settings → Debug, of F3 / drie vingers).
