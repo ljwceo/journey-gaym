@@ -180,6 +180,39 @@
       }
     },
     {
+      "id": "a_friend_for_the_road",
+      "name": "A Friend for the Road",
+      "kind": "main",
+      "giver": "marco",
+      "description": "quest.a_friend_for_the_road.desc",
+      "objectives": [
+        {
+          "type": "talk",
+          "npc": "marco"
+        }
+      ],
+      "requires": {
+        "quests": ["defeat_sultan"]
+      },
+      "dialogue": {
+        "offer": [
+          "quest.a_friend_for_the_road.offer.1",
+          "quest.a_friend_for_the_road.offer.2",
+          "quest.a_friend_for_the_road.offer.3"
+        ],
+        "progress": ["quest.a_friend_for_the_road.progress.1"],
+        "complete": [
+          "quest.a_friend_for_the_road.complete.1",
+          "quest.a_friend_for_the_road.complete.2"
+        ]
+      },
+      "rewards": {
+        "xp": 20,
+        "gold": 0,
+        "items": []
+      }
+    },
+    {
       "id": "your_resolve",
       "name": "Your Resolve",
       "kind": "main",

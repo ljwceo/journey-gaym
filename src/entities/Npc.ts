@@ -33,6 +33,11 @@ export class Npc {
   shown = false;
   /** In the world at all (`presentWhen` / `absentWhen`, or hidden during a boss fight). */
   present = true;
+  /**
+   * A companion told to wait (Biscuit at a dungeon entrance): it stands where it was put and
+   * shows / hides like any NPC until it is called back (Npcs.stopWaiting).
+   */
+  waiting = false;
   /** Seconds left of the little hop after petting (drawing only). */
   hop = 0;
   /** Marker above the head: a quest to offer, a quest to hand in, or none. */

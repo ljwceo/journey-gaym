@@ -119,5 +119,6 @@ export function createCharacter(
     gold: start.gold,
     inventory: start.items.map((entry) => ({ ...entry })),
     equipment: { ...start.equipment },
+    pack: [],
   };
 }

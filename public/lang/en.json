@@ -187,7 +187,11 @@
     "noPotion": "You have no potions.",
     "alreadyFull": "Your HP is already full.",
     "loadChanged": "Load: {tier}",
-    "gearInCombat": "You can't change gear during a fight."
+    "gearInCombat": "You can't change gear during a fight.",
+    "pack": "Open {name}'s pack",
+    "packInCombat": "Not now, you are in a fight.",
+    "packTooHeavy": "{name} can't carry that much.",
+    "packWorn": "Take it off first."
   },
   "dialog": {
     "next": "Continue",
@@ -454,6 +458,21 @@
         "boss": "Defeat {monster}",
         "buy": "Buy {item} {have}/{need}"
       }
+    },
+    "a_friend_for_the_road": {
+      "desc": "Marco has something for you after your fight with Sultan.",
+      "offer": {
+        "1": "You beat Sultan! The whole market is talking about it. A cat in disguise, who'd have thought.",
+        "2": "Listen, someone who fights like that will soon carry more than two arms can hold. This is Biscuit, my donkey. He's yours.",
+        "3": "He's stubborn, he's slow to complain and he carries a heavy load without a word. Whatever is on his back doesn't weigh on you."
+      },
+      "progress": {
+        "1": "Biscuit is waiting for you."
+      },
+      "complete": {
+        "1": "Go on, say hello. Talk to him and you can load your spare gear onto him or take it off again.",
+        "2": "Only remember: what Biscuit carries, you can't use. Take it out of his pack first. And not in the middle of a fight!"
+      }
     }
   },
   "season": {
@@ -518,7 +537,8 @@
     "grantSlimeGel": "+3 Slime Gel",
     "boss": "Boss fight",
     "bossSultan": "Fight Sultan",
-    "grantGear": "+ all gear"
+    "grantGear": "+ all gear",
+    "grantPackAnimal": "+ pack animal"
   },
   "bag": {
     "title": "Bag",
@@ -598,5 +618,17 @@
       }
     },
     "defeated": "{name} is defeated!"
+  },
+  "pack": {
+    "title": "{name}'s pack",
+    "yours": "Your bag",
+    "theirs": "On {name}",
+    "load": "{name} carries {kg} / {max} kg",
+    "toPack": "Load",
+    "fromPack": "Take",
+    "all": "All",
+    "emptyBag": "Nothing to load.",
+    "emptyPack": "{name} carries nothing yet.",
+    "note": "What {name} carries does not count for your load, but you can't use it until you take it out."
   }
 }

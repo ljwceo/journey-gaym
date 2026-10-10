@@ -23,7 +23,7 @@ export interface NpcWorld {
  *   (the same on every graphics preset; companions are always there),
  * - static NPCs turn towards a player who comes close (or talks to them), then back,
  * - wanderers roam only near the player, where collision is loaded,
- * - companions roam around the player (Pringle),
+ * - companions roam around the player (Pringle, Biscuit), unless told to wait (`waitAt`),
  * - solid NPCs push the player out (you cannot walk through Brother Ansel),
  * - the nearest NPC you can talk to (within `interactRange`) or pet (within `petRange`).
  * NPCs bound to a season (`season`) only exist in that season; `presentWhen` / `absentWhen`
@@ -93,7 +93,8 @@ export class Npcs {
     for (let i = 0; i < this.list.length; i++) {
       const npc = this.list[i] as Npc;
       const s = npc.state;
-      const companion = npc.companion;
+      // A waiting companion stays put, like any other NPC.
+      const companion = npc.waiting ? null : npc.companion;
       if (!npc.present) continue;
 
       if (companion) {
@@ -135,7 +136,7 @@ export class Npcs {
           npc.wander.step(s, dt, world.mover);
           s.y = world.heightAt(s.x, s.z);
         }
-      } else {
+      } else if (!npc.waiting) {
         s.heading = turnTowards(s.heading, npc.homeHeading, maxTurn);
       }
     }
@@ -188,14 +189,38 @@ export class Npcs {
     return best;
   }
 
-  /** Companions jump to the player (after a teleport). */
+  /** Companions jump to the player (after a teleport); waiting ones stay where they are. */
   snapCompanions(px: number, pz: number, heading: number, world: NpcWorld): void {
     for (const npc of this.list) {
-      if (!npc.companion || !npc.present) continue;
+      if (!npc.companion || !npc.present || npc.waiting) continue;
       npc.companion.placeBehind(npc.state, px, pz, heading);
       npc.shown = true;
       this.settle(npc, world);
     }
+  }
+
+  /**
+   * Hook for dungeons (phase 3 plan): a companion waits at (x, z), e.g. Biscuit at the entrance
+   * while you go in. Returns false when there is no such companion.
+   */
+  waitAt(id: string, x: number, z: number, heading: number, world: NpcWorld): boolean {
+    const npc = this.byId(id);
+    if (!npc?.companion) return false;
+    npc.waiting = true;
+    npc.place(x, world.heightAt(x, z), z, heading);
+    world.resolve(npc.state, Math.max(0.25, npc.solidRadius));
+    return true;
+  }
+
+  /** The companion follows you again; it appears beside you. */
+  stopWaiting(id: string, px: number, pz: number, heading: number, world: NpcWorld): void {
+    const npc = this.byId(id);
+    if (!npc?.companion || !npc.waiting) return;
+    npc.waiting = false;
+    if (!npc.present) return;
+    npc.companion.placeBehind(npc.state, px, pz, heading);
+    npc.shown = true;
+    this.settle(npc, world);
   }
 
   byId(id: string): Npc | undefined {

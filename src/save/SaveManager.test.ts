@@ -37,6 +37,7 @@ function sampleSave() {
     gold: 0,
     inventory: [{ item: 'old_sword', count: 1 }],
     equipment: { weapon: 'old_sword' },
+    pack: [],
   };
   save.world = {
     zone: 'greyhaven',
@@ -229,6 +230,29 @@ describe('migrate', () => {
     expect(result.save.seenCutscenes).toEqual([]);
     expect(result.save.seenHints).toEqual([]);
     expect(result.save.quests.completed).toEqual(['a_quiet_awakening']);
+  });
+
+  it('upgrades a version 5 save: an empty pack; the bag stays', () => {
+    const current = sampleSave();
+    const character: Record<string, unknown> = { ...current.character };
+    delete character.pack;
+    const v5: Record<string, unknown> = { ...current, version: 5, character };
+    const storage = new MemoryStorage();
+    storage.setItem(SAVE_KEY, JSON.stringify(v5));
+    const result = new SaveManager(storage).load();
+    expect(result.status).toBe('ok');
+    if (result.status !== 'ok') return;
+    expect(result.save.version).toBe(SAVE_VERSION);
+    expect(result.save.character?.pack).toEqual([]);
+    expect(result.save.character?.inventory).toEqual([{ item: 'old_sword', count: 1 }]);
+  });
+
+  it('upgrades a version 5 save without a character', () => {
+    const v5: Record<string, unknown> = { ...createNewSave('en'), version: 5 };
+    const storage = new MemoryStorage();
+    storage.setItem(SAVE_KEY, JSON.stringify(v5));
+    const result = new SaveManager(storage).load();
+    expect(result.status === 'ok' && result.save.character).toBe(null);
   });
 
   it('keeps quests and unlocks through writing and loading', () => {

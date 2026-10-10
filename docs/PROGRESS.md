@@ -7,9 +7,9 @@
 | | |
 |---|---|
 | **Huidige fase** | Fase 3 – Je pad, Entrance Exam en gear (plan goedgekeurd 2026-10-10) |
-| **Status** | Stap 3.1 (gear en draaglast) in een pull request. Fase 2 wacht nog op spelen en Meet 20 s op de pc |
-| **Volgende stap** | 3.2 (ezel Biscuit) |
-| **Laatste sessie** | 2026-10-10: plan fase 3, stap 3.0 en 3.1 |
+| **Status** | Stap 3.2 (ezel Biscuit) in een pull request. Fase 2 wacht nog op spelen en Meet 20 s op de pc |
+| **Volgende stap** | 3.3 (instances: Academy-hal en kelder van Sam) |
+| **Laatste sessie** | 2026-10-10: plan fase 3, stap 3.0, 3.1 en 3.2 |
 
 ---
 
@@ -405,7 +405,7 @@ Doel: na Sultan kies je in de Academy je pad (Sir Garrick, Master Brink of Wizar
 | ✅ | Tests (gevechtsformules, XP, quests, save-migratie) en de DataValidator slagen | 330 tests |
 
 ### Fase 3 – Je pad, Entrance Exam en gear
-**Status:** plan goedgekeurd; stap 3.0 en 3.1 gebouwd.
+**Status:** plan goedgekeurd; stap 3.0, 3.1 en 3.2 gebouwd.
 **Gebouwd:**
 - 3.0 Debugvenster in groottes:
   - **F3** (of tikken met drie vingers) zet debugmodus aan en wisselt daarna de grootte: **Groot** (alles, zoals eerst) → **Normaal** (alles, kleiner en doorzichtiger) → **Klein** (fps, draw calls, grafische stand, positie en zone) → **Alleen fps** (één regel) → **Verborgen** → Groot. Ook te kiezen bovenin het cheatmenu (**Debugvenster**). De keuze wordt per browser onthouden (niet in de save).
@@ -422,6 +422,15 @@ Doel: na Sultan kies je in de Academy je pad (Sir Garrick, Master Brink of Wizar
   - **Cheatmenu:** "Geven → + alle gear" (één van elk: meteen overbelast, handig om de standen te testen). Debugregel `load` (kg, stand, loopsnelheid, dash, schadefactoren).
   - Geen nieuwe saveversie nodig: wat je draagt stond al in de save (`character.equipment`).
   - Getest: 349 tests (o.a. gewicht tellen, grenzen van de standen, ringen twee keer, wapen nooit uit, stats optellen, licht = oude beweging, fat roll, overbelast = geen dash en geen energie kwijt, 60 en 120 Hz gelijk, validator). Headless Chromium (pc 1100×760, NL): start 5/30 kg licht → alle gear 55,2/30 kg overbelast met melding → Iron Helm, Heartwood Ring en Chief's Greatblade aandoen (HP 165, schade ×1,20, schade ontvangen ×0,94) → dash doet niets met "Te zwaar om te dashen.". Geen fouten.
+
+- 3.2 Ezel Biscuit:
+  - **Biscuit krijgen:** na Sultan heeft Marco een nieuwe quest (gouden ruit): *A Friend for the Road* (naam voorlopig). Hij geeft je zijn ezel Biscuit (+20 XP). Daarna loopt Biscuit met je mee, net als Pringle eerst: rustig, wat verder weg (3,2–6 m), nooit voor je of tussen jou en de camera, grazend als je stilstaat. Na een teleport staat hij weer naast je.
+  - **Biscuits tas:** loop naar Biscuit en druk E ("Open de tas van Biscuit"). Bovenaan staan je eigen draaglast en wat Biscuit draagt ("Biscuit draagt 22 / 60 kg"). Met **Opladen** gaat iets van jouw tas naar Biscuit, met **Pakken** terug; bij een stapel ook **Alles**. Wat je draagt (je wapen, je mantel) blijft bij jou ("Gedragen"). Biscuit draagt max 60 kg aan wapens en gear; grondstoffen en drankjes passen altijd. Alleen buiten een gevecht ("Nu niet, je bent in een gevecht.").
+  - **Niet bruikbaar op Biscuit:** wat op Biscuit ligt telt niet voor je draaglast, maar je kunt het ook niet drinken, aandoen of inleveren voor een quest tot je het eruit haalt.
+  - **Haak "wacht bij de ingang"** voor dungeons (`Npcs.waitAt` / `stopWaiting`), nog niet in gebruik.
+  - **Save versie 6:** Biscuits tas (`character.pack`); oude saves krijgen een lege tas.
+  - **Cheatmenu:** "Geven → + pakdier" (Biscuit meteen, zonder Sultan).
+  - Getest: 358 tests (o.a. opladen/pakken, gedragen gear blijft, maximum gewicht, Biscuit pas na de quest, meelopen 30 s, wachten en terugroepen, save v5 → v6). Headless Chromium (pc 1100×760, NL en EN) met een oude v5-save: praten met Marco → quest klaar en Biscuit verschijnt → E bij Biscuit → Chief's Greatblade en een Goblin Cleaver opladen (41/33 kg overbelast → 19/33 kg middel, Biscuit 22/60 kg) → 6 s lopen, Biscuit loopt mee → herladen + Continue: Biscuits tas is bewaard. Geen fouten.
 
 ## Besluiten
 
@@ -563,6 +572,10 @@ Doel: na Sultan kies je in de Academy je pad (Sir Garrick, Master Brink of Wizar
 | 2026-10-10 | Je wapen kun je niet uitdoen, alleen wisselen | Zonder wapen kun je niet vechten (en een staf komt pas in 3.5) |
 | 2026-10-10 | Gear aandoen geeft extra max HP, maar vult je HP niet bij | Anders kun je HP "bijvullen" door gear uit en aan te doen |
 | 2026-10-10 | Zeldzaamheidskleuren in de tas gemengd met de tekstkleur | Puur magieblauw en spreukviolet waren te donker op het paneel |
+| 2026-10-10 | Biscuit krijg je via een korte quest van Marco (*A Friend for the Road*, +20 XP) die meteen na Sultan beschikbaar is | Plan: "krijg je van Marco direct na Sultan"; zo zie je de gouden ruit boven Marco en weet je waar je heen moet |
+| 2026-10-10 | Biscuit draagt 60 kg aan wapens en gear; grondstoffen en drankjes wegen niets en passen altijd | Zelfde regel als jouw draaglast; 60 kg komt uit het plan (`pack.maxKg` in `npcs.json`) |
+| 2026-10-10 | Wat je aan hebt kan niet op Biscuit (eerst uitdoen); je wapen dus nooit | Anders sta je zonder wapen of stats die je niet ziet |
+| 2026-10-10 | Biscuit is niet solide (je loopt door hem heen) en praat niet; E opent meteen zijn tas | Een ezel die je de weg verspert is irritant in smalle straatjes. Zeg het als hij wel solide moet zijn of iets moet zeggen |
 
 ## Sessielog
 
@@ -596,3 +609,4 @@ Doel: na Sultan kies je in de Academy je pad (Sir Garrick, Master Brink of Wizar
 - Stap 2.7 gebouwd: balanstest met een nagebootste speler tegen Sultan (en Sultan iets vriendelijker gemaakt), fout opgelost waarbij Sultan niet aanviel als je tegen hem aan bleef staan, rekentijd van alle vijanden gemeten (0,03 ms per stap met alle 45 vijanden om je heen), draw calls per stand bij het goblinkamp en tegen Sultan, geheugen na 3× wereld in/uit gelijk, Definition of Done van fase 2 nagelopen. 330 tests. Open: spelen en Meet 20 s op de pc door Bo en Lucas.
 - Plan fase 3 geschreven en goedgekeurd met aanpassingen (glintstone-achtig schot met reisafstand, lock-on met missen en instelbare richthulp, draaglast zoals Elden Ring, instances via deuren met uitleg-cutscene, debugvenster in groottes). Stap 3.0 gebouwd: debugvenster in groottes, cheats ook met verborgen venster. 336 tests. Tijdelijke namen: geen nieuwe. Volgende stap: 3.1 (gear en draaglast).
 - Stap 3.1 gebouwd: gear in 6 slots met zeldzaamheid en stats, draaglast zoals Elden Ring (licht/middel/zwaar/overbelast), aan- en uitdoen in de tas, gear als buit en bij Marco, hoed en amulet op het poppetje, cheat "+ alle gear". 349 tests. Tijdelijke namen (nieuw, alleen in data): de 13 gear-namen. Volgende stap: 3.2 (Biscuit).
+- Stap 3.2 gebouwd: ezel Biscuit via Marco's quest na Sultan, loopt mee, pakdier-tas met 60 kg (opladen/pakken, gedragen gear blijft bij jou, alleen buiten gevecht), haak "wacht bij de ingang", save versie 6, cheat "+ pakdier". 358 tests. Tijdelijke namen gebruikt (alleen in data): Biscuit, Marco the Merchant; nieuw: de quest *A Friend for the Road*. Volgende stap: 3.3 (instances).

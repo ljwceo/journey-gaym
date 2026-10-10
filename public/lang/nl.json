@@ -187,7 +187,11 @@
     "noPotion": "Je hebt geen drankjes.",
     "alreadyFull": "Je HP is al vol.",
     "loadChanged": "Draaglast: {tier}",
-    "gearInCombat": "Je kunt geen spullen wisselen tijdens een gevecht."
+    "gearInCombat": "Je kunt geen spullen wisselen tijdens een gevecht.",
+    "pack": "Open de tas van {name}",
+    "packInCombat": "Nu niet, je bent in een gevecht.",
+    "packTooHeavy": "{name} kan niet zoveel dragen.",
+    "packWorn": "Doe het eerst uit."
   },
   "dialog": {
     "next": "Verder",
@@ -454,6 +458,21 @@
         "boss": "Versla {monster}",
         "buy": "Koop {item} {have}/{need}"
       }
+    },
+    "a_friend_for_the_road": {
+      "desc": "Marco heeft iets voor je na je gevecht met Sultan.",
+      "offer": {
+        "1": "Je hebt Sultan verslagen! De hele markt heeft het erover. Een kat in vermomming, wie had dat gedacht.",
+        "2": "Luister, iemand die zo vecht draagt straks meer dan twee armen kunnen houden. Dit is Biscuit, mijn ezel. Hij is van jou.",
+        "3": "Hij is koppig, klaagt zelden en draagt een flinke vracht zonder te morren. Wat op zijn rug ligt, weegt niet voor jou."
+      },
+      "progress": {
+        "1": "Biscuit wacht op je."
+      },
+      "complete": {
+        "1": "Ga hem maar gedag zeggen. Praat met hem, dan kun je je reservespullen op hem laden of er weer af halen.",
+        "2": "Onthoud wel: wat Biscuit draagt, kun jij niet gebruiken. Haal het eerst uit zijn tas. En niet midden in een gevecht!"
+      }
     }
   },
   "season": {
@@ -518,7 +537,8 @@
     "grantSlimeGel": "+3 Slime Gel",
     "boss": "Baasgevecht",
     "bossSultan": "Vecht tegen Sultan",
-    "grantGear": "+ alle gear"
+    "grantGear": "+ alle gear",
+    "grantPackAnimal": "+ pakdier"
   },
   "bag": {
     "title": "Tas",
@@ -598,5 +618,17 @@
       }
     },
     "defeated": "{name} is verslagen!"
+  },
+  "pack": {
+    "title": "Tas van {name}",
+    "yours": "Jouw tas",
+    "theirs": "Op {name}",
+    "load": "{name} draagt {kg} / {max} kg",
+    "toPack": "Opladen",
+    "fromPack": "Pakken",
+    "all": "Alles",
+    "emptyBag": "Niets om op te laden.",
+    "emptyPack": "{name} draagt nog niets.",
+    "note": "Wat {name} draagt telt niet voor jouw draaglast, maar je kunt het pas gebruiken als je het eruit haalt."
   }
 }

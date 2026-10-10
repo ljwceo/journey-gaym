@@ -234,7 +234,8 @@ const npcSchema = z.strictObject({
   role: id,
   zone: id,
   position: pointSchema,
-  interaction: z.enum(['talk', 'pet', 'none']),
+  /** talk (dialogue), pet (Pringle), pack (opens the pack animal's bag: Biscuit), none. */
+  interaction: z.enum(['talk', 'pet', 'pack', 'none']),
   behavior: z.enum(['static', 'follow', 'wander']),
   dialogue: z.array(textKey),
   /**
@@ -268,6 +269,8 @@ const npcSchema = z.strictObject({
   dialogueWhen: optional(
     z.array(z.strictObject({ condition: name, lines: atLeast(z.array(textKey)) })),
   ),
+  /** A pack animal (Biscuit): carries up to `maxKg` of your gear (interaction "pack"). */
+  pack: optional(z.strictObject({ maxKg: range(1, 10_000) })),
   /** A simple shop that opens after talking (Marco): items and their price in gold. */
   shop: optional(
     z.strictObject({

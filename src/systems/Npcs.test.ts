@@ -355,6 +355,61 @@ describe('Npcs presence (Pringle becomes Sultan)', () => {
   });
 });
 
+describe('Biscuit (pack animal)', () => {
+  const conditions = triggersFileSchema.parse(readPublicJson('data/triggers.json')).conditions;
+  const owned = {
+    level: 3,
+    completedQuests: new Set(['defeat_sultan', 'a_friend_for_the_road']),
+  };
+  const ids = (list: Npcs): string[] => list.list.filter((n) => n.shown).map((n) => n.id);
+
+  it('only comes along after Marco gave him to you, and then follows', () => {
+    const list = new Npcs(npcsFile(), 'summer', () => 0xffffff);
+    list.refreshPresence(conditions, { level: 3, completedQuests: new Set(['defeat_sultan']) });
+    list.update(DT, at(0, 0, 0), flatWorld, null);
+    expect(ids(list)).not.toContain('biscuit');
+    list.refreshPresence(conditions, owned);
+    list.update(DT, at(0, 0, 0), flatWorld, null);
+    expect(ids(list)).toContain('biscuit');
+    // Walk 30 s north: Biscuit keeps up.
+    let z = 0;
+    for (let i = 0; i < 30 * 60; i++) {
+      z += 4 * DT;
+      list.update(DT, at(0, z, 0, true), flatWorld, null);
+    }
+    const biscuit = list.byId('biscuit');
+    if (!biscuit) throw new Error('missing Biscuit');
+    expect(Math.hypot(biscuit.state.x, biscuit.state.z - z)).toBeLessThan(8);
+  });
+
+  it('waits at an entrance and comes back when called', () => {
+    const list = new Npcs(npcsFile(), 'summer', () => 0xffffff);
+    list.refreshPresence(conditions, owned);
+    list.update(DT, at(0, 0, 0), flatWorld, null);
+    expect(list.waitAt('biscuit', 10, 10, 0, flatWorld)).toBe(true);
+    expect(list.waitAt('marco', 10, 10, 0, flatWorld)).toBe(false);
+    let z = 0;
+    for (let i = 0; i < 10 * 60; i++) {
+      z += 4 * DT;
+      list.update(DT, at(0, z, 0, true), flatWorld, null);
+    }
+    list.snapCompanions(0, z, 0, flatWorld);
+    const biscuit = list.byId('biscuit');
+    if (!biscuit) throw new Error('missing Biscuit');
+    expect(biscuit.state.x).toBe(10);
+    expect(biscuit.state.z).toBe(10);
+    list.stopWaiting('biscuit', 0, z, 0, flatWorld);
+    expect(Math.hypot(biscuit.state.x, biscuit.state.z - z)).toBeLessThan(8);
+    expect(biscuit.waiting).toBe(false);
+  });
+
+  it('is not the nearest thing to talk to while it just follows you', () => {
+    const file = npcsFile();
+    const biscuit = file.npcs.find((npc) => npc.id === 'biscuit');
+    expect(biscuit?.follow?.minDistance).toBeGreaterThan(file.settings.interactRange);
+  });
+});
+
 describe('NPC data', () => {
   it('uses only placeholder models the factory can build', () => {
     for (const role of npcsFile().roles) expect(hasNpcModel(role.model), role.model).toBe(true);
