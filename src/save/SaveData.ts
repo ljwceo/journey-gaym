@@ -3,7 +3,7 @@ import { qualityLevelSchema } from '../data/schemas';
 import { LANGUAGES, type Language } from '../i18n/I18n';
 
 /** Current save format. Bump it and add `migrations[old]` whenever the shape changes. */
-export const SAVE_VERSION = 3;
+export const SAVE_VERSION = 4;
 
 /** Camera sensitivity for new saves (1 = 100%); the allowed range is in player.json. */
 export const DEFAULT_CAMERA_SENSITIVITY = 0.7;
@@ -62,6 +62,13 @@ export const saveDataSchema = z.object({
   }),
   visitedPlaces: z.array(id),
   metNpcs: z.array(id),
+  /** Quests: the ones running (with a counter per objective) and the ones handed in. */
+  quests: z.object({
+    active: z.array(z.object({ id, counts: z.array(z.int().check(z.nonnegative())) })),
+    completed: z.array(id),
+  }),
+  /** Things that became yours through quests (e.g. "garden_plot"). */
+  unlocks: z.array(id),
   playTimeSeconds: z.number().check(z.nonnegative()),
 });
 
@@ -69,6 +76,7 @@ export type SaveData = z.infer<typeof saveDataSchema>;
 export type SaveSettings = SaveData['settings'];
 export type SaveCharacter = NonNullable<SaveData['character']>;
 export type SaveProgress = SaveData['progress'];
+export type SaveQuests = SaveData['quests'];
 
 /** Level 1, no XP, full HP and mana. */
 export function freshProgress(): SaveProgress {
@@ -97,6 +105,8 @@ export function createNewSave(language: Language, now: Date = new Date()): SaveD
     world: { zone: null, position: null, heading: 0, checkpoint: null },
     visitedPlaces: [],
     metNpcs: [],
+    quests: { active: [], completed: [] },
+    unlocks: [],
     playTimeSeconds: 0,
   };
 }
@@ -120,6 +130,8 @@ export const migrations: Readonly<Record<number, Migration>> = {
   },
   // v3 (step 2.4): level, XP and HP / mana left; everyone starts at level 1 with full health.
   2: (save) => ({ ...save, version: 3, progress: freshProgress() }),
+  // v4 (step 2.5): quests and unlocks; nobody had started a quest yet.
+  3: (save) => ({ ...save, version: 4, quests: { active: [], completed: [] }, unlocks: [] }),
 };
 
 export type MigrateResult =

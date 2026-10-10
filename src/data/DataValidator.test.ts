@@ -81,7 +81,9 @@ describe('validateGameData catches broken data', () => {
   it('reports references to things that do not exist', () => {
     const raw = freshData();
     raw.npcs.npcs[0].role = 'dragon_tamer';
-    raw.quests.quests[2].rewards.items[0].item = 'golden_spoon';
+    raw.quests.quests.find(
+      (q: { rewards: { items: unknown[] } }) => q.rewards.items.length > 0,
+    ).rewards.items[0].item = 'golden_spoon';
     raw.monsters.monsters.find((m: { drops: unknown[] }) => m.drops.length > 0).drops[0].item =
       'nothing';
     raw.zones.zones[1].scatter[0].prop = 'palm_tree';
@@ -92,6 +94,24 @@ describe('validateGameData catches broken data', () => {
     expect(found).toContainEqual(expect.stringContaining('unknown role "dragon_tamer"'));
     expect(found).toContainEqual(expect.stringContaining('unknown item "golden_spoon"'));
     expect(found).toContainEqual(expect.stringContaining('unknown item "nothing"'));
+  });
+
+  it('checks quests: places, checkpoints, shops, dialogue and upgrades', () => {
+    const raw = freshData();
+    const quest = (id: string) => raw.quests.quests.find((q: { id: string }) => q.id === id);
+    quest('a_patch_of_earth').objectives[0].trigger = 'moon';
+    quest('a_quiet_awakening').objectives[0].checkpoint = 'bed_of_nails';
+    quest('just_for_you').objectives[0].item = 'slime_gel';
+    delete quest('tales_by_the_fire').dialogue;
+    quest('steel_and_slime').rewards.upgrades[0].to = 'excalibur';
+    raw.npcs.npcs.find((n: { id: string }) => n.id === 'marco').shop.items[0].item = 'gold';
+    const found = messages(raw);
+    expect(found).toContainEqual(expect.stringContaining('unknown trigger "moon"'));
+    expect(found).toContainEqual(expect.stringContaining('unknown checkpoint "bed_of_nails"'));
+    expect(found).toContainEqual(expect.stringContaining('no shop sells "slime_gel"'));
+    expect(found).toContainEqual(expect.stringContaining('needs dialogue'));
+    expect(found).toContainEqual(expect.stringContaining('unknown item "excalibur"'));
+    expect(found).toContainEqual(expect.stringContaining('gold is not sold'));
   });
 
   it('checks potions: what they restore, and the drink key order', () => {

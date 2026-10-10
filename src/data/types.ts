@@ -29,3 +29,5 @@ export type CombosFile = GameData['combos'];
 export type CutscenesFile = GameData['cutscenes'];
 export type Shape = z.infer<typeof shapeSchema>;
 export type { Condition } from './schemas';
+export type QuestObjective = QuestDef['objectives'][number];
+export type ShopDef = NonNullable<NpcDef['shop']>;

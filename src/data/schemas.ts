@@ -264,6 +264,12 @@ const npcSchema = z.strictObject({
   dialogueWhen: optional(
     z.array(z.strictObject({ condition: name, lines: atLeast(z.array(textKey)) })),
   ),
+  /** A simple shop that opens after talking (Marco): items and their price in gold. */
+  shop: optional(
+    z.strictObject({
+      items: atLeast(z.array(z.strictObject({ item: id, price: intRange(1, 1_000_000) }))),
+    }),
+  ),
 });
 
 export const npcsFileSchema = z.strictObject({
@@ -717,9 +723,12 @@ export const triggersFileSchema = z.strictObject({
 // ---------------------------------------------------------------- quests.json
 
 const objectiveSchema = z.discriminatedUnion('type', [
+  /** Talk to an NPC (the giver itself counts as soon as the quest is accepted). */
   z.strictObject({ type: z.literal('talk'), npc: id }),
+  /** Have items in the bag when handing in (they stay in the bag). */
   z.strictObject({ type: z.literal('find'), item: id, count: posInt }),
   z.strictObject({ type: z.literal('kill'), monster: id, count: posInt }),
+  /** Bring items to `npc`; they leave the bag when the quest is handed in. */
   z.strictObject({
     type: z.literal('deliver'),
     item: id,
@@ -727,6 +736,12 @@ const objectiveSchema = z.discriminatedUnion('type', [
     npc: id,
   }),
   z.strictObject({ type: z.literal('boss'), monster: id }),
+  /** Buy items in a shop (optionally only from this NPC) after accepting the quest. */
+  z.strictObject({ type: z.literal('buy'), item: id, count: posInt, npc: optional(id) }),
+  /** Rest in the bed at a checkpoint (optionally a certain one); `text` says where. */
+  z.strictObject({ type: z.literal('rest'), checkpoint: optional(id), text: textKey }),
+  /** Walk into a trigger area (triggers.json); `text` says where to go. */
+  z.strictObject({ type: z.literal('visit'), trigger: id, text: textKey }),
 ]);
 
 export const questsFileSchema = z.strictObject({
@@ -743,10 +758,25 @@ export const questsFileSchema = z.strictObject({
         quests: optional(z.array(id)),
         items: optional(z.array(itemStack)),
       }),
+      /**
+       * What the giver says: when offering the quest (it starts right away), while it is not
+       * done yet (with a list of what is still missing), and when you hand it in.
+       */
+      dialogue: optional(
+        z.strictObject({
+          offer: atLeast(z.array(textKey)),
+          progress: atLeast(z.array(textKey)),
+          complete: atLeast(z.array(textKey)),
+        }),
+      ),
       rewards: z.strictObject({
         xp: nonNegInt,
         gold: nonNegInt,
         items: z.array(itemStack),
+        /** Items that are replaced by a better one (Hilda upgrades your old sword). */
+        upgrades: optional(z.array(z.strictObject({ from: id, to: id }))),
+        /** Things that are now yours, kept in the save (e.g. your plot in the Garden). */
+        unlocks: optional(z.array(id)),
       }),
     }),
   ),

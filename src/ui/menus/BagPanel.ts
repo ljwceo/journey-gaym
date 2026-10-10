@@ -1,6 +1,7 @@
 import type { GameContext } from '../../core/GameContext';
 import type { ItemDef } from '../../data/types';
 import { button, el } from '../dom';
+import type { QuestSummary } from '../questText';
 import type { Panel } from '../Overlays';
 import { bindT } from './ConfirmPanel';
 
@@ -17,14 +18,15 @@ const TYPE_ORDER: readonly ItemDef['type'][] = [
 ];
 
 /**
- * The simple bag (I / B or the bag button): gold, level and XP, and every item with its count
- * and description. Potions have a Drink button. Item names stay English in both languages
+ * The simple bag (I / B or the bag button): gold, level and XP, every item with its count
+ * and description, and the running quests with what is still missing. Potions have a Drink button. Item names stay English in both languages
  * (CLAUDE.md §2.6). The game is paused while the bag is open.
  */
 export function bagPanel(
   ctx: GameContext,
   drink: (itemId: string) => void,
   xpLine: () => string,
+  quests: () => readonly QuestSummary[],
   onClose: () => void,
 ): Panel {
   return {
@@ -89,9 +91,32 @@ export function bagPanel(
         rows.length > 0
           ? el('ul', { className: 'ui-bag-list' }, ...rows)
           : el('p', { className: 'ui-note', text: t('bag.empty') }),
+        questList(quests(), t),
         button(t('common.close'), () => ctx.overlays.close(), true),
       );
     },
     onClose,
   };
+}
+
+/** The running quests: name (English) and each objective with ✓ / ✗. */
+function questList(quests: readonly QuestSummary[], t: (key: string) => string): HTMLElement {
+  const heading = el('h3', { className: 'ui-bag-subheading', text: t('bag.quests') });
+  if (quests.length === 0) {
+    return el('div', {}, heading, el('p', { className: 'ui-note', text: t('bag.noQuests') }));
+  }
+  const items = quests.map((quest) =>
+    el(
+      'li',
+      { className: 'ui-bag-row ui-bag-quest' },
+      el('span', { className: 'ui-bag-name', text: quest.name }),
+      ...quest.rows.map((row) =>
+        el('span', {
+          className: row.done ? 'ui-bag-objective ui-bag-objective-done' : 'ui-bag-objective',
+          text: `${row.done ? '✓' : '✗'} ${row.text}`,
+        }),
+      ),
+    ),
+  );
+  return el('div', {}, heading, el('ul', { className: 'ui-bag-list' }, ...items));
 }

@@ -345,6 +345,13 @@ class CrossChecker {
         entry.lines.forEach((key, l) => this.text(f, `${p}.dialogueWhen[${w}].lines[${l}]`, key));
       });
 
+      npc.shop?.items.forEach((entry, e) => {
+        this.ref('item', f, `${p}.shop.items[${e}].item`, entry.item);
+        if (entry.item === 'gold') this.issue(f, `${p}.shop.items[${e}].item`, 'gold is not sold');
+      });
+      if (npc.shop && npc.interaction !== 'talk') {
+        this.issue(f, `${p}.shop`, 'a shop needs an NPC you can talk to');
+      }
       if (npc.interaction === 'talk' && npc.dialogue.length === 0) {
         this.issue(f, `${p}.dialogue`, 'an NPC you can talk to needs at least one line');
       }
@@ -662,6 +669,38 @@ class CrossChecker {
         if ('npc' in objective) this.ref('npc', f, `${op}.npc`, objective.npc);
         if ('item' in objective) this.ref('item', f, `${op}.item`, objective.item);
         if ('monster' in objective) this.ref('monster', f, `${op}.monster`, objective.monster);
+        if ('text' in objective) this.text(f, `${op}.text`, objective.text);
+        if (objective.type === 'visit') this.ref('trigger', f, `${op}.trigger`, objective.trigger);
+        if (objective.type === 'rest')
+          this.ref('checkpoint', f, `${op}.checkpoint`, objective.checkpoint);
+        if (objective.type === 'buy') {
+          const shops = this.data.npcs.npcs.filter(
+            (npc) =>
+              (objective.npc === undefined || npc.id === objective.npc) &&
+              npc.shop?.items.some((entry) => entry.item === objective.item),
+          );
+          if (shops.length === 0) {
+            this.issue(f, `${op}.item`, `no shop sells "${objective.item}"`);
+          }
+        }
+      });
+      if (quest.giver && !quest.dialogue) {
+        this.issue(
+          f,
+          `${p}.dialogue`,
+          'a quest with a giver needs dialogue (offer, progress, complete)',
+        );
+      }
+      if (quest.dialogue) {
+        for (const part of ['offer', 'progress', 'complete'] as const) {
+          quest.dialogue[part].forEach((key, l) =>
+            this.text(f, `${p}.dialogue.${part}[${l}]`, key),
+          );
+        }
+      }
+      quest.rewards.upgrades?.forEach((upgrade, u) => {
+        this.ref('item', f, `${p}.rewards.upgrades[${u}].from`, upgrade.from);
+        this.ref('item', f, `${p}.rewards.upgrades[${u}].to`, upgrade.to);
       });
       quest.requires.quests?.forEach((required, r) => {
         this.ref('quest', f, `${p}.requires.quests[${r}]`, required);

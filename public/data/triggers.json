@@ -54,6 +54,12 @@
       "firstVisitText": "place.garden"
     },
     {
+      "id": "garden_plot",
+      "zone": "greyhaven",
+      "kind": "place",
+      "shape": { "type": "circle", "x": -1780, "z": 215, "radius": 2.5 }
+    },
+    {
       "id": "academy",
       "zone": "greyhaven",
       "kind": "place",

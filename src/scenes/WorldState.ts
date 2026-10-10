@@ -16,7 +16,7 @@ import type { GameContext } from '../core/GameContext';
 import { Random } from '../core/Random';
 import { Input, type LookDelta } from '../core/Input';
 import type { GameState } from '../core/StateMachine';
-import type { GameData, ItemDef, QualityPreset } from '../data/types';
+import type { GameData, ItemDef, NpcDef, QualityPreset, QuestDef } from '../data/types';
 import { chosenLevel, presetFor } from '../render/quality';
 import type { FollowTarget } from '../entities/Companion';
 import type { Enemy } from '../entities/Enemy';
@@ -46,8 +46,10 @@ import {
   drinkPotion,
   GOLD_ITEM,
   type ItemStack,
+  removeItem,
   rollDrops,
 } from '../systems/Inventory';
+import { QuestBook, type QuestEventKind } from '../systems/Quests';
 import { addXp, deathGoldLoss, xpFraction, xpToNext } from '../systems/Progression';
 import type { EnemyTarget } from '../systems/EnemyAI';
 import { ARROW_HEIGHT, Projectiles, type ProjectileWorld } from '../systems/Projectiles';
@@ -69,6 +71,9 @@ import { HUD } from '../ui/HUD';
 import { StructureLabels } from '../ui/StructureLabels';
 import { el } from '../ui/dom';
 import { bagPanel } from '../ui/menus/BagPanel';
+import { type BuyResult, shopPanel } from '../ui/menus/ShopPanel';
+import { QuestTexts } from '../ui/questText';
+import type { ChecklistRow } from '../ui/Dialog';
 import { pausePanel } from '../ui/menus/PausePanel';
 import type { Panel } from '../ui/Overlays';
 import { TouchControls } from '../ui/TouchControls';
@@ -105,6 +110,7 @@ const DEBUG_KEYS = [
   'energy',
   'combat',
   'enemies',
+  'quests',
   'camera',
   'cheats',
 ] as const;
@@ -134,6 +140,7 @@ const LOOT_TEXT_SPACING = 0.45;
 const CHEAT_XP = 100;
 const CHEAT_GOLD = 50;
 const CHEAT_POTIONS = 5;
+const CHEAT_SLIME_GEL = 3;
 /** Not dying (the death timer is off). */
 const NOT_DYING = -1;
 
@@ -215,6 +222,10 @@ export class WorldState implements GameState, InstanceHost {
   private gateBlocked = false;
   private readonly fogTarget = new Color();
   private readonly conditionContext: ConditionContext = { level: 1, completedQuests: new Set() };
+  /** Quests from quests.json with the player's progress (changes the save in place). */
+  private quests: QuestBook | null = null;
+  private questTexts: QuestTexts | null = null;
+  private readonly changedQuests: QuestDef[] = [];
   private readonly placesInside: string[] = [];
   private readonly labelPoint = new Vector3();
   private water: Mesh | null = null;
@@ -327,6 +338,11 @@ export class WorldState implements GameState, InstanceHost {
     this.potionCooldown = 0;
     this.lootRng = new Random((Date.now() >>> 0) ^ 0x5eed);
     this.items = new Map(data.items.items.map((item) => [item.id, item]));
+    this.quests = new QuestBook(data.quests.quests, session.quests);
+    this.questTexts = new QuestTexts(data, t);
+    this.conditionContext.completedQuests = this.quests.completed;
+    this.applyWeapon();
+    this.refreshQuestMarkers();
     this.hud.setGold(session.character?.gold ?? 0);
     this.hud.setXp(xpFraction(data.player, session.progress), false);
     this.refreshPotions();
@@ -398,6 +414,20 @@ export class WorldState implements GameState, InstanceHost {
         if (def?.firstVisitText) this.hud?.showMessage(ctx.i18n.t(def.firstVisitText));
       }),
       ctx.events.on('checkpointSet', () => this.hud?.showMessage(ctx.i18n.t('hud.checkpointSet'))),
+      // Quests count what happens in the world.
+      ctx.events.on('monsterDefeated', ({ monsterId }) => {
+        this.recordQuest('kill', monsterId, 1);
+        this.recordQuest('boss', monsterId, 1);
+      }),
+      ctx.events.on('playerRested', ({ checkpointId }) =>
+        this.recordQuest('rest', checkpointId, 1),
+      ),
+      ctx.events.on('triggerEntered', ({ triggerId }) => this.recordQuest('visit', triggerId, 1)),
+      ctx.events.on('itemBought', ({ itemId, count, npcId }) =>
+        this.recordQuest('buy', itemId, count, npcId),
+      ),
+      ctx.events.on('itemsGained', ({ itemId, count }) => this.itemQuestProgress(itemId, count)),
+      ctx.events.on('levelUp', () => this.refreshQuestMarkers()),
     );
     this.debugTimer = window.setInterval(this.updateDebug, DEBUG_REFRESH_MS);
     // From now on frames count for the benchmark / auto-downgrade.
@@ -441,6 +471,8 @@ export class WorldState implements GameState, InstanceHost {
     this.damageNumbers = null;
     this.talkingTo = null;
     this.targetNpc = null;
+    this.quests = null;
+    this.questTexts = null;
     this.labels?.dispose();
     this.labels = null;
     this.ctx.renderer.setCamera(null);
@@ -977,12 +1009,227 @@ export class WorldState implements GameState, InstanceHost {
       if (npc.def.petText) this.hud?.showMessage(ctx.i18n.t(npc.def.petText));
       return;
     }
-    const lines = dialogueLines(npc.def, data.triggers.conditions, this.conditionContext);
+    // Talking counts for quests that send you to this NPC.
+    this.recordQuest('talk', npc.id, 1);
+    const talk = this.questConversation(npc.def);
+    const lines =
+      talk?.lines ?? dialogueLines(npc.def, data.triggers.conditions, this.conditionContext);
     this.talkingTo = npc;
     this.targetNpc = null;
-    this.dialog?.open(npc.def.name, lines, () => {
-      this.talkingTo = null;
-    });
+    const shop = npc.def.shop;
+    this.dialog?.open(
+      npc.def.name,
+      lines,
+      (finished) => {
+        this.talkingTo = null;
+        // A merchant opens the shop after the last line (not after Escape or walking away).
+        if (finished && shop) this.openShop(npc.def.name, npc.id, shop);
+      },
+      talk?.checklist ?? null,
+    );
+  }
+
+  /**
+   * What an NPC says about its quest, if it has one for you now: hand in a finished quest
+   * (rewards right away), offer a new one (it starts right away), or say what is still missing.
+   * Null = no quest; the NPC says its normal lines.
+   */
+  private questConversation(
+    def: NpcDef,
+  ): { lines: readonly string[]; checklist: (() => readonly ChecklistRow[]) | null } | null {
+    const book = this.quests;
+    const session = this.ctx.session;
+    const bag = session?.character?.inventory;
+    if (!book || !session || !bag) return null;
+    const found = book.forNpc(def.id, session.progress.level, bag);
+    const dialogue = found?.def.dialogue;
+    if (!found || !dialogue) return null;
+    const quest = found.def;
+    const checklist = () => this.questTexts?.rows(book, quest, bag) ?? [];
+    if (found.status === 'ready') {
+      this.completeQuest(quest);
+      return { lines: dialogue.complete, checklist: null };
+    }
+    if (found.status === 'available') {
+      book.accept(quest.id);
+      this.ctx.events.emit('questStarted', { questId: quest.id });
+      // The giver's own "talk" objective counts now (e.g. listening to Old Bertha's tale).
+      this.recordQuest('talk', def.id, 1, undefined, true);
+      if (book.isReady(quest, bag)) {
+        this.completeQuest(quest);
+        return { lines: [...dialogue.offer, ...dialogue.complete], checklist: null };
+      }
+      this.hud?.showMessage(this.ctx.i18n.t('quest.ui.started', { name: quest.name }));
+      this.refreshQuestMarkers();
+      this.ctx.persist();
+      return { lines: dialogue.offer, checklist };
+    }
+    return { lines: dialogue.progress, checklist };
+  }
+
+  /**
+   * Counts something that happened for the running quests; says how far a quest is now, or
+   * that it can be handed in. `quiet` counts without messages.
+   */
+  private recordQuest(
+    kind: QuestEventKind,
+    target: string,
+    count: number,
+    source?: string,
+    quiet = false,
+  ): void {
+    const book = this.quests;
+    if (!book) return;
+    const changed = book.record(kind, target, count, this.changedQuests, source);
+    if (changed.length === 0) return;
+    if (!quiet) for (const def of changed) this.announceQuestProgress(def);
+    this.refreshQuestMarkers();
+    this.ctx.persist();
+  }
+
+  /** An item came into the bag: quests that need it say how far they are. */
+  private itemQuestProgress(itemId: string, gained: number): void {
+    const book = this.quests;
+    if (!book) return;
+    let any = false;
+    const bag = this.ctx.session?.character?.inventory ?? [];
+    for (const def of book.activeDefs()) {
+      // Only while it was still needed: a 5th Slime Gel for a quest that wants 3 says nothing.
+      const wants = def.objectives.some(
+        (objective) =>
+          (objective.type === 'find' || objective.type === 'deliver') &&
+          objective.item === itemId &&
+          countItem(bag, itemId) - gained < objective.count,
+      );
+      if (!wants) continue;
+      this.announceQuestProgress(def);
+      any = true;
+    }
+    if (any) this.refreshQuestMarkers();
+  }
+
+  /** "Steel and Slime · Bring Slime Gel to Hilda Ironhand 2/3", or "go back to Hilda". */
+  private announceQuestProgress(def: QuestDef): void {
+    const book = this.quests;
+    const texts = this.questTexts;
+    const bag = this.ctx.session?.character?.inventory;
+    if (!book || !texts || !bag) return;
+    const t = this.ctx.i18n;
+    if (book.isReady(def, bag)) {
+      this.hud?.showMessage(
+        t.t('quest.ui.ready', { name: def.name, giver: texts.npcName(def.giver) }),
+      );
+      this.ctx.events.emit('questReady', { questId: def.id });
+      return;
+    }
+    const objective = texts.firstOpenRow(book, def, bag);
+    this.hud?.showMessage(t.t('quest.ui.progress', { name: def.name, objective }));
+  }
+
+  /**
+   * Hands a quest in: delivered items leave the bag, then XP, gold, items, upgrades (Hilda's
+   * sword) and unlocks (Rose's plot). Saved at once.
+   */
+  private completeQuest(def: QuestDef): void {
+    const book = this.quests;
+    const session = this.ctx.session;
+    const character = session?.character;
+    const player = this.player;
+    if (!book || !session || !character || !player) return;
+    if (!book.complete(def.id, character.inventory)) return;
+    const t = this.ctx.i18n;
+    this.hud?.showMessage(t.t('quest.ui.completed', { name: def.name }));
+    const r = def.rewards;
+    const s = player.state;
+    let y = s.y + 2.2;
+    if (r.xp > 0) {
+      this.gainXp(r.xp);
+      this.damageNumbers?.spawnText(s.x, y, s.z, `+${r.xp} XP`, 'xp');
+      y += LOOT_TEXT_SPACING;
+    }
+    const gains = r.gold > 0 ? [{ item: GOLD_ITEM, count: r.gold }, ...r.items] : r.items;
+    for (const stack of gains) {
+      this.gainItem(stack.item, stack.count);
+      const name = stack.item === GOLD_ITEM ? this.goldName() : this.itemName(stack.item);
+      this.damageNumbers?.spawnText(s.x, y, s.z, `+${stack.count} ${name}`, 'loot');
+      y += LOOT_TEXT_SPACING;
+    }
+    for (const upgrade of r.upgrades ?? []) {
+      if (!removeItem(character.inventory, upgrade.from, 1)) continue;
+      addItem(character.inventory, upgrade.to, 1);
+      for (const [slot, itemId] of Object.entries(character.equipment)) {
+        if (itemId === upgrade.from) character.equipment[slot] = upgrade.to;
+      }
+      this.hud?.showMessage(
+        t.t('quest.ui.upgraded', {
+          from: this.itemName(upgrade.from),
+          to: this.itemName(upgrade.to),
+        }),
+      );
+    }
+    for (const unlock of r.unlocks ?? []) {
+      if (!session.unlocks.includes(unlock)) session.unlocks.push(unlock);
+    }
+    this.applyWeapon();
+    this.ctx.events.emit('questCompleted', { questId: def.id });
+    this.refreshQuestMarkers();
+    this.syncSave();
+    this.ctx.persist();
+  }
+
+  /** The equipped weapon's damage bonus goes into every hit (Hilda's honed sword). */
+  private applyWeapon(): void {
+    const c = this.player?.combat;
+    const weapon = this.ctx.session?.character?.equipment.weapon;
+    if (!c) return;
+    c.weaponBonus = (weapon && this.items.get(weapon)?.weapon?.damageBonus) || 0;
+  }
+
+  /** Gold diamonds above NPCs with a new quest, blue ones above NPCs to hand a quest in. */
+  private refreshQuestMarkers(): void {
+    const { npcs, quests } = this;
+    const session = this.ctx.session;
+    const bag = session?.character?.inventory;
+    if (!npcs || !quests || !session || !bag) return;
+    for (const npc of npcs.list) {
+      const found = quests.forNpc(npc.id, session.progress.level, bag);
+      npc.questMarker =
+        found?.status === 'ready' ? 'handIn' : found?.status === 'available' ? 'offer' : 'none';
+    }
+  }
+
+  /** Marco's shop: the game waits, gold shows at the top right (HUD rule "at a shop"). */
+  private openShop(merchant: string, npcId: string, shop: NonNullable<NpcDef['shop']>): void {
+    this.hud?.rules.setShop(true);
+    this.openMenu((resume) =>
+      shopPanel(
+        this.ctx,
+        merchant,
+        shop,
+        (itemId, price) => this.buy(itemId, price, npcId),
+        () => {
+          this.hud?.rules.setShop(false);
+          resume();
+        },
+      ),
+    );
+  }
+
+  /** Buys one item for `price` gold. */
+  private buy(itemId: string, price: number, npcId: string): BuyResult {
+    const character = this.ctx.session?.character;
+    if (!character || character.gold < price) return 'notEnough';
+    character.gold -= price;
+    this.hud?.setGold(character.gold);
+    this.hud?.rules.goldChanged();
+    this.gainItem(itemId, 1);
+    this.ctx.events.emit('itemBought', { itemId, count: 1, npcId });
+    this.ctx.persist();
+    return 'bought';
+  }
+
+  private itemName(itemId: string): string {
+    return this.items.get(itemId)?.name ?? itemId;
   }
 
   private showZoneName(zoneId: string | null): void {
@@ -1011,6 +1258,7 @@ export class WorldState implements GameState, InstanceHost {
     player.syncModel(a);
     if (this.sword) player.showSword(this.sword);
     this.npcRenderer?.update(a, this.ctx.data?.npcs.settings.petHopSeconds ?? 1);
+    this.npcRenderer?.updateMarkers(a, this.time);
     if (!this.paused) this.time += frameSeconds;
     this.enemyRenderer?.update(a, this.time);
     if (this.enemies) this.warningRenderer?.update(this.enemies.shown, a);
@@ -1190,6 +1438,10 @@ export class WorldState implements GameState, InstanceHost {
           if (this.drink(itemId) === 'drunk') this.ctx.overlays.refreshTop();
         },
         () => this.xpLine(),
+        () => {
+          const bag = this.ctx.session?.character?.inventory ?? [];
+          return this.quests && this.questTexts ? this.questTexts.summaries(this.quests, bag) : [];
+        },
         resume,
       ),
     );
@@ -1294,9 +1546,10 @@ export class WorldState implements GameState, InstanceHost {
   }
 
   /** Debug: XP, gold or potions for testing levels, dying and drinking. */
-  private grant(kind: 'xp' | 'gold' | 'potions'): void {
+  private grant(kind: 'xp' | 'gold' | 'potions' | 'slimeGel'): void {
     if (kind === 'xp') this.gainXp(CHEAT_XP);
     else if (kind === 'gold') this.gainItem(GOLD_ITEM, CHEAT_GOLD);
+    else if (kind === 'slimeGel') this.gainItem('slime_gel', CHEAT_SLIME_GEL);
     else this.gainItem(this.ctx.data?.player.potions.quickOrder[0] ?? '', CHEAT_POTIONS);
   }
 
@@ -1442,7 +1695,10 @@ export class WorldState implements GameState, InstanceHost {
       resolve: (p, radius) => collision.resolve(p, radius),
     };
     this.npcs = new Npcs(data.npcs, this.ctx.seasons?.currentId() ?? '', resolveColorToken);
-    this.npcRenderer = new NpcRenderer(this.npcs.list, worldRoot);
+    this.npcRenderer = new NpcRenderer(this.npcs.list, worldRoot, {
+      offer: resolveColorToken('zonlicht'),
+      handIn: resolveColorToken('magieblauw'),
+    });
     const safeAreas = new Map(
       data.zones.zones.flatMap((entry) => entry.areas.map((area) => [area.id, area.shape])),
     );
@@ -1667,6 +1923,15 @@ export class WorldState implements GameState, InstanceHost {
         `${c.inCombat ? 'in fight' : 'calm'}`,
     );
     debug.lines.set('enemies', this.enemyDebugLine(s.x, s.z));
+    const quests = this.ctx.session?.quests;
+    debug.lines.set(
+      'quests',
+      quests
+        ? `active ${quests.active.map((q) => `${q.id}[${q.counts.join(',')}]`).join(' ') || '-'} · ` +
+            `done ${quests.completed.length} · unlocks ${this.ctx.session?.unlocks.join(',') || '-'} · ` +
+            `weapon +${c.weaponBonus}`
+        : '-',
+    );
     debug.lines.set(
       'camera',
       `yaw ${Math.round(o.yaw / DEG)}° pitch ${Math.round(o.pitch / DEG)}° dist ${o.distance.toFixed(1)} m · sens ${Math.round((this.ctx.session?.settings.cameraSensitivity ?? 1) * 100)}%`,

@@ -26,6 +26,16 @@
       "weapon": { "kind": "sword", "damageBonus": 0 }
     },
     {
+      "id": "honed_old_sword",
+      "name": "Honed Old Sword",
+      "type": "weapon",
+      "rarity": "common",
+      "tradeable": true,
+      "weight": 4,
+      "description": "item.honed_old_sword.desc",
+      "weapon": { "kind": "sword", "damageBonus": 3 }
+    },
+    {
       "id": "travel_mantle",
       "name": "Travel Mantle",
       "type": "armor",
@@ -96,6 +106,14 @@
       "rarity": "common",
       "tradeable": true,
       "description": "item.slime_gel.desc"
+    },
+    {
+      "id": "herb_seeds",
+      "name": "Herb Seeds",
+      "type": "resource",
+      "rarity": "common",
+      "tradeable": true,
+      "description": "item.herb_seeds.desc"
     },
     { "id": "wood", "name": "Wood", "type": "resource", "rarity": "common", "tradeable": true },
     {
