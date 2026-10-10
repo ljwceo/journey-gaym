@@ -13,8 +13,8 @@ const SWIPE_HALF_ARC = 70 * DEG;
 const CIRCLE_FACTOR = 0.35;
 /** Backing off (too close for the next attack) at this fraction of its speed. */
 const BACK_OFF_FACTOR = 0.8;
-/** No attack in range after this many seconds past the pause: switch to the longest reach. */
-const GIVE_UP_EXTRA_SECONDS = 6;
+/** No attack in range this long (s) past the pause: switch to one that fits the gap now. */
+const GIVE_UP_EXTRA_SECONDS = 2;
 /** A pounce stops this far (m) before your body, so the two do not overlap. */
 const POUNCE_CONTACT = 0.1;
 
@@ -227,9 +227,10 @@ function stalk(e: Enemy, boss: BossState, target: EnemyTarget, world: BossWorld,
   turnTo(e, target.x, target.z, dt);
   if (inRange && boss.elapsed >= boss.duration) {
     beginTelegraph(e, boss, target, world);
-  } else if (boss.elapsed >= boss.duration + GIVE_UP_EXTRA_SECONDS) {
-    // Cannot get into range (you keep running): switch to the attack that reaches furthest.
-    boss.attack = longestReach(e);
+  } else if (gap < minGap && boss.elapsed >= boss.duration + GIVE_UP_EXTRA_SECONDS) {
+    // Cannot back off far enough (you stay glued to him): switch to an attack that fits the
+    // gap now. (Running away does not work: he is faster than you.)
+    boss.attack = attackForGap(e, gap) ?? boss.attack;
     boss.elapsed = boss.duration;
   }
 }
@@ -450,13 +451,12 @@ function turnTo(e: Enemy, x: number, z: number, dt: number): void {
   e.heading = turnTowards(e.heading, Math.atan2(x - e.x, z - e.z), TURN_SPEED * dt);
 }
 
-function longestReach(e: Enemy): BossAttack | null {
-  let best: BossAttack | null = null;
+function attackForGap(e: Enemy, gap: number): BossAttack | null {
   for (const a of e.def.attacks ?? []) {
     if (a.onlyWhenEnraged) continue;
-    if (!best || (a.maxGap ?? 0) > (best.maxGap ?? 0)) best = a;
+    if (gap >= (a.minGap ?? 0) && gap <= (a.maxGap ?? 2)) return a;
   }
-  return best;
+  return null;
 }
 
 /** Distance from point (px, pz) to the segment a → b. */
