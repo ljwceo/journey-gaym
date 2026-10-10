@@ -168,7 +168,7 @@
   },
   "hud": {
     "checkpointSet": "Checkpoint ingesteld",
-    "rested": "Je rust even uit.",
+    "rested": "Je rust uit in je bed. Je HP en mana zijn weer vol.",
     "qualityLowered": "Graphics verlaagd naar {quality} zodat het spel vloeiend blijft.",
     "interact": "Gebruiken",
     "dash": "Dash",
@@ -176,8 +176,10 @@
     "talkTo": "Praat met {name}",
     "pet": "Aai {name}",
     "qualityChosen": "Graphics ingesteld op {quality} voor dit apparaat. Je kunt het wijzigen in Instellingen.",
-    "knockedOut": "Je bent knock-out gegaan… Je wordt wakker bij je checkpoint.",
-    "protected": "{name} wordt hier beschermd."
+    "protected": "{name} wordt hier beschermd.",
+    "levelUp": "Level omhoog! Je bent nu level {level}.",
+    "noPotion": "Je hebt geen drankjes.",
+    "alreadyFull": "Je HP is al vol."
   },
   "dialog": {
     "next": "Verder",
@@ -267,6 +269,12 @@
     },
     "slime_gel": {
       "desc": "Kleverige gel die een slime achterlaat."
+    },
+    "health_potion": {
+      "desc": "Herstelt 50 HP."
+    },
+    "greater_health_potion": {
+      "desc": "Herstelt 120 HP."
     }
   },
   "quest": {
@@ -295,7 +303,8 @@
     "dash": "Dash",
     "clickToLook": "Klik om rond te kijken · Esc voor het menu",
     "attack": "Slaan",
-    "heavy": "Zwaar"
+    "heavy": "Zwaar",
+    "potion": "Drankje drinken"
   },
   "cheats": {
     "title": "Cheats (debug)",
@@ -326,6 +335,23 @@
     "measure": "Fps meten",
     "measureNote": "Loop {seconds} s gewoon rond. De uitslag staat daarna in de debug-overlay (regel \"measure\").",
     "measureStart": "Meet {seconds} s",
-    "monsters": "Monsters vallen aan"
+    "monsters": "Monsters vallen aan",
+    "grant": "Geven",
+    "grantXp": "+100 XP",
+    "grantGold": "+50 Gold",
+    "grantPotions": "+5 Health Potion"
+  },
+  "bag": {
+    "title": "Tas",
+    "drink": "Drinken",
+    "equipped": "Gedragen",
+    "empty": "Je tas is leeg.",
+    "level": "Level {level} · {xp} / {need} XP",
+    "levelMax": "Level {level} (hoogste level)"
+  },
+  "death": {
+    "title": "Je bent verslagen",
+    "goldLost": "Je bent {amount} {gold} kwijt. Je wordt wakker bij je checkpoint.",
+    "wakeUp": "Je wordt wakker bij je checkpoint."
   }
 }

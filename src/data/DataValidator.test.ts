@@ -94,6 +94,18 @@ describe('validateGameData catches broken data', () => {
     expect(found).toContainEqual(expect.stringContaining('unknown item "nothing"'));
   });
 
+  it('checks potions: what they restore, and the drink key order', () => {
+    const raw = freshData();
+    const potion = raw.items.items.find((item: { id: string }) => item.id === 'health_potion');
+    delete potion.potion;
+    raw.items.items.find((item: { id: string }) => item.id === 'wood').potion = { hp: 5 };
+    raw.player.potions.quickOrder = ['slime_gel', 'elixir'];
+    const found = messages(raw);
+    expect(found).toContainEqual(expect.stringContaining('required for) potions'));
+    expect(found).toContainEqual(expect.stringContaining('"slime_gel" is not a potion'));
+    expect(found).toContainEqual(expect.stringContaining('unknown item "elixir"'));
+  });
+
   it('reports NPCs placed outside their zone', () => {
     const raw = freshData();
     raw.npcs.npcs[0].position = { x: 1900, z: 0 };

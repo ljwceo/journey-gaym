@@ -7,7 +7,8 @@ const POOL_SIZE = 24;
 const LIFE_SECONDS = 0.9;
 const RISE_METERS = 0.9;
 
-export type DamageKind = 'normal' | 'combo' | 'heavy' | 'player';
+/** Hits (normal, combo, heavy, on the player) and other floating texts (healing, XP, loot). */
+export type DamageKind = 'normal' | 'combo' | 'heavy' | 'player' | 'heal' | 'xp' | 'loot';
 
 interface Slot {
   element: HTMLElement;
@@ -21,7 +22,7 @@ interface Slot {
 }
 
 /**
- * Damage numbers that float up from where a hit landed and fade out. A fixed pool of DOM
+ * Damage numbers (and XP, loot and healing texts) that float up from where a hit landed and fade out. A fixed pool of DOM
  * elements (no allocations while fighting); positions are world coordinates, projected to the
  * screen every frame. Styles in ui.css (`.ui-damage-*`), colors from the style guide.
  */
@@ -43,6 +44,11 @@ export class DamageNumbers {
 
   /** Shows `amount` at a world position (meters). */
   spawn(x: number, y: number, z: number, amount: number, kind: DamageKind): void {
+    this.spawnText(x, y, z, String(Math.round(amount)), kind);
+  }
+
+  /** Shows a short text ("+10 XP", "+1 Slime Gel") at a world position (meters). */
+  spawnText(x: number, y: number, z: number, text: string, kind: DamageKind): void {
     const slot = this.slots[this.next] as Slot;
     this.next = (this.next + 1) % this.slots.length;
     slot.x = x;
@@ -51,7 +57,7 @@ export class DamageNumbers {
     slot.age = 0;
     slot.active = true;
     slot.offsetX = ((this.next * 37) % 40) - 20;
-    slot.element.textContent = String(Math.round(amount));
+    slot.element.textContent = text;
     slot.element.className = `ui-damage ui-damage-${kind}`;
     slot.element.hidden = false;
   }

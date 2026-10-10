@@ -69,14 +69,18 @@
       "name": "Health Potion",
       "type": "potion",
       "rarity": "common",
-      "tradeable": true
+      "tradeable": true,
+      "description": "item.health_potion.desc",
+      "potion": { "hp": 50 }
     },
     {
       "id": "greater_health_potion",
       "name": "Greater Health Potion",
       "type": "potion",
       "rarity": "rare",
-      "tradeable": true
+      "tradeable": true,
+      "description": "item.greater_health_potion.desc",
+      "potion": { "hp": 120 }
     },
     {
       "id": "recipe_greater_health_potion",

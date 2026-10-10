@@ -173,4 +173,38 @@ describe('migrate', () => {
     expect(result.save.settings.volume).toBe(0.3);
     expect(result.save.character?.name).toBe('Zoë42');
   });
+
+  it('upgrades a version 2 save: level 1, no XP, full HP and mana; gold and bag stay', () => {
+    const current = sampleSave();
+    const character = current.character;
+    if (!character) throw new Error('sample has a character');
+    character.gold = 42;
+    character.inventory.push({ item: 'slime_gel', count: 3 });
+    const v2: Record<string, unknown> = { ...current, version: 2 };
+    delete v2.progress;
+    const storage = new MemoryStorage();
+    storage.setItem(SAVE_KEY, JSON.stringify(v2));
+    const result = new SaveManager(storage).load();
+    expect(result.status).toBe('ok');
+    if (result.status !== 'ok') return;
+    expect(result.save.version).toBe(3);
+    expect(result.save.progress).toEqual({ level: 1, xp: 0, hp: null, mana: null });
+    expect(result.save.character?.gold).toBe(42);
+    expect(result.save.character?.inventory).toContainEqual({ item: 'slime_gel', count: 3 });
+  });
+
+  it('keeps level, XP, HP and mana through writing and loading', () => {
+    const save = sampleSave();
+    save.progress = { level: 4, xp: 37, hp: 61.5, mana: 20 };
+    const storage = new MemoryStorage();
+    const saves = new SaveManager(storage);
+    expect(saves.write(save)).toBe(true);
+    const result = saves.load();
+    expect(result.status === 'ok' && result.save.progress).toEqual({
+      level: 4,
+      xp: 37,
+      hp: 61.5,
+      mana: 20,
+    });
+  });
 });

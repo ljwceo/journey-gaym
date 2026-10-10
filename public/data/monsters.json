@@ -97,6 +97,12 @@
           "chance": 0.75,
           "min": 1,
           "max": 2
+        },
+        {
+          "item": "health_potion",
+          "chance": 0.15,
+          "min": 1,
+          "max": 1
         }
       ],
       "model": "placeholder:slime",
@@ -142,6 +148,12 @@
           "chance": 1,
           "min": 2,
           "max": 5
+        },
+        {
+          "item": "health_potion",
+          "chance": 0.1,
+          "min": 1,
+          "max": 1
         }
       ],
       "model": "placeholder:goblin",
@@ -177,6 +189,12 @@
           "chance": 1,
           "min": 2,
           "max": 5
+        },
+        {
+          "item": "health_potion",
+          "chance": 0.1,
+          "min": 1,
+          "max": 1
         }
       ],
       "model": "placeholder:goblin_archer",
@@ -226,6 +244,12 @@
           "chance": 1,
           "min": 15,
           "max": 30
+        },
+        {
+          "item": "health_potion",
+          "chance": 1,
+          "min": 1,
+          "max": 2
         }
       ],
       "model": "placeholder:goblin_chief",
