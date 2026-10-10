@@ -77,7 +77,6 @@ export interface HudBars {
  * - The XP bar only after defeating an enemy; when it is done, all bars fade out.
  * - Under 30 % HP the HP bar stays until it is higher again.
  * - Energy (phase 1 test): shows while it refills after a dash, then fades out.
- * Phase 1 only uses energy; the rest is ready for phase 2.
  */
 export class HudRules {
   constructor(
@@ -109,6 +108,13 @@ export class HudRules {
     hp.show('xp', seconds);
     mana.show('xp', seconds);
     energy.show('xp', seconds);
+  }
+
+  /** A potion was drunk: HP and mana show for a moment (you see them go up). */
+  healed(): void {
+    const seconds = this.cfg.xpShowSeconds;
+    this.bars.hp.show('healed', seconds);
+    this.bars.mana.show('healed', seconds);
   }
 
   setHpFraction(fraction: number): void {

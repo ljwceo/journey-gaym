@@ -223,6 +223,31 @@ function sword(m: Materials): Object3D {
   return result;
 }
 
+/** A wide-brimmed hat on the head (placeholder for every hat). */
+function hat(material: MeshLambertMaterial): Object3D {
+  const brim = mesh(new CylinderGeometry(0.3, 0.3, 0.03, 20), material, 0, HEAD_Y + 0.12, 0);
+  const crown = mesh(new CylinderGeometry(0.13, 0.19, 0.2, 16), material, 0, HEAD_Y + 0.23, 0);
+  const result = group(brim, crown);
+  result.name = 'hat';
+  return result;
+}
+
+/** A small pendant on the chest (placeholder for every amulet). */
+function amulet(material: MeshLambertMaterial): Object3D {
+  const result = mesh(new OctahedronGeometry(0.05), material, 0, 1.18, 0.27);
+  result.name = 'amulet';
+  return result;
+}
+
+/** What worn gear looks like on the placeholder: colours by rarity, null = not worn. */
+export interface GearLook {
+  hat: number | null;
+  amulet: number | null;
+  mantle: boolean;
+  /** Heavier swords are drawn longer (1 = the old sword). */
+  swordScale: number;
+}
+
 /** How the sword is held: at the hip, slashing, winding up over the head, or chopping down. */
 export type SwordPose = 'rest' | 'fast' | 'windup' | 'heavy';
 
@@ -263,8 +288,12 @@ export class CharacterModel {
   private body: Object3D | null = null;
   private hair: Object3D | null = null;
   private readonly sword: Object3D;
-  /** Fixed placeholder parts (head, mantle); hidden when a real model is used. */
-  private readonly fixedParts: Object3D[];
+  private readonly head: Object3D;
+  private readonly mantle: Object3D;
+  private readonly hat: Object3D;
+  private readonly amulet: Object3D;
+  private readonly hatMaterial = new MeshLambertMaterial({ color: palette.steengrijs });
+  private readonly amuletMaterial = new MeshLambertMaterial({ color: palette.ornamentgoud });
   /** A real (glTF) model replacing the placeholder body, or null. */
   private custom: Object3D | null = null;
 
@@ -283,8 +312,13 @@ export class CharacterModel {
     this.materials.mantle.side = DoubleSide;
     this.materials.hair.side = DoubleSide;
     this.sword = sword(this.materials);
-    this.fixedParts = [head(this.materials), mantle(this.materials)];
-    this.root.add(...this.fixedParts, this.sword);
+    this.head = head(this.materials);
+    this.mantle = mantle(this.materials);
+    this.hat = hat(this.hatMaterial);
+    this.amulet = amulet(this.amuletMaterial);
+    this.hat.visible = false;
+    this.amulet.visible = false;
+    this.root.add(this.head, this.mantle, this.sword, this.hat, this.amulet);
     this.root.name = 'character';
   }
 
@@ -308,7 +342,8 @@ export class CharacterModel {
     this.custom?.removeFromParent();
     this.custom = model;
     this.root.add(model);
-    for (const part of this.fixedParts) part.visible = false;
+    this.head.visible = false;
+    this.mantle.visible = false;
     if (this.body) this.body.visible = false;
     if (this.hair) this.hair.visible = false;
   }
@@ -332,6 +367,17 @@ export class CharacterModel {
     }
   }
 
+  /** Shows worn gear (hat, amulet, mantle, sword size). Only colours and visibility change. */
+  setGear(look: GearLook): void {
+    this.hat.visible = look.hat !== null;
+    if (look.hat !== null) this.hatMaterial.color.setHex(look.hat);
+    this.amulet.visible = look.amulet !== null;
+    if (look.amulet !== null) this.amuletMaterial.color.setHex(look.amulet);
+    // A real model has its own mantle.
+    this.mantle.visible = look.mantle && this.custom === null;
+    this.sword.scale.setScalar(look.swordScale);
+  }
+
   /** Shows a sword swing (`t` 0–1 along the swing); 'rest' puts it back at the hip. */
   setSwordPose(pose: SwordPose, t: number): void {
     setSwordPose(this.sword, pose, t);
@@ -352,6 +398,8 @@ export class CharacterModel {
     for (const variant of this.variants.values()) collect(variant);
     for (const geometry of geometries) geometry.dispose();
     for (const material of Object.values(this.materials)) material.dispose();
+    this.hatMaterial.dispose();
+    this.amuletMaterial.dispose();
     this.variants.clear();
     this.root.removeFromParent();
     this.root.clear();

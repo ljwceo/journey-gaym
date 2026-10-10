@@ -1,10 +1,9 @@
 import { Color } from 'three';
 import { hashSeed, Random } from '../core/Random';
-import type { Condition, NpcDef, NpcsFile, Shape } from '../data/types';
+import type { Condition, NpcDef, NpcsFile } from '../data/types';
 import { angleDelta } from '../systems/Movement';
 import { Wander, type WalkerState } from '../systems/NpcBehavior';
 import { type ConditionContext, evaluateCondition } from '../world/Conditions';
-import { pointInShape } from '../world/Shapes';
 import { Companion } from './Companion';
 
 const DEG = Math.PI / 180;
@@ -17,9 +16,11 @@ export type NpcSettings = NpcsFile['settings'];
 /**
  * One NPC from npcs.json: its data, simulation state (fixed step) and the previous step for
  * smooth drawing. Behavior comes from data: `static` NPCs stand still and turn towards a player
- * who comes close, `wander` NPCs roam around their spot, `follow` NPCs (Pringle) follow the
- * player. A new NPC is only data.
+ * who comes close, `wander` NPCs roam around their spot, `follow` NPCs (Pringle) roam around
+ * the player. A new NPC is only data.
  */
+export type QuestMarker = 'none' | 'offer' | 'handIn';
+
 export class Npc {
   readonly state: WalkerState & { y: number };
   readonly color: Color;
@@ -30,8 +31,17 @@ export class Npc {
   readonly companion: Companion | null;
   /** Drawn and simulated right now (near the player, see Npcs). */
   shown = false;
+  /** In the world at all (`presentWhen` / `absentWhen`, or hidden during a boss fight). */
+  present = true;
+  /**
+   * A companion told to wait (Biscuit at a dungeon entrance): it stands where it was put and
+   * shows / hides like any NPC until it is called back (Npcs.stopWaiting).
+   */
+  waiting = false;
   /** Seconds left of the little hop after petting (drawing only). */
   hop = 0;
+  /** Marker above the head: a quest to offer, a quest to hand in, or none. */
+  questMarker: QuestMarker = 'none';
   private prevX = 0;
   private prevY = 0;
   private prevZ = 0;
@@ -50,6 +60,7 @@ export class Npc {
     const turnSpeed = settings.turnDegreesPerSecond * DEG;
     const bodyRadius = Math.max(MIN_BODY_RADIUS, role.radius);
     const [pauseMin, pauseMax] = settings.wanderPauseSeconds;
+    const rng = new Random(hashSeed(...Array.from(def.id, (c) => c.charCodeAt(0))));
     this.wander =
       def.behavior === 'wander' && def.wander
         ? new Wander(
@@ -63,18 +74,25 @@ export class Npc {
               turnSpeed,
               bodyRadius,
             },
-            new Random(hashSeed(...Array.from(def.id, (c) => c.charCodeAt(0)))),
+            rng,
           )
         : null;
     this.companion =
       def.behavior === 'follow' && def.follow
-        ? new Companion({
-            distance: def.follow.distance,
-            speed: def.follow.speed,
-            teleportDistance: settings.followTeleportDistance,
-            turnSpeed,
-            bodyRadius,
-          })
+        ? new Companion(
+            {
+              minDistance: def.follow.minDistance,
+              maxDistance: def.follow.maxDistance,
+              speed: def.follow.speed,
+              strollSpeed: def.follow.strollSpeed,
+              idlePauseMin: def.follow.idlePauseSeconds[0],
+              idlePauseMax: def.follow.idlePauseSeconds[1],
+              teleportDistance: settings.followTeleportDistance,
+              turnSpeed,
+              bodyRadius,
+            },
+            rng,
+          )
         : null;
     this.place(this.state.x, this.state.y, this.state.z, this.state.heading);
   }
@@ -135,22 +153,4 @@ export function dialogueLines(
     if (condition && evaluateCondition(condition, ctx)) return entry.lines;
   }
   return def.dialogue;
-}
-
-/**
- * Whether the NPC may be attacked at (x, z): never inside one of its safe areas (e.g.
- * Treewardens in the elven city), never if it is not a monster. Used by combat in phase 2.
- */
-export function isAttackable(
-  def: NpcDef,
-  x: number,
-  z: number,
-  areas: ReadonlyMap<string, Shape>,
-): boolean {
-  if (!def.monster) return false;
-  for (const id of def.safeAreas ?? []) {
-    const shape = areas.get(id);
-    if (shape && pointInShape(shape, x, z)) return false;
-  }
-  return true;
 }

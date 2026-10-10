@@ -111,7 +111,6 @@
       "minPlayerDistance": 15,
       "maxPlayerDistance": 70,
       "checkSeconds": 4,
-      "corpseSeconds": 4,
       "wanderRadius": 6
     }
   },
@@ -233,7 +232,9 @@
         "master_brink",
         "wizard_sam",
         "sir_garrick",
-        "pringle"
+        "pringle",
+        "sultan",
+        "biscuit"
       ],
       "areas": [
         {
@@ -559,6 +560,16 @@
           "collider": "none"
         },
         {
+          "id": "garden_plot",
+          "name": "Your plot",
+          "model": "placeholder:block",
+          "x": -1780,
+          "z": 215,
+          "size": [3, 0.3, 3],
+          "color": "lavasteen",
+          "collider": "none"
+        },
+        {
           "id": "harbor_pier_north",
           "name": "Harbor",
           "model": "placeholder:block",
@@ -862,6 +873,17 @@
           "x": -1694,
           "z": -74
         }
+      ],
+      "spawnAreas": [
+        {
+          "id": "greyhaven_slime_yard",
+          "monster": "green_slime",
+          "x": -1580,
+          "z": -175,
+          "radius": 12,
+          "count": 3,
+          "respawnSeconds": 30
+        }
       ]
     },
     {
@@ -920,18 +942,7 @@
         "z": -394,
         "radius": 8
       },
-      "npcs": [
-        "treewarden_1",
-        "treewarden_2",
-        "treewarden_3",
-        "treewarden_4",
-        "treewarden_5",
-        "treewarden_6",
-        "treewarden_7",
-        "treewarden_8",
-        "treewarden_9",
-        "treewarden_10"
-      ],
+      "npcs": [],
       "areas": [
         {
           "id": "elven_city",
@@ -941,6 +952,16 @@
             "z": -650,
             "radius": 160
           }
+        },
+        {
+          "id": "goblin_camp",
+          "shape": {
+            "type": "circle",
+            "x": -1300,
+            "z": -1030,
+            "radius": 32
+          },
+          "noScatter": true
         }
       ],
       "instances": [
@@ -1116,6 +1137,47 @@
           "size": [16, 8, 12],
           "color": "lavasteen",
           "collider": "box"
+        },
+        {
+          "id": "goblin_tent_1",
+          "name": "Goblin tent",
+          "model": "placeholder:house",
+          "x": -1316,
+          "z": -1046,
+          "size": [5, 3, 4],
+          "color": "steengrijs",
+          "collider": "box"
+        },
+        {
+          "id": "goblin_tent_2",
+          "name": "Goblin tent",
+          "model": "placeholder:house",
+          "x": -1282,
+          "z": -1048,
+          "size": [5, 3, 4],
+          "color": "steengrijs",
+          "collider": "box"
+        },
+        {
+          "id": "goblin_tent_3",
+          "name": "Goblin tent",
+          "model": "placeholder:house",
+          "x": -1300,
+          "z": -1008,
+          "size": [4, 3, 5],
+          "rotation": 90,
+          "color": "steengrijs",
+          "collider": "box"
+        },
+        {
+          "id": "goblin_campfire",
+          "name": "Campfire",
+          "model": "placeholder:block",
+          "x": -1292,
+          "z": -1028,
+          "size": [1.4, 0.5, 1.4],
+          "color": "lantaarnamber",
+          "collider": "circle"
         }
       ],
       "scatter": [
@@ -1136,6 +1198,170 @@
           "perHectare": 3,
           "minScale": 0.6,
           "maxScale": 1.6
+        }
+      ],
+      "spawns": [
+        {
+          "id": "treewarden_1",
+          "monster": "treewarden",
+          "x": -1080,
+          "z": -610,
+          "wanderRadius": 40,
+          "respawnSeconds": 300
+        },
+        {
+          "id": "treewarden_2",
+          "monster": "treewarden",
+          "x": -1320,
+          "z": -820,
+          "wanderRadius": 60,
+          "respawnSeconds": 300
+        },
+        {
+          "id": "treewarden_3",
+          "monster": "treewarden",
+          "x": -880,
+          "z": -380,
+          "wanderRadius": 60,
+          "respawnSeconds": 300
+        },
+        {
+          "id": "treewarden_4",
+          "monster": "treewarden",
+          "x": -1420,
+          "z": -110,
+          "wanderRadius": 30,
+          "respawnSeconds": 300
+        },
+        {
+          "id": "treewarden_5",
+          "monster": "treewarden",
+          "x": -1300,
+          "z": -200,
+          "wanderRadius": 40,
+          "respawnSeconds": 300
+        },
+        {
+          "id": "treewarden_6",
+          "monster": "treewarden",
+          "x": -1230,
+          "z": -440,
+          "wanderRadius": 35,
+          "respawnSeconds": 300
+        },
+        {
+          "id": "treewarden_7",
+          "monster": "treewarden",
+          "x": -1400,
+          "z": -560,
+          "wanderRadius": 50,
+          "respawnSeconds": 300
+        },
+        {
+          "id": "treewarden_8",
+          "monster": "treewarden",
+          "x": -980,
+          "z": -820,
+          "wanderRadius": 50,
+          "respawnSeconds": 300
+        },
+        {
+          "id": "treewarden_9",
+          "monster": "treewarden",
+          "x": -930,
+          "z": -950,
+          "wanderRadius": 30,
+          "respawnSeconds": 300
+        },
+        {
+          "id": "treewarden_10",
+          "monster": "treewarden",
+          "x": -780,
+          "z": -200,
+          "wanderRadius": 50,
+          "respawnSeconds": 300
+        },
+        {
+          "id": "goblin_chief_camp",
+          "monster": "goblin_chief",
+          "x": -1300,
+          "z": -1030,
+          "wanderRadius": 6,
+          "respawnSeconds": 180
+        }
+      ],
+      "spawnAreas": [
+        {
+          "id": "slime_meadow_west",
+          "monster": "green_slime",
+          "x": -1340,
+          "z": -150,
+          "radius": 22,
+          "count": 5,
+          "respawnSeconds": 30
+        },
+        {
+          "id": "slime_meadow_brook",
+          "monster": "green_slime",
+          "x": -1310,
+          "z": -310,
+          "radius": 20,
+          "count": 4,
+          "respawnSeconds": 30
+        },
+        {
+          "id": "big_slime_hollow",
+          "monster": "big_slime",
+          "x": -1180,
+          "z": -240,
+          "radius": 18,
+          "count": 2,
+          "respawnSeconds": 45
+        },
+        {
+          "id": "goblin_trail",
+          "monster": "goblin",
+          "x": -1340,
+          "z": -480,
+          "radius": 25,
+          "count": 2,
+          "respawnSeconds": 60
+        },
+        {
+          "id": "goblin_ridge",
+          "monster": "goblin",
+          "x": -900,
+          "z": -470,
+          "radius": 25,
+          "count": 2,
+          "respawnSeconds": 60
+        },
+        {
+          "id": "goblin_ridge_archers",
+          "monster": "goblin_archer",
+          "x": -870,
+          "z": -520,
+          "radius": 18,
+          "count": 2,
+          "respawnSeconds": 60
+        },
+        {
+          "id": "goblin_camp_guards",
+          "monster": "goblin",
+          "x": -1300,
+          "z": -1030,
+          "radius": 22,
+          "count": 2,
+          "respawnSeconds": 90
+        },
+        {
+          "id": "goblin_camp_archers",
+          "monster": "goblin_archer",
+          "x": -1300,
+          "z": -1030,
+          "radius": 26,
+          "count": 3,
+          "respawnSeconds": 90
         }
       ]
     },

@@ -23,7 +23,7 @@ export function checkpointsOf(zones: readonly Zone[]): CheckpointDef[] {
 /**
  * Checkpoints (Monastery, elven shrine, stilt monastery, ...): walking past one makes it your
  * checkpoint, which emits `checkpointSet` (autosave + a message). Standing at one, you can rest
- * there (for now only a message; health and mana come in phase 2).
+ * there (full HP and mana; WorldState handles it).
  */
 export class Checkpoints {
   /** The checkpoint the player stands at, or null. */

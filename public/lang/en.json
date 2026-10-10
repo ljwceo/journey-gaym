@@ -163,19 +163,35 @@
       "1": "Meow.",
       "2": "Did you really think you could just leave?",
       "4": "I am Sultan. Show me you're ready for the world out there.",
-      "5": "Try to keep up!"
-    }
+      "5": "Try to keep up!",
+      "caption1": "The city gate at sunset. Pringle sits in the middle of the path.",
+      "caption2": "Close-up: Pringle's eyes glow gold.",
+      "caption3": "Purple smoke and wind. Pringle grows…",
+      "caption4": "A tall cat man stands in the smoke: cat ears, a tail, golden eyes.",
+      "caption5": "Sultan leaps forward. A flash!"
+    },
+    "tapToContinue": "Tap or press Space"
   },
   "hud": {
     "checkpointSet": "Checkpoint set",
-    "rested": "You rest for a while.",
+    "rested": "You rest in your bed. HP and mana are full again.",
     "qualityLowered": "Graphics lowered to {quality} to keep the game smooth.",
     "interact": "Interact",
     "dash": "Dash",
     "rest": "Rest",
     "talkTo": "Talk to {name}",
     "pet": "Pet {name}",
-    "qualityChosen": "Graphics set to {quality} for this device. You can change it in Settings."
+    "qualityChosen": "Graphics set to {quality} for this device. You can change it in Settings.",
+    "protected": "{name} is protected here.",
+    "levelUp": "Level up! You are now level {level}.",
+    "noPotion": "You have no potions.",
+    "alreadyFull": "Your HP is already full.",
+    "loadChanged": "Load: {tier}",
+    "gearInCombat": "You can't change gear during a fight.",
+    "pack": "Open {name}'s pack",
+    "packInCombat": "Not now, you are in a fight.",
+    "packTooHeavy": "{name} can't carry that much.",
+    "packWorn": "Take it off first."
   },
   "dialog": {
     "next": "Continue",
@@ -202,9 +218,9 @@
   },
   "npc": {
     "brother_ansel": {
-      "1": "Ah, you're awake. I found you unconscious by the road and brought you here.",
-      "2": "This Monastery is your checkpoint. Should you fall, you will wake up here again.",
-      "3": "Rest in your bed whenever you are tired. Now go, Greyhaven awaits."
+      "1": "Welcome back. The Monastery's doors are always open to you.",
+      "2": "Remember: should you fall, you will wake up here again.",
+      "3": "Rest in your bed whenever you are tired. Greyhaven awaits."
     },
     "marco": {
       "1": "Welcome, welcome! Everything here is special, just for you.",
@@ -242,6 +258,11 @@
     },
     "pringle": {
       "pet": "Pringle purrs happily."
+    },
+    "sultan": {
+      "1": "You fought well, little one. Pringle was only a disguise. Cats have their secrets.",
+      "2": "Go on, the world is waiting. But when you are stronger, come back. I want a rematch.",
+      "3": "Nine lives, remember? I still have eight."
     }
   },
   "item": {
@@ -265,17 +286,193 @@
     },
     "slime_gel": {
       "desc": "Sticky gel left behind by a slime."
+    },
+    "health_potion": {
+      "desc": "Restores 50 HP."
+    },
+    "greater_health_potion": {
+      "desc": "Restores 120 HP."
+    },
+    "honed_old_sword": {
+      "desc": "Your old sword, honed by Hilda. Every hit does 3 more damage."
+    },
+    "goblin_cleaver": {
+      "desc": "A crude, heavy goblin blade. Hits hard, but you feel every kilo."
+    },
+    "chiefs_greatblade": {
+      "desc": "The Goblin Chief's pride. Enormous damage, enormous weight."
+    },
+    "straw_hat": {
+      "desc": "Keeps the sun out of your eyes. Light as a feather."
+    },
+    "leather_cap": {
+      "desc": "Simple boiled leather. Better than nothing."
+    },
+    "iron_helm": {
+      "desc": "Solid iron. Strong protection, but heavy on your head."
+    },
+    "padded_mantle": {
+      "desc": "A thick, quilted mantle that softens blows."
+    },
+    "ironweave_mantle": {
+      "desc": "Woven with iron threads. Very strong, very heavy."
+    },
+    "copper_amulet": {
+      "desc": "A simple charm that hums faintly with magic."
+    },
+    "goblin_tooth_necklace": {
+      "desc": "Goblin teeth on a string. Somehow it makes you fiercer."
+    },
+    "brass_ring": {
+      "desc": "A plain brass ring."
+    },
+    "swift_ring": {
+      "desc": "Your steps feel a little lighter."
+    },
+    "chiefs_signet": {
+      "desc": "The Goblin Chief's ring. Heavy with stolen gold."
+    },
+    "heartwood_ring": {
+      "desc": "Carved from a fallen branch of Old Tjikko. It feels alive."
+    },
+    "herb_seeds": {
+      "desc": "Seeds from Rose. You can plant them in your plot later."
     }
   },
   "quest": {
     "defeat_sultan": {
-      "desc": "Defeat Sultan at the city gate."
+      "desc": "Leave the city: defeat Sultan at the city gate."
     },
     "your_resolve": {
+      "offer": {
+        "1": "It is time to choose your path."
+      },
+      "progress": {
+        "1": "Choose your path at the Academy."
+      },
+      "complete": {
+        "1": "Your path is chosen."
+      },
       "desc": "Go to the Academy and choose your path."
     },
     "first_harvest": {
+      "offer": {
+        "1": "Spring brings blossom. Could you bring me five?"
+      },
+      "progress": {
+        "1": "Five Blossom, dear. Only in spring."
+      },
+      "complete": {
+        "1": "Thank you! Here, my recipe."
+      },
       "desc": "Bring Rose 5 Blossom from the Garden."
+    },
+    "a_quiet_awakening": {
+      "desc": "Brother Ansel found you by the road. Rest in your bed at the Monastery.",
+      "objective": "Rest in your bed at the Monastery",
+      "offer": {
+        "1": "Ah, you're awake. Easy now. I found you unconscious by the road, far from any town, and carried you here.",
+        "2": "This is the Monastery of Greyhaven. It is your checkpoint now: should you ever fall, you will wake up here again.",
+        "3": "Your bed is right over there. Lie down and rest a while; it heals body and mind. Come and see me when you feel better."
+      },
+      "progress": {
+        "1": "Go on, rest in your bed first. Walk up to it and press E (or tap Rest)."
+      },
+      "complete": {
+        "1": "There, colour in your cheeks again. Whenever you are hurt, a bed at a checkpoint makes you whole.",
+        "2": "Take these coins for the road. Marco on the Market Square sells potions. Greyhaven is yours to explore."
+      }
+    },
+    "just_for_you": {
+      "desc": "Buy 2 Health Potions from Marco on the Market Square.",
+      "offer": {
+        "1": "A new customer! And what a fine one. Today, and only for you, my Health Potions are a steal.",
+        "2": "Buy two, just to be safe. A wise traveller never leaves town without them. Trust me!"
+      },
+      "progress": {
+        "1": "Still thinking it over? Two Health Potions, special price, just for you."
+      },
+      "complete": {
+        "1": "Pleasure doing business! Drink one with Q, or tap the potion button, whenever you are hurt.",
+        "2": "Here, a little something back. Don't tell the other merchants."
+      }
+    },
+    "steel_and_slime": {
+      "desc": "Bring Hilda 3 Slime Gel from the slimes in the yard by the north-east city wall. She will hone your old sword.",
+      "offer": {
+        "1": "HA! That rusty old thing is your sword? It couldn't cut butter on a summer day!",
+        "2": "I can hone it for you. But I need Slime Gel to polish the steel. Three blobs of it.",
+        "3": "A few slimes have crept into the old yard by the north-east city wall. Whack them and bring me their gel!"
+      },
+      "progress": {
+        "1": "No gel, no shine! The slimes are in the old yard by the north-east city wall."
+      },
+      "complete": {
+        "1": "Ooh, nice and sticky. Hand me that sword. *CLANG* *CLANG* *hiss*",
+        "2": "There! Your Honed Old Sword. Every hit bites a little harder now. Come back when you have gold and materials!"
+      }
+    },
+    "a_patch_of_earth": {
+      "desc": "Rose has a small plot for you in the Garden. Go and see it.",
+      "objective": "Go to your plot in the Garden",
+      "offer": {
+        "1": "Hello, dear. Every traveller needs a place where something grows. Even a wanderer like you.",
+        "2": "There is a little plot at the south end of the Garden, by the hedge. It's yours now. Go and have a look."
+      },
+      "progress": {
+        "1": "Your plot is at the south end of the Garden, by the hedge. Go and stand on it."
+      },
+      "complete": {
+        "1": "Lovely soil, isn't it? Here are some seeds to start with.",
+        "2": "We'll plant them together another day; plants need patience. Your plot keeps growing even while you are away."
+      }
+    },
+    "tales_by_the_fire": {
+      "desc": "Listen to Old Bertha's tale about the Lords of Morvath.",
+      "offer": {
+        "1": "Come in, come in, sit by the fire! You're the one Brother Ansel found by the road, aren't you? I hear everything.",
+        "2": "Let me tell you a tale. Five thousand years ago, two wizards, the brothers Lucael and Baelor, did the unthinkable: they slew a god.",
+        "3": "They took its power and became demi-gods. They do not grow old, they do not fall ill. Folk call them the Lords of Morvath.",
+        "4": "Now they are necromancers. They raise slimes, goblins, skeletons and worse all over Eryndor, and their corruption spreads from the east.",
+        "5": "The further east you go, the darker it gets. But you... you have a stubborn look about you. Perhaps that's good."
+      },
+      "progress": {
+        "1": "Sit, sit. Let an old woman tell her tale."
+      },
+      "complete": {
+        "1": "Brr. Even I get the shivers telling it. Have some soup, it's on the house.",
+        "2": "And if you are ever stuck, come and ask Old Bertha. Somebody always knows something."
+      }
+    },
+    "ui": {
+      "started": "New quest: {name}",
+      "ready": "{name}: go back to {giver}",
+      "completed": "Quest complete: {name}",
+      "progress": "{name} · {objective}",
+      "upgraded": "{from} is now {to}",
+      "objective": {
+        "talk": "Talk to {npc}",
+        "find": "{item} {have}/{need}",
+        "deliver": "Bring {item} to {npc} {have}/{need}",
+        "kill": "Defeat {monster} {have}/{need}",
+        "boss": "Defeat {monster}",
+        "buy": "Buy {item} {have}/{need}"
+      }
+    },
+    "a_friend_for_the_road": {
+      "desc": "Marco has something for you after your fight with Sultan.",
+      "offer": {
+        "1": "You beat Sultan! The whole market is talking about it. A cat in disguise, who'd have thought.",
+        "2": "Listen, someone who fights like that will soon carry more than two arms can hold. This is Biscuit, my donkey. He's yours.",
+        "3": "He's stubborn, he's slow to complain and he carries a heavy load without a word. Whatever is on his back doesn't weigh on you."
+      },
+      "progress": {
+        "1": "Biscuit is waiting for you."
+      },
+      "complete": {
+        "1": "Go on, say hello. Talk to him and you can load your spare gear onto him or take it off again.",
+        "2": "Only remember: what Biscuit carries, you can't use. Take it out of his pack first. And not in the middle of a fight!"
+      }
     }
   },
   "season": {
@@ -293,9 +490,17 @@
     "dash": "Dash",
     "clickToLook": "Click to look around · Esc for the menu",
     "attack": "Attack",
-    "heavy": "Heavy"
+    "heavy": "Heavy",
+    "potion": "Drink potion"
   },
   "cheats": {
+    "debugView": "Debug overlay",
+    "debugViewNote": "F3 cycles the size. Hidden keeps debug mode and this menu (F6) on.",
+    "debugView_large": "Large",
+    "debugView_normal": "Normal",
+    "debugView_small": "Small",
+    "debugView_mini": "Fps only",
+    "debugView_hidden": "Hidden",
     "title": "Cheats (debug)",
     "note": "Only in debug mode, never saved.",
     "speed": "Speed",
@@ -324,11 +529,112 @@
     "measure": "Measure fps",
     "measureNote": "Walk around normally for {seconds} s. The result appears in the debug overlay (line \"measure\").",
     "measureStart": "Measure {seconds} s",
+    "monsters": "Monsters attack",
+    "grant": "Give",
+    "grantXp": "+100 XP",
+    "grantGold": "+50 Gold",
+    "grantPotions": "+5 Health Potion",
+    "grantSlimeGel": "+3 Slime Gel",
+    "boss": "Boss fight",
+    "bossSultan": "Fight Sultan",
+    "grantGear": "+ all gear",
+    "grantPackAnimal": "+ pack animal",
     "dayNight": "Day and night",
     "dayNightNow": "{phase} · {time} left",
     "dayNightClock": "Real clock",
     "dayNightSpeed": "Speed",
     "dayNightMonsters": "Night monsters: {count} · test area only in debug mode"
+  },
+  "bag": {
+    "title": "Bag",
+    "drink": "Drink",
+    "equipped": "Equipped",
+    "empty": "Your bag is empty.",
+    "level": "Level {level} · {xp} / {need} XP",
+    "levelMax": "Level {level} (highest level)",
+    "quests": "Quests",
+    "noQuests": "No quests right now. Talk to the people of Greyhaven.",
+    "equip": "Wear",
+    "unequip": "Take off",
+    "equipment": "Worn",
+    "items": "Items",
+    "load": "Load {kg} / {max} kg · {tier}",
+    "weight": "{kg} kg",
+    "rarity": {
+      "rare": "Rare",
+      "epic": "Epic",
+      "legendary": "Legendary"
+    },
+    "slot": {
+      "weapon": "Weapon",
+      "hat": "Hat",
+      "mantle": "Mantle",
+      "amulet": "Amulet",
+      "ring1": "Ring",
+      "ring2": "Ring"
+    },
+    "stat": {
+      "weaponDamage": "+{n} damage per hit",
+      "hp": "+{n} HP",
+      "mana": "+{n} mana",
+      "damagePercent": "+{n}% damage",
+      "damageReductionPercent": "−{n}% damage taken",
+      "moveSpeedPercent": "+{n}% speed"
+    }
+  },
+  "load": {
+    "light": "Light",
+    "medium": "Medium",
+    "heavy": "Heavy",
+    "overloaded": "Overloaded",
+    "mediumMessage": "Medium load: your dash is a bit shorter.",
+    "heavyMessage": "Heavy load: you walk slower, dash short and need a moment to get up.",
+    "overloadedMessage": "Overloaded: you walk very slowly and cannot dash. Put something away.",
+    "lightMessage": "Light load: you move freely again.",
+    "cannotDash": "Too heavy to dash."
+  },
+  "death": {
+    "title": "You were defeated",
+    "goldLost": "You lost {amount} {gold}. You wake up at your checkpoint.",
+    "wakeUp": "You wake up at your checkpoint."
+  },
+  "shop": {
+    "title": "Shop",
+    "buy": "Buy",
+    "price": "{price} {gold}",
+    "notEnough": "Not enough {gold}.",
+    "bought": "Bought: {item}",
+    "owned": "In your bag: {count}"
+  },
+  "boss": {
+    "dodged": "Dodged!",
+    "sultan": {
+      "retry": "Back again? Try to keep up!",
+      "enrage": "Not bad… Now I'm getting serious!",
+      "win": "Heh… you've got claws after all. You're ready for the world out there.",
+      "hint": {
+        "claw": "His claws light up: step back or dash away!",
+        "pounce": "He crouches, eyes glowing: dash sideways!",
+        "charge": "A red line: get off it before he runs!",
+        "flurry": "Flurry! Get away, then strike while he catches his breath.",
+        "strike": "He stands still: now strike!",
+        "strikeTouch": "He stands still: tap Attack now!",
+        "guard": "He dodges everything. Wait until he stands still after an attack."
+      }
+    },
+    "defeated": "{name} is defeated!"
+  },
+  "pack": {
+    "title": "{name}'s pack",
+    "yours": "Your bag",
+    "theirs": "On {name}",
+    "load": "{name} carries {kg} / {max} kg",
+    "toPack": "Load",
+    "fromPack": "Take",
+    "all": "All",
+    "emptyBag": "Nothing to load.",
+    "emptyPack": "{name} carries nothing yet.",
+    "note": "What {name} carries does not count for your load, but you can't use it until you take it out."
   },
   "daynight": {
     "day": "Day",

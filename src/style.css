@@ -46,6 +46,25 @@ body {
   z-index: 100;
 }
 
+/* Smaller sizes (F3 cycles): same text, less screen; small and mini also show fewer lines. */
+.debug-overlay--normal {
+  padding: 4px 6px;
+  font-size: 10px;
+  line-height: 1.25;
+  background: color-mix(in srgb, var(--gh-nachtinkt) 60%, transparent);
+  max-width: min(46vw, 420px);
+  white-space: pre-wrap;
+}
+
+.debug-overlay--small,
+.debug-overlay--mini {
+  padding: 3px 6px;
+  font-size: 10px;
+  line-height: 1.25;
+  background: color-mix(in srgb, var(--gh-nachtinkt) 55%, transparent);
+  border-color: transparent;
+}
+
 .debug-errors {
   position: fixed;
   bottom: max(8px, env(safe-area-inset-bottom));

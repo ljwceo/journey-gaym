@@ -5,13 +5,28 @@
     "normal": 3,
     "fast": 4.5
   },
+  "settings": {
+    "simulateRadius": 60,
+    "turnDegreesPerSecond": 420,
+    "wanderPauseSeconds": [2, 6],
+    "wanderSpeedFactor": 0.4,
+    "corpseSeconds": 1.6,
+    "respawnMinPlayerDistance": 35,
+    "hitGraceMeters": 0.5,
+    "hitArcDegrees": 140,
+    "calmDownSeconds": 8,
+    "packAggroRadius": 14
+  },
   "monsters": [
     {
       "id": "training_dummy",
       "name": "Training Dummy",
       "levelRange": [1, 1],
       "hp": 120,
-      "damage": { "min": 0, "max": 0 },
+      "damage": {
+        "min": 0,
+        "max": 0
+      },
       "speed": "verySlow",
       "xp": 0,
       "behavior": "static",
@@ -25,79 +40,359 @@
       "name": "Green Slime",
       "levelRange": [1, 2],
       "hp": 30,
-      "damage": { "min": 5, "max": 5 },
+      "damage": {
+        "min": 5,
+        "max": 5
+      },
       "speed": "slow",
       "xp": 10,
       "behavior": "melee",
+      "drops": [
+        {
+          "item": "slime_gel",
+          "chance": 0.5,
+          "min": 1,
+          "max": 1
+        }
+      ],
       "model": "placeholder:slime",
       "radius": 0.45,
-      "drops": [{ "item": "slime_gel", "chance": 0.5, "min": 1, "max": 1 }]
+      "ai": {
+        "aggroRadius": 9,
+        "leashRadius": 25,
+        "hop": {
+          "seconds": 0.45,
+          "pauseSeconds": 0.3
+        },
+        "attack": {
+          "style": "lunge",
+          "range": 1.4,
+          "windupSeconds": 0.6,
+          "strikeSeconds": 0.25,
+          "lungeDistance": 2.2,
+          "recoverySeconds": 0.7,
+          "cooldownSeconds": 1.2
+        }
+      }
     },
     {
       "id": "big_slime",
       "name": "Big Slime",
       "levelRange": [3, 4],
       "hp": 80,
-      "damage": { "min": 10, "max": 10 },
+      "damage": {
+        "min": 10,
+        "max": 10
+      },
       "speed": "slow",
       "xp": 30,
       "behavior": "melee",
-      "model": "placeholder:big_slime",
-      "radius": 0.75,
-      "splitsInto": { "monster": "green_slime", "count": 2 },
-      "drops": [{ "item": "slime_gel", "chance": 0.75, "min": 1, "max": 2 }]
+      "splitsInto": {
+        "monster": "green_slime",
+        "count": 2
+      },
+      "drops": [
+        {
+          "item": "slime_gel",
+          "chance": 0.75,
+          "min": 1,
+          "max": 2
+        },
+        {
+          "item": "health_potion",
+          "chance": 0.15,
+          "min": 1,
+          "max": 1
+        },
+        {
+          "item": "copper_amulet",
+          "chance": 0.04,
+          "min": 1,
+          "max": 1
+        }
+      ],
+      "model": "placeholder:slime",
+      "radius": 0.8,
+      "scale": 1.8,
+      "ai": {
+        "aggroRadius": 10,
+        "leashRadius": 25,
+        "hop": {
+          "seconds": 0.6,
+          "pauseSeconds": 0.4
+        },
+        "attack": {
+          "style": "lunge",
+          "range": 1.6,
+          "windupSeconds": 0.8,
+          "strikeSeconds": 0.3,
+          "lungeDistance": 2.8,
+          "recoverySeconds": 0.9,
+          "cooldownSeconds": 1.5
+        }
+      }
     },
     {
       "id": "goblin",
       "name": "Goblin",
       "levelRange": [3, 5],
       "hp": 60,
-      "damage": { "min": 8, "max": 8 },
+      "damage": {
+        "min": 8,
+        "max": 8
+      },
       "speed": "fast",
       "xp": 20,
       "behavior": "melee",
-      "groupSize": { "min": 2, "max": 3 },
-      "drops": [{ "item": "gold", "chance": 1, "min": 2, "max": 5 }]
+      "groupSize": {
+        "min": 2,
+        "max": 3
+      },
+      "drops": [
+        {
+          "item": "gold",
+          "chance": 1,
+          "min": 2,
+          "max": 5
+        },
+        {
+          "item": "health_potion",
+          "chance": 0.1,
+          "min": 1,
+          "max": 1
+        },
+        {
+          "item": "straw_hat",
+          "chance": 0.04,
+          "min": 1,
+          "max": 1
+        },
+        {
+          "item": "brass_ring",
+          "chance": 0.04,
+          "min": 1,
+          "max": 1
+        },
+        {
+          "item": "leather_cap",
+          "chance": 0.03,
+          "min": 1,
+          "max": 1
+        }
+      ],
+      "model": "placeholder:goblin",
+      "radius": 0.4,
+      "ai": {
+        "aggroRadius": 12,
+        "leashRadius": 30,
+        "attack": {
+          "style": "strike",
+          "range": 1.1,
+          "windupSeconds": 0.45,
+          "recoverySeconds": 0.6,
+          "cooldownSeconds": 1.4
+        }
+      }
     },
     {
       "id": "goblin_archer",
       "name": "Goblin Archer",
       "levelRange": [5, 7],
       "hp": 45,
-      "damage": { "min": 12, "max": 12 },
+      "damage": {
+        "min": 12,
+        "max": 12
+      },
       "speed": "normal",
       "xp": 30,
       "behavior": "ranged",
       "range": 12,
-      "drops": [{ "item": "gold", "chance": 1, "min": 2, "max": 5 }]
+      "drops": [
+        {
+          "item": "gold",
+          "chance": 1,
+          "min": 2,
+          "max": 5
+        },
+        {
+          "item": "health_potion",
+          "chance": 0.1,
+          "min": 1,
+          "max": 1
+        },
+        {
+          "item": "swift_ring",
+          "chance": 0.04,
+          "min": 1,
+          "max": 1
+        },
+        {
+          "item": "copper_amulet",
+          "chance": 0.04,
+          "min": 1,
+          "max": 1
+        },
+        {
+          "item": "goblin_tooth_necklace",
+          "chance": 0.03,
+          "min": 1,
+          "max": 1
+        }
+      ],
+      "model": "placeholder:goblin_archer",
+      "radius": 0.4,
+      "ai": {
+        "aggroRadius": 16,
+        "leashRadius": 32,
+        "keepDistance": 7,
+        "attack": {
+          "style": "shoot",
+          "range": 12,
+          "windupSeconds": 0.8,
+          "recoverySeconds": 0.5,
+          "cooldownSeconds": 2,
+          "projectileSpeed": 16
+        }
+      }
     },
     {
       "id": "goblin_chief",
       "name": "Goblin Chief",
       "levelRange": [7, 8],
       "hp": 400,
-      "damage": { "min": 20, "max": 20 },
+      "damage": {
+        "min": 20,
+        "max": 20
+      },
       "speed": "normal",
       "xp": 150,
       "behavior": "melee",
       "rank": "miniboss",
       "attacks": [
-        { "id": "big_swing", "name": "Big Swing", "damage": 20, "warningSeconds": 0.8, "hits": 1 }
+        {
+          "id": "big_swing",
+          "name": "Big Swing",
+          "damage": 20,
+          "warningSeconds": 1.0,
+          "hits": 1,
+          "everyNth": 3,
+          "areaRadius": 3.5,
+          "recoverySeconds": 1.4
+        }
       ],
-      "drops": [{ "item": "gold", "chance": 1, "min": 15, "max": 30 }]
+      "drops": [
+        {
+          "item": "gold",
+          "chance": 1,
+          "min": 15,
+          "max": 30
+        },
+        {
+          "item": "health_potion",
+          "chance": 1,
+          "min": 1,
+          "max": 2
+        },
+        {
+          "item": "goblin_cleaver",
+          "chance": 0.3,
+          "min": 1,
+          "max": 1
+        },
+        {
+          "item": "iron_helm",
+          "chance": 0.25,
+          "min": 1,
+          "max": 1
+        },
+        {
+          "item": "chiefs_signet",
+          "chance": 0.12,
+          "min": 1,
+          "max": 1
+        },
+        {
+          "item": "ironweave_mantle",
+          "chance": 0.08,
+          "min": 1,
+          "max": 1
+        },
+        {
+          "item": "chiefs_greatblade",
+          "chance": 0.06,
+          "min": 1,
+          "max": 1
+        },
+        {
+          "item": "heartwood_ring",
+          "chance": 0.02,
+          "min": 1,
+          "max": 1
+        }
+      ],
+      "model": "placeholder:goblin_chief",
+      "radius": 0.7,
+      "scale": 1.5,
+      "ai": {
+        "aggroRadius": 14,
+        "leashRadius": 25,
+        "attack": {
+          "style": "strike",
+          "range": 1.5,
+          "windupSeconds": 0.6,
+          "recoverySeconds": 0.8,
+          "cooldownSeconds": 1.6
+        }
+      }
     },
     {
       "id": "sultan",
       "name": "Sultan",
       "levelRange": [3, 3],
       "hp": 800,
-      "damage": { "min": 12, "max": 15 },
+      "damage": {
+        "min": 12,
+        "max": 15
+      },
       "speed": "fast",
       "xp": 200,
       "behavior": "melee",
       "rank": "boss",
       "transformsFrom": "pringle",
-      "enrage": { "belowHpFraction": 0.5, "speedFactor": 1.25 },
+      "model": "placeholder:sultan",
+      "radius": 0.55,
+      "enrage": {
+        "belowHpFraction": 0.5,
+        "speedFactor": 1.25
+      },
+      "boss": {
+        "quest": "defeat_sultan",
+        "trigger": "sultan_gate",
+        "cutscene": "pringle",
+        "arena": {
+          "x": -1551,
+          "z": 0,
+          "radius": 15
+        },
+        "start": {
+          "x": -1538,
+          "z": 0
+        },
+        "playerStart": {
+          "x": -1560,
+          "z": 0
+        },
+        "pauseSeconds": [1.0, 2.0],
+        "retreatGap": 1.5,
+        "retreatSeconds": 0.35,
+        "vulnerableSeconds": 1,
+        "retryLine": "boss.sultan.retry",
+        "enrageLine": "boss.sultan.enrage",
+        "winLine": "boss.sultan.win",
+        "strikeHint": "boss.sultan.hint.strike",
+        "guardHint": "boss.sultan.hint.guard",
+        "guardText": "boss.dodged"
+      },
       "attacks": [
         {
           "id": "claw_combo",
@@ -105,33 +400,63 @@
           "damage": 12,
           "hits": 3,
           "minHits": 2,
-          "warningSeconds": 0.4,
-          "recoverySeconds": 1
+          "warningSeconds": 0.7,
+          "recoverySeconds": 1,
+          "pattern": "combo",
+          "minGap": 0,
+          "maxGap": 1.2,
+          "hitIntervalSeconds": 0.3,
+          "reach": 1.3,
+          "stepPerHit": 0.5,
+          "hint": "boss.sultan.hint.claw"
         },
         {
           "id": "pounce",
           "name": "Pounce",
           "damage": 15,
           "hits": 1,
-          "warningSeconds": 0.6,
-          "recoverySeconds": 1
+          "warningSeconds": 0.9,
+          "recoverySeconds": 1,
+          "pattern": "pounce",
+          "minGap": 3,
+          "maxGap": 8,
+          "aimLockSeconds": 0.3,
+          "travelSeconds": 0.35,
+          "reach": 0.9,
+          "hint": "boss.sultan.hint.pounce"
         },
         {
           "id": "dash_strike",
           "name": "Dash Strike",
           "damage": 15,
           "hits": 1,
-          "warningSeconds": 0.7,
-          "recoverySeconds": 1
+          "warningSeconds": 1,
+          "recoverySeconds": 1,
+          "pattern": "charge",
+          "minGap": 4,
+          "maxGap": 12,
+          "travelSeconds": 0.5,
+          "length": 16,
+          "width": 1.4,
+          "hint": "boss.sultan.hint.charge"
         },
         {
           "id": "flurry",
           "name": "Flurry",
           "damage": 12,
           "hits": 5,
-          "warningSeconds": 0.5,
+          "warningSeconds": 0.9,
           "recoverySeconds": 2,
-          "onlyWhenEnraged": true
+          "onlyWhenEnraged": true,
+          "everyNth": 3,
+          "pattern": "combo",
+          "minGap": 0,
+          "maxGap": 1.5,
+          "hitIntervalSeconds": 0.22,
+          "reach": 1.4,
+          "stepPerHit": 0.4,
+          "openingSeconds": 2,
+          "hint": "boss.sultan.hint.flurry"
         }
       ],
       "drops": []
@@ -141,15 +466,48 @@
       "name": "Treewarden",
       "levelRange": [8, 8],
       "hp": 3000,
-      "damage": { "min": 40, "max": 40 },
+      "damage": {
+        "min": 40,
+        "max": 40
+      },
       "speed": "verySlow",
       "xp": 400,
       "behavior": "melee",
       "neutral": true,
       "attacks": [
-        { "id": "heavy_slam", "name": "Heavy Slam", "damage": 40, "warningSeconds": 1.2, "hits": 1 }
+        {
+          "id": "heavy_slam",
+          "name": "Heavy Slam",
+          "damage": 40,
+          "warningSeconds": 1.2,
+          "hits": 1,
+          "everyNth": 1,
+          "areaRadius": 4,
+          "recoverySeconds": 1.6
+        }
       ],
-      "drops": [{ "item": "wood", "chance": 1, "min": 3, "max": 6 }]
+      "drops": [
+        {
+          "item": "wood",
+          "chance": 1,
+          "min": 3,
+          "max": 6
+        }
+      ],
+      "model": "placeholder:treewarden",
+      "radius": 1.1,
+      "safeAreas": ["elven_city"],
+      "ai": {
+        "aggroRadius": 0,
+        "leashRadius": 40,
+        "attack": {
+          "style": "strike",
+          "range": 2.4,
+          "windupSeconds": 1.2,
+          "recoverySeconds": 1.5,
+          "cooldownSeconds": 2.5
+        }
+      }
     }
   ]
 }

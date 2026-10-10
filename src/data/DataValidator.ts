@@ -269,7 +269,7 @@ class CrossChecker {
       'monsterSpawn',
       'zones',
       'zones[].spawns',
-      d.zones.zones.flatMap((zone) => zone.spawns ?? []),
+      d.zones.zones.flatMap((zone) => [...(zone.spawns ?? []), ...(zone.spawnAreas ?? [])]),
     );
     this.unique('role', 'npcs', 'roles', d.npcs.roles);
     this.unique('npc', 'npcs', 'npcs', d.npcs.npcs);
@@ -361,8 +361,18 @@ class CrossChecker {
       zone.spawns?.forEach((spawn, n) => {
         const sp = `${p}.spawns[${n}]`;
         this.ref('monster', f, `${sp}.monster`, spawn.monster);
+        this.needsAi(sp, spawn.monster);
         if (!pointInShape(zone.bounds, spawn.x, spawn.z)) {
           this.issue(f, sp, 'monster spawn lies outside the zone');
+        }
+      });
+      zone.spawnAreas?.forEach((area, n) => {
+        const sp = `${p}.spawnAreas[${n}]`;
+        this.ref('monster', f, `${sp}.monster`, area.monster);
+        this.needsAi(sp, area.monster);
+        const circle = { type: 'circle' as const, x: area.x, z: area.z, radius: area.radius };
+        if (!shapeInside(zone.bounds, circle)) {
+          this.issue(f, sp, 'spawn area reaches outside the zone');
         }
       });
       zone.scatter?.forEach((rule, n) => {
@@ -370,6 +380,14 @@ class CrossChecker {
         this.range(f, `${p}.scatter[${n}]`, rule.minScale, rule.maxScale);
       });
     });
+  }
+
+  /** A monster placed in the world that walks and fights needs `ai` (monsters.json). */
+  private needsAi(path: string, monsterId: string): void {
+    const def = this.data.monsters.monsters.find((monster) => monster.id === monsterId);
+    if (def && def.behavior !== 'static' && !def.ai) {
+      this.issue('zones', path, `monster "${monsterId}" walks and fights but has no ai settings`);
+    }
   }
 
   private checkStructures(zone: Zone, p: string): void {
@@ -418,27 +436,49 @@ class CrossChecker {
       const p = `npcs[${i}]`;
       this.ref('role', f, `${p}.role`, npc.role);
       this.ref('zone', f, `${p}.zone`, npc.zone);
-      this.ref('monster', f, `${p}.monster`, npc.monster);
       this.ref('season', f, `${p}.season`, npc.season);
+      this.ref('condition', f, `${p}.presentWhen`, npc.presentWhen);
+      this.ref('condition', f, `${p}.absentWhen`, npc.absentWhen);
       npc.dialogue.forEach((key, d) => this.text(f, `${p}.dialogue[${d}]`, key));
       this.text(f, `${p}.petText`, npc.petText);
       npc.dialogueWhen?.forEach((entry, w) => {
         this.ref('condition', f, `${p}.dialogueWhen[${w}].condition`, entry.condition);
         entry.lines.forEach((key, l) => this.text(f, `${p}.dialogueWhen[${w}].lines[${l}]`, key));
       });
-      npc.safeAreas?.forEach((area, a) => this.ref('area', f, `${p}.safeAreas[${a}]`, area));
 
+      npc.shop?.items.forEach((entry, e) => {
+        this.ref('item', f, `${p}.shop.items[${e}].item`, entry.item);
+        if (entry.item === 'gold') this.issue(f, `${p}.shop.items[${e}].item`, 'gold is not sold');
+      });
+      if (npc.shop && npc.interaction !== 'talk') {
+        this.issue(f, `${p}.shop`, 'a shop needs an NPC you can talk to');
+      }
       if (npc.interaction === 'talk' && npc.dialogue.length === 0) {
         this.issue(f, `${p}.dialogue`, 'an NPC you can talk to needs at least one line');
       }
       if (npc.interaction === 'pet' && !npc.petText) {
         this.issue(f, `${p}.petText`, 'an NPC you can pet needs petText');
       }
+      if (npc.interaction === 'pack' && !npc.pack) {
+        this.issue(f, `${p}.pack`, 'an NPC with interaction "pack" needs pack settings');
+      }
+      if (npc.pack && npc.interaction !== 'pack') {
+        this.issue(f, `${p}.pack`, 'a pack animal needs interaction "pack"');
+      }
       if (npc.behavior === 'follow' && !npc.follow) {
         this.issue(f, `${p}.follow`, 'behavior "follow" needs follow settings');
       }
-      if (npc.follow && npc.interaction === 'pet' && npc.follow.distance <= settings.petRange) {
-        this.issue(f, `${p}.follow.distance`, 'must be larger than settings.petRange');
+      if (npc.follow) {
+        const follow = npc.follow;
+        if (npc.interaction === 'pet' && follow.minDistance <= settings.petRange) {
+          this.issue(f, `${p}.follow.minDistance`, 'must be larger than settings.petRange');
+        }
+        // Otherwise the animal beside you takes the E key from everyone else all the time.
+        if (npc.interaction === 'pack' && follow.minDistance <= settings.interactRange) {
+          this.issue(f, `${p}.follow.minDistance`, 'must be larger than settings.interactRange');
+        }
+        this.range(f, `${p}.follow`, follow.minDistance, follow.maxDistance);
+        this.range(f, `${p}.follow.idlePauseSeconds`, ...follow.idlePauseSeconds);
       }
       if (npc.behavior === 'wander' && !npc.wander) {
         this.issue(f, `${p}.wander`, 'behavior "wander" needs wander settings');
@@ -481,6 +521,25 @@ class CrossChecker {
         this.issue(f, `start.equipment.${slot}`, `"${itemId}" is equipped but not in start.items`);
       }
     }
+    player.potions.quickOrder.forEach((itemId, i) => {
+      this.ref('item', f, `potions.quickOrder[${i}]`, itemId);
+      const item = this.data.items.items.find((entry) => entry.id === itemId);
+      if (item && item.type !== 'potion') {
+        this.issue(f, `potions.quickOrder[${i}]`, `"${itemId}" is not a potion`);
+      }
+    });
+    player.load.tiers.forEach((tier, i) => {
+      this.text(f, `load.tiers[${i}].label`, tier.label);
+      this.text(f, `load.tiers[${i}].message`, tier.message);
+      const last = i === player.load.tiers.length - 1;
+      if (last !== (tier.maxRatio === undefined)) {
+        this.issue(f, `load.tiers[${i}].maxRatio`, 'every tier but the last needs a maxRatio');
+      }
+      const before = player.load.tiers[i - 1]?.maxRatio;
+      if (tier.maxRatio !== undefined && before !== undefined && tier.maxRatio <= before) {
+        this.issue(f, `load.tiers[${i}].maxRatio`, 'tiers must go from light to heavy');
+      }
+    });
     if (player.xpToNextLevel.length > player.maxLevel - 1) {
       this.issue(f, 'xpToNextLevel', 'more XP steps than levels');
     }
@@ -503,6 +562,7 @@ class CrossChecker {
   private checkMonsters(): void {
     const f = 'monsters';
     const speedClasses = this.data.monsters.speedClasses;
+    this.range(f, 'settings.wanderPauseSeconds', ...this.data.monsters.settings.wanderPauseSeconds);
     this.data.monsters.monsters.forEach((monster, i) => {
       const p = `monsters[${i}]`;
       this.range(f, `${p}.levelRange`, monster.levelRange[0], monster.levelRange[1]);
@@ -513,6 +573,23 @@ class CrossChecker {
       if (monster.behavior === 'ranged' && monster.range === undefined) {
         this.issue(f, `${p}.range`, 'a ranged monster needs a range');
       }
+      const ai = monster.ai;
+      if (ai) {
+        const attack = ai.attack;
+        if (attack.style === 'lunge' && (!attack.lungeDistance || !attack.strikeSeconds)) {
+          this.issue(f, `${p}.ai.attack`, 'a lunge needs lungeDistance and strikeSeconds');
+        }
+        if (attack.style === 'shoot' && !attack.projectileSpeed) {
+          this.issue(f, `${p}.ai.attack.projectileSpeed`, 'a shooting attack needs a speed');
+        }
+        if (ai.keepDistance !== undefined && ai.keepDistance >= attack.range) {
+          this.issue(f, `${p}.ai.keepDistance`, 'must be smaller than the attack range');
+        }
+        if (!monster.neutral && ai.aggroRadius <= 0) {
+          this.issue(f, `${p}.ai.aggroRadius`, 'only a neutral monster may have 0');
+        }
+      }
+      monster.safeAreas?.forEach((area, a) => this.ref('area', f, `${p}.safeAreas[${a}]`, area));
       if (monster.groupSize)
         this.range(f, `${p}.groupSize`, monster.groupSize.min, monster.groupSize.max);
       this.ref('monster', f, `${p}.splitsInto.monster`, monster.splitsInto?.monster);
@@ -522,10 +599,50 @@ class CrossChecker {
         this.range(f, `${p}.drops[${d}]`, drop.min, drop.max);
       });
       monster.attacks?.forEach((attack, a) => {
-        if (attack.minHits !== undefined) {
-          this.range(f, `${p}.attacks[${a}]`, attack.minHits, attack.hits);
+        const ap = `${p}.attacks[${a}]`;
+        if (attack.minHits !== undefined) this.range(f, ap, attack.minHits, attack.hits);
+        if (attack.minGap !== undefined && attack.maxGap !== undefined) {
+          this.range(f, `${ap}.minGap`, attack.minGap, attack.maxGap);
+        }
+        this.text(f, `${ap}.hint`, attack.hint);
+        if (monster.boss && !attack.pattern) {
+          this.issue(f, `${ap}.pattern`, 'a boss attack needs a pattern');
+        }
+        const needs: Record<string, (keyof typeof attack)[]> = {
+          combo: ['hitIntervalSeconds', 'reach'],
+          pounce: ['travelSeconds', 'reach'],
+          charge: ['travelSeconds', 'length', 'width'],
+        };
+        for (const field of attack.pattern ? (needs[attack.pattern] ?? []) : []) {
+          if (attack[field] === undefined) {
+            this.issue(f, `${ap}.${field}`, `a ${attack.pattern} attack needs ${field}`);
+          }
         }
       });
+      const boss = monster.boss;
+      if (boss) {
+        this.ref('quest', f, `${p}.boss.quest`, boss.quest);
+        this.ref('trigger', f, `${p}.boss.trigger`, boss.trigger);
+        this.ref('cutscene', f, `${p}.boss.cutscene`, boss.cutscene);
+        this.range(f, `${p}.boss.pauseSeconds`, ...boss.pauseSeconds);
+        for (const key of [
+          'retryLine',
+          'enrageLine',
+          'winLine',
+          'strikeHint',
+          'guardHint',
+        ] as const)
+          this.text(f, `${p}.boss.${key}`, boss[key]);
+        this.text(f, `${p}.boss.guardText`, boss.guardText);
+        const a = boss.arena;
+        for (const point of ['start', 'playerStart'] as const) {
+          const q = boss[point];
+          if (Math.hypot(q.x - a.x, q.z - a.z) > a.radius - 1) {
+            this.issue(f, `${p}.boss.${point}`, 'must lie inside the arena');
+          }
+        }
+        if (!monster.attacks?.length) this.issue(f, `${p}.attacks`, 'a boss needs attacks');
+      }
     });
   }
 
@@ -550,11 +667,21 @@ class CrossChecker {
       if ((item.type === 'crystal') !== (item.crystal !== undefined)) {
         this.issue(f, `${p}.crystal`, 'crystal settings belong to (and are required for) crystals');
       }
+      if ((item.type === 'potion') !== (item.potion !== undefined)) {
+        this.issue(f, `${p}.potion`, 'potion settings belong to (and are required for) potions');
+      }
       if (item.slot !== undefined && item.type !== 'armor') {
         this.issue(f, `${p}.slot`, 'only armor has a slot');
       }
       if (item.type === 'armor' && item.slot === undefined) {
         this.issue(f, `${p}.slot`, 'armor needs a slot');
+      }
+      const gear = item.type === 'weapon' || item.type === 'armor';
+      if (gear && item.weight === undefined) {
+        this.issue(f, `${p}.weight`, 'weapons and armor need a weight (equip load)');
+      }
+      if (!gear && item.stats !== undefined) {
+        this.issue(f, `${p}.stats`, 'only weapons and armor have stats');
       }
       this.ref('crystalSize', f, `${p}.weapon.maxCrystalSize`, item.weapon?.maxCrystalSize);
       this.ref('crystalSize', f, `${p}.crystal.size`, item.crystal?.size);
@@ -712,6 +839,38 @@ class CrossChecker {
         if ('npc' in objective) this.ref('npc', f, `${op}.npc`, objective.npc);
         if ('item' in objective) this.ref('item', f, `${op}.item`, objective.item);
         if ('monster' in objective) this.ref('monster', f, `${op}.monster`, objective.monster);
+        if ('text' in objective) this.text(f, `${op}.text`, objective.text);
+        if (objective.type === 'visit') this.ref('trigger', f, `${op}.trigger`, objective.trigger);
+        if (objective.type === 'rest')
+          this.ref('checkpoint', f, `${op}.checkpoint`, objective.checkpoint);
+        if (objective.type === 'buy') {
+          const shops = this.data.npcs.npcs.filter(
+            (npc) =>
+              (objective.npc === undefined || npc.id === objective.npc) &&
+              npc.shop?.items.some((entry) => entry.item === objective.item),
+          );
+          if (shops.length === 0) {
+            this.issue(f, `${op}.item`, `no shop sells "${objective.item}"`);
+          }
+        }
+      });
+      if (quest.giver && !quest.dialogue) {
+        this.issue(
+          f,
+          `${p}.dialogue`,
+          'a quest with a giver needs dialogue (offer, progress, complete)',
+        );
+      }
+      if (quest.dialogue) {
+        for (const part of ['offer', 'progress', 'complete'] as const) {
+          quest.dialogue[part].forEach((key, l) =>
+            this.text(f, `${p}.dialogue.${part}[${l}]`, key),
+          );
+        }
+      }
+      quest.rewards.upgrades?.forEach((upgrade, u) => {
+        this.ref('item', f, `${p}.rewards.upgrades[${u}].from`, upgrade.from);
+        this.ref('item', f, `${p}.rewards.upgrades[${u}].to`, upgrade.to);
       });
       quest.requires.quests?.forEach((required, r) => {
         this.ref('quest', f, `${p}.requires.quests[${r}]`, required);
@@ -799,6 +958,8 @@ class CrossChecker {
       cutscene.panels.forEach((panel, n) => {
         const p = `cutscenes[${i}].panels[${n}]`;
         this.text(f, `${p}.narration`, panel.narration);
+        this.text(f, `${p}.caption`, panel.caption);
+        if (panel.background) this.color(f, `${p}.background`, panel.background);
         panel.lines?.forEach((line, l) => this.text(f, `${p}.lines[${l}].text`, line.text));
         this.ref('fight', f, `${p}.fight`, panel.fight);
       });

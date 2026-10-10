@@ -4,17 +4,17 @@ import {
   CapsuleGeometry,
   ConeGeometry,
   CylinderGeometry,
-  DodecahedronGeometry,
   SphereGeometry,
 } from 'three';
-import { palette, terrainColors } from '../render/palette';
+import { palette } from '../render/palette';
+import { catmanParts } from './EnemyFactory';
 import { colored } from './StructureFactory';
 
 /**
  * Placeholder models for NPCs (npcs.json `roles[].model`). A model is a few parts; every part
  * is one merged geometry with vertex colors, drawn as one InstancedMesh for all NPCs using that
  * model. A tinted part is multiplied by the NPC's role color (white parts take the role color
- * exactly); other parts keep their own colors (skin, eyes, bark).
+ * exactly); other parts keep their own colors (skin, eyes).
  * Heading 0 faces +z, like the player. Real glTF models replace this file later.
  */
 
@@ -87,35 +87,60 @@ function cat(): NpcModel {
   };
 }
 
-/** A Treewarden: a big walking trunk with branch arms and a leafy crown (tinted). */
-function treewarden(): NpcModel {
-  const arm = (side: number): BufferGeometry =>
-    new CylinderGeometry(0.14, 0.2, 1.8, 6).rotateZ(side * 0.6);
-  const glow = (): BufferGeometry => new SphereGeometry(0.11, 6, 4);
-  const trunk = colored([
-    [new CylinderGeometry(0.55, 0.8, 3.4, 8), palette.steengrijs, 0, 1.7, 0],
-    [arm(1), palette.steengrijs, -0.95, 2.4, 0],
-    [arm(-1), palette.steengrijs, 0.95, 2.4, 0],
-    [glow(), palette.zonlicht, -0.22, 2.75, 0.55],
-    [glow(), palette.zonlicht, 0.22, 2.75, 0.55],
+/**
+ * Biscuit: a donkey with saddlebags. Body, legs, neck and long ears are tinted; the muzzle,
+ * mane, hooves and the bags are not (the bags show it is a pack animal).
+ */
+function donkey(): NpcModel {
+  const leg = (): BufferGeometry => new CylinderGeometry(0.07, 0.06, 0.62, 6);
+  const ear = (): BufferGeometry => new ConeGeometry(0.06, 0.32, 5);
+  const fur = colored([
+    [new CapsuleGeometry(0.3, 0.75, 4, 10).rotateX(Math.PI / 2), WHITE, 0, 0.92, 0],
+    [new CylinderGeometry(0.13, 0.19, 0.55, 8).rotateX(0.7), WHITE, 0, 1.22, 0.52],
+    [new BoxGeometry(0.24, 0.26, 0.42), WHITE, 0, 1.42, 0.78],
+    [ear(), WHITE, -0.08, 1.68, 0.66],
+    [ear(), WHITE, 0.08, 1.68, 0.66],
+    [leg(), WHITE, -0.17, 0.31, 0.38],
+    [leg(), WHITE, 0.17, 0.31, 0.38],
+    [leg(), WHITE, -0.17, 0.31, -0.38],
+    [leg(), WHITE, 0.17, 0.31, -0.38],
+    [new CylinderGeometry(0.03, 0.02, 0.4, 5).rotateX(-0.4), WHITE, 0, 0.92, -0.62],
   ]);
-  const crown = colored([
-    [new DodecahedronGeometry(1.5, 0), WHITE, 0, 4.1, 0],
-    [new DodecahedronGeometry(0.9, 0), terrainColors.mosgroen, 0.6, 4.9, 0.2],
+  const bag = (): BufferGeometry => new BoxGeometry(0.16, 0.34, 0.46);
+  const hoof = (): BufferGeometry => new CylinderGeometry(0.065, 0.075, 0.07, 6);
+  const eye = (): BufferGeometry => new SphereGeometry(0.025, 6, 4);
+  const gear = colored([
+    [new BoxGeometry(0.22, 0.18, 0.2), 0xd8cfc2, 0, 1.36, 0.98],
+    [new BoxGeometry(0.06, 0.2, 0.5).rotateX(0.7), palette.nachtinkt, 0, 1.36, 0.5],
+    [eye(), EYES, -0.125, 1.5, 0.86],
+    [eye(), EYES, 0.125, 1.5, 0.86],
+    [new BoxGeometry(0.66, 0.06, 0.6), palette.schemerviolet, 0, 1.21, 0],
+    [bag(), 0x8a6a48, -0.38, 0.98, 0],
+    [bag(), 0x8a6a48, 0.38, 0.98, 0],
+    [hoof(), palette.nachtinkt, -0.17, 0.035, 0.38],
+    [hoof(), palette.nachtinkt, 0.17, 0.035, 0.38],
+    [hoof(), palette.nachtinkt, -0.17, 0.035, -0.38],
+    [hoof(), palette.nachtinkt, 0.17, 0.035, -0.38],
   ]);
   return {
     parts: [
-      { geometry: trunk, tinted: false },
-      { geometry: crown, tinted: true },
+      { geometry: fur, tinted: true },
+      { geometry: gear, tinted: false },
     ],
-    height: 5.6,
+    height: 1.85,
   };
+}
+
+/** Sultan after his fight: the same cat man as the boss, not tinted. */
+function catman(): NpcModel {
+  return { parts: [{ geometry: colored(catmanParts()), tinted: false }], height: 2.1 };
 }
 
 const builders: Record<string, () => NpcModel> = {
   'placeholder:npc_humanoid': humanoid,
   'placeholder:cat': cat,
-  'placeholder:treewarden': treewarden,
+  'placeholder:catman': catman,
+  'placeholder:donkey': donkey,
 };
 
 /** True when this factory can build the model named in npcs.json. */

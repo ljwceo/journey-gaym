@@ -163,19 +163,35 @@
       "1": "Miauw.",
       "2": "Dacht je echt dat je zomaar kon vertrekken?",
       "4": "Ik ben Sultan. Laat zien dat je klaar bent voor de wereld daarbuiten.",
-      "5": "Probeer me maar bij te houden!"
-    }
+      "5": "Probeer me maar bij te houden!",
+      "caption1": "De stadspoort bij zonsondergang. Pringle zit midden op het pad.",
+      "caption2": "Close-up: Pringles ogen gloeien goud.",
+      "caption3": "Paarse rook en wind. Pringle groeit…",
+      "caption4": "In de rook staat een lange kattenman: kattenoren, een staart, gouden ogen.",
+      "caption5": "Sultan springt naar voren. Een flits!"
+    },
+    "tapToContinue": "Tik of druk op spatie"
   },
   "hud": {
     "checkpointSet": "Checkpoint ingesteld",
-    "rested": "Je rust even uit.",
+    "rested": "Je rust uit in je bed. Je HP en mana zijn weer vol.",
     "qualityLowered": "Graphics verlaagd naar {quality} zodat het spel vloeiend blijft.",
     "interact": "Gebruiken",
     "dash": "Dash",
     "rest": "Rusten",
     "talkTo": "Praat met {name}",
     "pet": "Aai {name}",
-    "qualityChosen": "Graphics ingesteld op {quality} voor dit apparaat. Je kunt het wijzigen in Instellingen."
+    "qualityChosen": "Graphics ingesteld op {quality} voor dit apparaat. Je kunt het wijzigen in Instellingen.",
+    "protected": "{name} wordt hier beschermd.",
+    "levelUp": "Level omhoog! Je bent nu level {level}.",
+    "noPotion": "Je hebt geen drankjes.",
+    "alreadyFull": "Je HP is al vol.",
+    "loadChanged": "Draaglast: {tier}",
+    "gearInCombat": "Je kunt geen spullen wisselen tijdens een gevecht.",
+    "pack": "Open de tas van {name}",
+    "packInCombat": "Nu niet, je bent in een gevecht.",
+    "packTooHeavy": "{name} kan niet zoveel dragen.",
+    "packWorn": "Doe het eerst uit."
   },
   "dialog": {
     "next": "Verder",
@@ -202,9 +218,9 @@
   },
   "npc": {
     "brother_ansel": {
-      "1": "Ah, je bent wakker. Ik vond je bewusteloos langs de weg en bracht je hierheen.",
-      "2": "Dit Monastery is je checkpoint. Val je, dan word je hier weer wakker.",
-      "3": "Rust uit in je bed als je moe bent. Ga nu maar, Greyhaven wacht op je."
+      "1": "Welkom terug. De deuren van het Monastery staan altijd voor je open.",
+      "2": "Onthoud: val je, dan word je hier weer wakker.",
+      "3": "Rust in je bed als je moe bent. Greyhaven wacht op je."
     },
     "marco": {
       "1": "Welkom, welkom! Alles hier is speciaal, alleen voor jou.",
@@ -242,6 +258,11 @@
     },
     "pringle": {
       "pet": "Pringle spint tevreden."
+    },
+    "sultan": {
+      "1": "Goed gevochten, kleintje. Pringle was maar een vermomming. Katten hebben hun geheimen.",
+      "2": "Ga maar, de wereld wacht. Maar kom terug als je sterker bent. Ik wil een herkansing.",
+      "3": "Negen levens, weet je nog? Ik heb er nog acht."
     }
   },
   "item": {
@@ -265,17 +286,193 @@
     },
     "slime_gel": {
       "desc": "Kleverige gel die een slime achterlaat."
+    },
+    "health_potion": {
+      "desc": "Herstelt 50 HP."
+    },
+    "greater_health_potion": {
+      "desc": "Herstelt 120 HP."
+    },
+    "honed_old_sword": {
+      "desc": "Je oude zwaard, geslepen door Hilda. Elke slag doet 3 schade meer."
+    },
+    "goblin_cleaver": {
+      "desc": "Een ruw, zwaar goblinzwaard. Slaat hard, maar je voelt elke kilo."
+    },
+    "chiefs_greatblade": {
+      "desc": "De trots van de Goblin Chief. Enorme schade, enorm gewicht."
+    },
+    "straw_hat": {
+      "desc": "Houdt de zon uit je ogen. Licht als een veertje."
+    },
+    "leather_cap": {
+      "desc": "Simpel gekookt leer. Beter dan niets."
+    },
+    "iron_helm": {
+      "desc": "Massief ijzer. Sterke bescherming, maar zwaar op je hoofd."
+    },
+    "padded_mantle": {
+      "desc": "Een dikke, gewatteerde mantel die klappen dempt."
+    },
+    "ironweave_mantle": {
+      "desc": "Geweven met ijzerdraad. Heel sterk, heel zwaar."
+    },
+    "copper_amulet": {
+      "desc": "Een simpele hanger die zachtjes zoemt van magie."
+    },
+    "goblin_tooth_necklace": {
+      "desc": "Goblintanden aan een touwtje. Op de een of andere manier maakt het je feller."
+    },
+    "brass_ring": {
+      "desc": "Een eenvoudige koperen ring."
+    },
+    "swift_ring": {
+      "desc": "Je stappen voelen een beetje lichter."
+    },
+    "chiefs_signet": {
+      "desc": "De ring van de Goblin Chief. Zwaar van gestolen goud."
+    },
+    "heartwood_ring": {
+      "desc": "Gesneden uit een gevallen tak van Old Tjikko. Het voelt levend."
+    },
+    "herb_seeds": {
+      "desc": "Zaadjes van Rose. Later kun je ze planten op je stukje grond."
     }
   },
   "quest": {
     "defeat_sultan": {
-      "desc": "Versla Sultan bij de stadspoort."
+      "desc": "Verlaat de stad: versla Sultan bij de stadspoort."
     },
     "your_resolve": {
+      "offer": {
+        "1": "Het is tijd om je pad te kiezen."
+      },
+      "progress": {
+        "1": "Kies je pad in de Academy."
+      },
+      "complete": {
+        "1": "Je pad is gekozen."
+      },
       "desc": "Ga naar de Academy en kies je pad."
     },
     "first_harvest": {
+      "offer": {
+        "1": "De lente brengt bloesem. Breng je me er vijf?"
+      },
+      "progress": {
+        "1": "Vijf Blossom, lieverd. Alleen in de lente."
+      },
+      "complete": {
+        "1": "Dank je! Hier, mijn recept."
+      },
       "desc": "Breng Rose 5 Blossom uit de Garden."
+    },
+    "a_quiet_awakening": {
+      "desc": "Brother Ansel vond je langs de weg. Rust in je bed in het Monastery.",
+      "objective": "Rust in je bed in het Monastery",
+      "offer": {
+        "1": "Ah, je bent wakker. Rustig maar. Ik vond je bewusteloos langs de weg, ver van elk dorp, en heb je hierheen gedragen.",
+        "2": "Dit is het Monastery van Greyhaven. Het is nu je checkpoint: val je ooit, dan word je hier weer wakker.",
+        "3": "Je bed staat daar. Ga even liggen en rust uit; dat geneest lichaam en geest. Kom daarna bij me terug."
+      },
+      "progress": {
+        "1": "Ga eerst even rusten in je bed. Loop ernaartoe en druk op E (of tik op Rusten)."
+      },
+      "complete": {
+        "1": "Zo, weer wat kleur op je wangen. Ben je gewond, dan maakt een bed bij een checkpoint je weer heel.",
+        "2": "Neem deze munten mee. Marco op de Market Square verkoopt drankjes. Greyhaven ligt voor je open."
+      }
+    },
+    "just_for_you": {
+      "desc": "Koop 2 Health Potions bij Marco op de Market Square.",
+      "offer": {
+        "1": "Een nieuwe klant! En wat voor een. Vandaag, en alleen voor jou, zijn mijn Health Potions spotgoedkoop.",
+        "2": "Koop er twee, voor de zekerheid. Een wijze reiziger gaat nooit de stad uit zonder. Geloof me!"
+      },
+      "progress": {
+        "1": "Nog aan het twijfelen? Twee Health Potions, speciale prijs, speciaal voor jou."
+      },
+      "complete": {
+        "1": "Fijn zakendoen! Drink er een met Q, of tik op de drankknop, als je gewond bent.",
+        "2": "Hier, een kleinigheidje terug. Niet tegen de andere kooplui zeggen."
+      }
+    },
+    "steel_and_slime": {
+      "desc": "Breng Hilda 3 Slime Gel van de slimes op het erf bij de noordoostelijke stadsmuur. Dan slijpt ze je oude zwaard.",
+      "offer": {
+        "1": "HA! Is dat roestige ding je zwaard? Daar snij je op een zomerdag nog geen boter mee!",
+        "2": "Ik kan het voor je slijpen. Maar dan heb ik Slime Gel nodig om het staal te poetsen. Drie klodders.",
+        "3": "Er zijn een paar slimes het oude erf bij de noordoostelijke stadsmuur in gekropen. Mep ze en breng me hun gel!"
+      },
+      "progress": {
+        "1": "Geen gel, geen glans! De slimes zitten op het oude erf bij de noordoostelijke stadsmuur."
+      },
+      "complete": {
+        "1": "Ooh, lekker plakkerig. Geef dat zwaard maar hier. *KLANG* *KLANG* *sssss*",
+        "2": "Klaar! Je Honed Old Sword. Elke slag bijt nu wat harder. Kom terug als je gold en materialen hebt!"
+      }
+    },
+    "a_patch_of_earth": {
+      "desc": "Rose heeft een stukje grond voor je in de Garden. Ga het bekijken.",
+      "objective": "Ga naar je stukje grond in de Garden",
+      "offer": {
+        "1": "Hallo, lieverd. Elke reiziger heeft een plek nodig waar iets groeit. Zelfs een zwerver zoals jij.",
+        "2": "Aan de zuidkant van de Garden, bij de heg, ligt een klein stukje grond. Het is nu van jou. Ga maar kijken."
+      },
+      "progress": {
+        "1": "Je stukje grond ligt aan de zuidkant van de Garden, bij de heg. Ga erop staan."
+      },
+      "complete": {
+        "1": "Mooie grond, hè? Hier zijn wat zaadjes om mee te beginnen.",
+        "2": "We planten ze een andere keer samen; planten vragen geduld. Je grond blijft groeien, ook als je er niet bent."
+      }
+    },
+    "tales_by_the_fire": {
+      "desc": "Luister naar het verhaal van Old Bertha over de Lords of Morvath.",
+      "offer": {
+        "1": "Kom binnen, kom binnen, ga bij het vuur zitten! Jij bent degene die Brother Ansel langs de weg vond, hè? Ik hoor alles.",
+        "2": "Laat me je een verhaal vertellen. Vijfduizend jaar geleden deden twee tovenaars, de broers Lucael en Baelor, het ondenkbare: ze versloegen een god.",
+        "3": "Ze namen zijn kracht over en werden halfgoden. Ze worden niet oud en niet ziek. Men noemt ze de Lords of Morvath.",
+        "4": "Nu zijn het necromancers. Ze laten slimes, goblins, skeletten en erger opstaan in heel Eryndor, en hun corruptie kruipt vanuit het oosten.",
+        "5": "Hoe verder naar het oosten, hoe duisterder het wordt. Maar jij... jij kijkt nogal koppig. Misschien is dat maar goed ook."
+      },
+      "progress": {
+        "1": "Ga zitten, ga zitten. Laat een oude vrouw haar verhaal vertellen."
+      },
+      "complete": {
+        "1": "Brr. Zelfs ik krijg er de rillingen van. Neem wat soep, van het huis.",
+        "2": "En zit je ooit vast, kom het Old Bertha vragen. Er weet altijd wel iemand iets."
+      }
+    },
+    "ui": {
+      "started": "Nieuwe quest: {name}",
+      "ready": "{name}: ga terug naar {giver}",
+      "completed": "Quest voltooid: {name}",
+      "progress": "{name} · {objective}",
+      "upgraded": "{from} is nu {to}",
+      "objective": {
+        "talk": "Praat met {npc}",
+        "find": "{item} {have}/{need}",
+        "deliver": "Breng {item} naar {npc} {have}/{need}",
+        "kill": "Versla {monster} {have}/{need}",
+        "boss": "Versla {monster}",
+        "buy": "Koop {item} {have}/{need}"
+      }
+    },
+    "a_friend_for_the_road": {
+      "desc": "Marco heeft iets voor je na je gevecht met Sultan.",
+      "offer": {
+        "1": "Je hebt Sultan verslagen! De hele markt heeft het erover. Een kat in vermomming, wie had dat gedacht.",
+        "2": "Luister, iemand die zo vecht draagt straks meer dan twee armen kunnen houden. Dit is Biscuit, mijn ezel. Hij is van jou.",
+        "3": "Hij is koppig, klaagt zelden en draagt een flinke vracht zonder te morren. Wat op zijn rug ligt, weegt niet voor jou."
+      },
+      "progress": {
+        "1": "Biscuit wacht op je."
+      },
+      "complete": {
+        "1": "Ga hem maar gedag zeggen. Praat met hem, dan kun je je reservespullen op hem laden of er weer af halen.",
+        "2": "Onthoud wel: wat Biscuit draagt, kun jij niet gebruiken. Haal het eerst uit zijn tas. En niet midden in een gevecht!"
+      }
     }
   },
   "season": {
@@ -293,9 +490,17 @@
     "dash": "Dash",
     "clickToLook": "Klik om rond te kijken · Esc voor het menu",
     "attack": "Slaan",
-    "heavy": "Zwaar"
+    "heavy": "Zwaar",
+    "potion": "Drankje drinken"
   },
   "cheats": {
+    "debugView": "Debugvenster",
+    "debugViewNote": "F3 wisselt de grootte. Verborgen houdt debugmodus en dit menu (F6) aan.",
+    "debugView_large": "Groot",
+    "debugView_normal": "Normaal",
+    "debugView_small": "Klein",
+    "debugView_mini": "Alleen fps",
+    "debugView_hidden": "Verborgen",
     "title": "Cheats (debug)",
     "note": "Alleen in debugmodus, wordt nooit opgeslagen.",
     "speed": "Snelheid",
@@ -324,11 +529,112 @@
     "measure": "Fps meten",
     "measureNote": "Loop {seconds} s gewoon rond. De uitslag staat daarna in de debug-overlay (regel \"measure\").",
     "measureStart": "Meet {seconds} s",
+    "monsters": "Monsters vallen aan",
+    "grant": "Geven",
+    "grantXp": "+100 XP",
+    "grantGold": "+50 Gold",
+    "grantPotions": "+5 Health Potion",
+    "grantSlimeGel": "+3 Slime Gel",
+    "boss": "Baasgevecht",
+    "bossSultan": "Vecht tegen Sultan",
+    "grantGear": "+ alle gear",
+    "grantPackAnimal": "+ pakdier",
     "dayNight": "Dag en nacht",
     "dayNightNow": "{phase} · nog {time}",
     "dayNightClock": "Echte klok",
     "dayNightSpeed": "Snelheid",
     "dayNightMonsters": "Nachtmonsters: {count} · testgebied alleen in debugmodus"
+  },
+  "bag": {
+    "title": "Tas",
+    "drink": "Drinken",
+    "equipped": "Gedragen",
+    "empty": "Je tas is leeg.",
+    "level": "Level {level} · {xp} / {need} XP",
+    "levelMax": "Level {level} (hoogste level)",
+    "quests": "Quests",
+    "noQuests": "Je hebt nu geen quests. Praat met de mensen van Greyhaven.",
+    "equip": "Aandoen",
+    "unequip": "Uitdoen",
+    "equipment": "Gedragen",
+    "items": "Spullen",
+    "load": "Draaglast {kg} / {max} kg · {tier}",
+    "weight": "{kg} kg",
+    "rarity": {
+      "rare": "Zeldzaam",
+      "epic": "Episch",
+      "legendary": "Legendarisch"
+    },
+    "slot": {
+      "weapon": "Wapen",
+      "hat": "Hoed",
+      "mantle": "Mantel",
+      "amulet": "Amulet",
+      "ring1": "Ring",
+      "ring2": "Ring"
+    },
+    "stat": {
+      "weaponDamage": "+{n} schade per slag",
+      "hp": "+{n} HP",
+      "mana": "+{n} mana",
+      "damagePercent": "+{n}% schade",
+      "damageReductionPercent": "−{n}% schade ontvangen",
+      "moveSpeedPercent": "+{n}% snelheid"
+    }
+  },
+  "load": {
+    "light": "Licht",
+    "medium": "Middel",
+    "heavy": "Zwaar",
+    "overloaded": "Overbelast",
+    "mediumMessage": "Middelzware last: je dash is wat korter.",
+    "heavyMessage": "Zwaar beladen: je loopt trager, dasht kort en staat daarna even stil.",
+    "overloadedMessage": "Overbelast: je loopt heel langzaam en kunt niet dashen. Leg iets weg.",
+    "lightMessage": "Lichte last: je beweegt weer vrij.",
+    "cannotDash": "Te zwaar om te dashen."
+  },
+  "death": {
+    "title": "Je bent verslagen",
+    "goldLost": "Je bent {amount} {gold} kwijt. Je wordt wakker bij je checkpoint.",
+    "wakeUp": "Je wordt wakker bij je checkpoint."
+  },
+  "shop": {
+    "title": "Winkel",
+    "buy": "Kopen",
+    "price": "{price} {gold}",
+    "notEnough": "Niet genoeg {gold}.",
+    "bought": "Gekocht: {item}",
+    "owned": "In je tas: {count}"
+  },
+  "boss": {
+    "dodged": "Ontweken!",
+    "sultan": {
+      "retry": "Ben je terug? Probeer me maar bij te houden!",
+      "enrage": "Niet slecht… Nu wordt het menens!",
+      "win": "Heh… je hebt toch klauwen. Je bent klaar voor de wereld daarbuiten.",
+      "hint": {
+        "claw": "Zijn klauwen lichten op: stap achteruit of dash weg!",
+        "pounce": "Hij zakt door zijn knieën, zijn ogen gloeien: dash opzij!",
+        "charge": "Een rode streep: ga eraf voordat hij rent!",
+        "flurry": "Flurry! Ga weg en sla als hij buiten adem is.",
+        "strike": "Hij staat stil: nu slaan!",
+        "strikeTouch": "Hij staat stil: tik nu op Slaan!",
+        "guard": "Hij ontwijkt alles. Wacht tot hij stilstaat na een aanval."
+      }
+    },
+    "defeated": "{name} is verslagen!"
+  },
+  "pack": {
+    "title": "Tas van {name}",
+    "yours": "Jouw tas",
+    "theirs": "Op {name}",
+    "load": "{name} draagt {kg} / {max} kg",
+    "toPack": "Opladen",
+    "fromPack": "Pakken",
+    "all": "Alles",
+    "emptyBag": "Niets om op te laden.",
+    "emptyPack": "{name} draagt nog niets.",
+    "note": "Wat {name} draagt telt niet voor jouw draaglast, maar je kunt het pas gebruiken als je het eruit haalt."
   },
   "daynight": {
     "day": "Dag",

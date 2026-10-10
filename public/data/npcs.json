@@ -73,10 +73,16 @@
       "radius": 0
     },
     {
-      "id": "creature",
-      "color": "spreukviolet",
-      "model": "placeholder:treewarden",
-      "radius": 1.1
+      "id": "catfolk",
+      "color": "zonsondergang",
+      "model": "placeholder:catman",
+      "radius": 0.45
+    },
+    {
+      "id": "pack_animal",
+      "color": "steengrijs",
+      "model": "placeholder:donkey",
+      "radius": 0
     }
   ],
   "npcs": [
@@ -104,7 +110,35 @@
       },
       "interaction": "talk",
       "behavior": "static",
-      "dialogue": ["npc.marco.1", "npc.marco.2"]
+      "dialogue": ["npc.marco.1", "npc.marco.2"],
+      "shop": {
+        "items": [
+          {
+            "item": "health_potion",
+            "price": 10
+          },
+          {
+            "item": "greater_health_potion",
+            "price": 40
+          },
+          {
+            "item": "straw_hat",
+            "price": 15
+          },
+          {
+            "item": "brass_ring",
+            "price": 25
+          },
+          {
+            "item": "copper_amulet",
+            "price": 30
+          },
+          {
+            "item": "padded_mantle",
+            "price": 60
+          }
+        ]
+      }
     },
     {
       "id": "hilda",
@@ -215,201 +249,49 @@
       "interaction": "pet",
       "behavior": "follow",
       "follow": {
-        "distance": 1.8,
-        "speed": 4.5
+        "minDistance": 1.8,
+        "maxDistance": 4.5,
+        "speed": 4.8,
+        "strollSpeed": 1.1,
+        "idlePauseSeconds": [1.5, 5]
       },
       "petText": "npc.pringle.pet",
-      "dialogue": []
+      "dialogue": [],
+      "absentWhen": "sultanDefeated"
     },
     {
-      "id": "treewarden_1",
-      "name": "Treewarden",
-      "role": "creature",
-      "zone": "greenwood",
+      "id": "sultan",
+      "name": "Sultan",
+      "role": "catfolk",
+      "zone": "greyhaven",
       "position": {
-        "x": -1080,
-        "z": -610
+        "x": -1507,
+        "z": 7
       },
-      "interaction": "none",
-      "behavior": "wander",
-      "wander": {
-        "radius": 40,
-        "speed": 0.8
-      },
-      "monster": "treewarden",
-      "safeAreas": ["elven_city"],
-      "dialogue": []
+      "interaction": "talk",
+      "behavior": "static",
+      "heading": -110,
+      "presentWhen": "sultanDefeated",
+      "dialogue": ["npc.sultan.1", "npc.sultan.2", "npc.sultan.3"]
     },
     {
-      "id": "treewarden_2",
-      "name": "Treewarden",
-      "role": "creature",
-      "zone": "greenwood",
-      "position": {
-        "x": -1320,
-        "z": -820
+      "id": "biscuit",
+      "name": "Biscuit",
+      "role": "pack_animal",
+      "zone": "greyhaven",
+      "position": { "x": -1812, "z": 126 },
+      "interaction": "pack",
+      "behavior": "follow",
+      "follow": {
+        "minDistance": 3.2,
+        "maxDistance": 6,
+        "speed": 4.6,
+        "strollSpeed": 0.8,
+        "idlePauseSeconds": [3, 9]
       },
-      "interaction": "none",
-      "behavior": "wander",
-      "wander": {
-        "radius": 60,
-        "speed": 0.8
-      },
-      "monster": "treewarden",
-      "safeAreas": ["elven_city"],
-      "dialogue": []
-    },
-    {
-      "id": "treewarden_3",
-      "name": "Treewarden",
-      "role": "creature",
-      "zone": "greenwood",
-      "position": {
-        "x": -880,
-        "z": -380
-      },
-      "interaction": "none",
-      "behavior": "wander",
-      "wander": {
-        "radius": 60,
-        "speed": 0.8
-      },
-      "monster": "treewarden",
-      "safeAreas": ["elven_city"],
-      "dialogue": []
-    },
-    {
-      "id": "treewarden_4",
-      "name": "Treewarden",
-      "role": "creature",
-      "zone": "greenwood",
-      "position": {
-        "x": -1420,
-        "z": -110
-      },
-      "interaction": "none",
-      "behavior": "wander",
-      "wander": {
-        "radius": 30,
-        "speed": 0.8
-      },
-      "monster": "treewarden",
-      "safeAreas": ["elven_city"],
-      "dialogue": []
-    },
-    {
-      "id": "treewarden_5",
-      "name": "Treewarden",
-      "role": "creature",
-      "zone": "greenwood",
-      "position": {
-        "x": -1300,
-        "z": -200
-      },
-      "interaction": "none",
-      "behavior": "wander",
-      "wander": {
-        "radius": 40,
-        "speed": 0.8
-      },
-      "monster": "treewarden",
-      "safeAreas": ["elven_city"],
-      "dialogue": []
-    },
-    {
-      "id": "treewarden_6",
-      "name": "Treewarden",
-      "role": "creature",
-      "zone": "greenwood",
-      "position": {
-        "x": -1230,
-        "z": -440
-      },
-      "interaction": "none",
-      "behavior": "wander",
-      "wander": {
-        "radius": 35,
-        "speed": 0.8
-      },
-      "monster": "treewarden",
-      "safeAreas": ["elven_city"],
-      "dialogue": []
-    },
-    {
-      "id": "treewarden_7",
-      "name": "Treewarden",
-      "role": "creature",
-      "zone": "greenwood",
-      "position": {
-        "x": -1400,
-        "z": -560
-      },
-      "interaction": "none",
-      "behavior": "wander",
-      "wander": {
-        "radius": 50,
-        "speed": 0.8
-      },
-      "monster": "treewarden",
-      "safeAreas": ["elven_city"],
-      "dialogue": []
-    },
-    {
-      "id": "treewarden_8",
-      "name": "Treewarden",
-      "role": "creature",
-      "zone": "greenwood",
-      "position": {
-        "x": -980,
-        "z": -820
-      },
-      "interaction": "none",
-      "behavior": "wander",
-      "wander": {
-        "radius": 50,
-        "speed": 0.8
-      },
-      "monster": "treewarden",
-      "safeAreas": ["elven_city"],
-      "dialogue": []
-    },
-    {
-      "id": "treewarden_9",
-      "name": "Treewarden",
-      "role": "creature",
-      "zone": "greenwood",
-      "position": {
-        "x": -930,
-        "z": -950
-      },
-      "interaction": "none",
-      "behavior": "wander",
-      "wander": {
-        "radius": 30,
-        "speed": 0.8
-      },
-      "monster": "treewarden",
-      "safeAreas": ["elven_city"],
-      "dialogue": []
-    },
-    {
-      "id": "treewarden_10",
-      "name": "Treewarden",
-      "role": "creature",
-      "zone": "greenwood",
-      "position": {
-        "x": -780,
-        "z": -200
-      },
-      "interaction": "none",
-      "behavior": "wander",
-      "wander": {
-        "radius": 50,
-        "speed": 0.8
-      },
-      "monster": "treewarden",
-      "safeAreas": ["elven_city"],
-      "dialogue": []
+      "pack": { "maxKg": 60 },
+      "dialogue": [],
+      "presentWhen": "hasBiscuit"
     }
   ]
 }

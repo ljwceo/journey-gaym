@@ -1,5 +1,6 @@
 import type { GameContext } from '../core/GameContext';
 import type { Input } from '../core/Input';
+import { DEBUG_VIEWS } from '../render/DebugOverlay';
 import { CHEAT_SPEEDS, type Cheats } from '../systems/Cheats';
 import { el } from './dom';
 
@@ -15,6 +16,13 @@ export interface CheatPanelHandlers {
   rerunBenchmark(): void;
   /** Night monsters alive now (test mode text). */
   nightMonsters(): number;
+  /**
+   * Gives XP, gold, potions, Slime Gel, gear or the pack animal (testing levels, dying,
+   * drinking, quests, load, Biscuit).
+   */
+  grant(kind: 'xp' | 'gold' | 'potions' | 'slimeGel' | 'gear' | 'packAnimal'): void;
+  /** Starts the Sultan fight right away (no quests needed). */
+  bossFight(): void;
 }
 
 type SaveTool = 'none' | 'export' | 'import';
@@ -24,7 +32,8 @@ const MEASURE_SECONDS = 20;
 
 /**
  * Debug-only cheat menu for quick testing: walk faster, fly through walls, teleport to a zone,
- * show chunk borders. Opens with F6 or the "Cheats" button (both only in debug mode). It is a
+ * show chunk borders, give XP, gold or potions, pick the debug overlay size. Opens with F6 or the "Cheats" button (both
+ * in debug mode, also when the overlay is hidden). It is a
  * small panel at the side, so the game keeps running behind it. While flying on a touch screen,
  * ▲ / ▼ buttons appear next to the dash button.
  */
@@ -165,6 +174,20 @@ export class CheatPanel {
       el('h2', { className: 'ui-heading', text: t('cheats.title') }),
       el('p', { className: 'ui-note', text: t('cheats.note') }),
       section(
+        t('cheats.debugView'),
+        el(
+          'div',
+          { className: 'ui-chips' },
+          ...DEBUG_VIEWS.map((view) =>
+            chip(t(`cheats.debugView_${view}`), this.ctx.debug.view === view, () => {
+              this.ctx.debug.setView(view);
+              this.rebuild();
+            }),
+          ),
+        ),
+        el('p', { className: 'ui-note', text: t('cheats.debugViewNote') }),
+      ),
+      section(
         t('cheats.speed'),
         el(
           'div',
@@ -189,6 +212,34 @@ export class CheatPanel {
               text: t(this.isTouch() ? 'cheats.flyHintTouch' : 'cheats.flyHintKeys'),
             })
           : null,
+      ),
+      section(
+        t('cheats.monsters'),
+        toggle(cheats.monsters, (on) => {
+          cheats.monsters = on;
+          this.changed();
+        }),
+      ),
+      section(
+        t('cheats.grant'),
+        el(
+          'div',
+          { className: 'ui-chips' },
+          chip(t('cheats.grantXp'), false, () => this.handlers.grant('xp')),
+          chip(t('cheats.grantGold'), false, () => this.handlers.grant('gold')),
+          chip(t('cheats.grantPotions'), false, () => this.handlers.grant('potions')),
+          chip(t('cheats.grantSlimeGel'), false, () => this.handlers.grant('slimeGel')),
+          chip(t('cheats.grantGear'), false, () => this.handlers.grant('gear')),
+          chip(t('cheats.grantPackAnimal'), false, () => this.handlers.grant('packAnimal')),
+        ),
+      ),
+      section(
+        t('cheats.boss'),
+        el(
+          'div',
+          { className: 'ui-chips' },
+          chip(t('cheats.bossSultan'), false, () => this.handlers.bossFight()),
+        ),
       ),
       section(
         t('cheats.chunkLines'),

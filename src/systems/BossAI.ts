@@ -1,0 +1,477 @@
+import type { Enemy } from '../entities/Enemy';
+import type { MonsterDef } from '../data/types';
+import { angleDelta, type Mover } from './Movement';
+import { turnTowards } from './NpcBehavior';
+import type { EnemyTarget } from './EnemyAI';
+
+const DEG = Math.PI / 180;
+/** How fast a boss turns (radians per second): quick, it is a cat. */
+const TURN_SPEED = 720 * DEG;
+/** A swipe hits in this half arc in front of the boss (plus the player's width). */
+const SWIPE_HALF_ARC = 70 * DEG;
+/** While circling between attacks the boss walks sideways at this fraction of its speed. */
+const CIRCLE_FACTOR = 0.35;
+/** Backing off (too close for the next attack) at this fraction of its speed. */
+const BACK_OFF_FACTOR = 0.8;
+/** No attack in range this long (s) past the pause: switch to one that fits the gap now. */
+const GIVE_UP_EXTRA_SECONDS = 2;
+/** A pounce stops this far (m) before your body, so the two do not overlap. */
+const POUNCE_CONTACT = 0.1;
+
+export type BossAttack = NonNullable<MonsterDef['attacks']>[number];
+export type BossDef = NonNullable<MonsterDef['boss']>;
+
+/**
+ * What a boss is doing:
+ * - `stalk`: circling and closing in (or backing off) until the next attack is in range,
+ * - `telegraph`: the warning (claws glow, a crouch with golden eyes, a red line on the ground),
+ * - `attack`: the swipes, the leap or the run,
+ * - `retreat`: a leap away after the attack,
+ * - `opening`: standing still for a moment: the only time it can be hit,
+ * - `idle`: the player is down (or switched off in the cheat menu): waits, guarded.
+ */
+export type BossPhase = 'idle' | 'stalk' | 'telegraph' | 'attack' | 'retreat' | 'opening';
+
+/** Things the fight scene shows: a warning starts (hints), an opening, the boss gets faster. */
+export type BossEventKind = 'telegraph' | 'opening' | 'enraged';
+
+/** What a boss does to the world: walking (with collision), hurting the player, events. */
+export interface BossWorld {
+  mover: Mover;
+  hitPlayer(e: Enemy, damage: number): void;
+  bossEvent(e: Enemy, kind: BossEventKind, attack: BossAttack | null): void;
+}
+
+/** The ring the fight happens in (neither the boss nor the player can leave it). */
+export interface Arena {
+  x: number;
+  z: number;
+  radius: number;
+}
+
+/** Simulation state of one boss (on Enemy.boss). Reused between fights; reset by `start`. */
+export class BossState {
+  phase: BossPhase = 'idle';
+  /** Seconds spent in the current phase. */
+  elapsed = 0;
+  /** How long the current stalk pause lasts (rolled), or the current phase's length. */
+  duration = 0;
+  /** The attack being prepared or done (chosen when the stalk starts). */
+  attack: BossAttack | null = null;
+  lastAttack: BossAttack | null = null;
+  /** Attacks done this fight (Flurry comes every n-th once enraged). */
+  attacksDone = 0;
+  /** Combo: swipes still to come, seconds until the next one, swipes done (drawing). */
+  hitsLeft = 0;
+  hitTimer = 0;
+  swipes = 0;
+  /** A pounce or a charge already hit the player. */
+  struck = false;
+  /** Below the enrage HP: faster, and Flurry joins its attacks. */
+  enraged = false;
+  /** Pounce aim is fixed (the last moment of the warning). */
+  aimed = false;
+  /** Start and end of a leap, pounce or charge; the charge direction. */
+  fromX = 0;
+  fromZ = 0;
+  toX = 0;
+  toZ = 0;
+  dirX = 0;
+  dirZ = 1;
+  /** Circling direction between attacks (+1 or -1). */
+  circle = 1;
+
+  constructor(
+    readonly def: BossDef,
+    readonly arena: Arena,
+  ) {}
+
+  /** 0–1 through a leap, pounce or charge (drawing: the jump arc). */
+  get travel(): number {
+    return this.duration > 0 ? Math.min(1, this.elapsed / this.duration) : 1;
+  }
+
+  /** Speed multiplier (enraged: `enrage.speedFactor`). */
+  speedFactor(monster: MonsterDef): number {
+    return this.enraged ? (monster.enrage?.speedFactor ?? 1) : 1;
+  }
+}
+
+/** Puts a boss into its fight: at `start`, full HP, guarded, choosing its first attack. */
+export function startBoss(e: Enemy, heading: number): void {
+  const boss = e.boss;
+  if (!boss) return;
+  e.spawn(boss.def.start.x, boss.def.start.z, heading);
+  e.mode = 'chase';
+  e.guarded = true;
+  boss.attacksDone = 0;
+  boss.lastAttack = null;
+  boss.enraged = false;
+  boss.swipes = 0;
+  beginStalk(e, boss);
+}
+
+/**
+ * One fixed step of a boss fight (Sultan). Allocation-free; the same at 60 and 120 Hz.
+ * Pattern: stalk → telegraph (a clear warning) → attack → leap away → opening (it stands still
+ * and can be hit) → stalk … Below `enrage.belowHpFraction` it gets faster and adds Flurry.
+ */
+export function stepBoss(e: Enemy, target: EnemyTarget, world: BossWorld, dt: number): void {
+  const boss = e.boss;
+  if (!boss || !e.active) return;
+  if (e.mode === 'dead') {
+    e.timer -= dt;
+    if (e.timer <= 0) e.active = false;
+    return;
+  }
+  const enrage = e.def.enrage;
+  if (!boss.enraged && enrage && e.hp < e.maxHp * enrage.belowHpFraction) {
+    boss.enraged = true;
+    world.bossEvent(e, 'enraged', null);
+  }
+  if (!target.hostile) {
+    // The player is down: it stops (an attack in the air still lands somewhere).
+    if (boss.phase !== 'idle') {
+      boss.phase = 'idle';
+      e.guarded = true;
+    }
+    return;
+  }
+  if (boss.phase === 'idle') beginStalk(e, boss);
+  boss.elapsed += dt;
+  switch (boss.phase) {
+    case 'stalk':
+      stalk(e, boss, target, world, dt);
+      break;
+    case 'telegraph':
+      telegraph(e, boss, target, dt);
+      break;
+    case 'attack':
+      attack(e, boss, target, world, dt);
+      break;
+    case 'retreat':
+      if (travelTo(e, boss, world.mover)) beginOpening(e, boss, world);
+      break;
+    case 'opening':
+      // Catching its breath: it only turns to watch you.
+      turnTo(e, target.x, target.z, dt);
+      if (boss.elapsed >= boss.duration) {
+        e.guarded = true;
+        beginStalk(e, boss);
+      }
+      break;
+  }
+}
+
+/** Picks the next attack: Flurry every n-th once enraged, otherwise a different one each time. */
+export function chooseAttack(e: Enemy, boss: BossState): BossAttack | null {
+  const attacks = e.def.attacks;
+  if (!attacks || attacks.length === 0) return null;
+  const next = boss.attacksDone + 1;
+  if (boss.enraged) {
+    for (let i = 0; i < attacks.length; i++) {
+      const a = attacks[i] as BossAttack;
+      if (a.onlyWhenEnraged && a.everyNth && next % a.everyNth === 0) return a;
+    }
+  }
+  let count = 0;
+  for (let i = 0; i < attacks.length; i++) {
+    const a = attacks[i] as BossAttack;
+    if (!a.onlyWhenEnraged && a !== boss.lastAttack) count++;
+  }
+  if (count === 0) return boss.lastAttack;
+  let pick = Math.floor(e.rng.next() * count);
+  for (let i = 0; i < attacks.length; i++) {
+    const a = attacks[i] as BossAttack;
+    if (a.onlyWhenEnraged || a === boss.lastAttack) continue;
+    if (pick-- === 0) return a;
+  }
+  return null;
+}
+
+function beginStalk(e: Enemy, boss: BossState): void {
+  boss.phase = 'stalk';
+  boss.elapsed = 0;
+  const [min, max] = boss.def.pauseSeconds;
+  boss.duration = (min + (max - min) * e.rng.next()) / boss.speedFactor(e.def);
+  boss.attack = chooseAttack(e, boss);
+  boss.circle = e.rng.next() < 0.5 ? -1 : 1;
+  e.mode = 'chase';
+}
+
+function stalk(e: Enemy, boss: BossState, target: EnemyTarget, world: BossWorld, dt: number): void {
+  const a = boss.attack;
+  if (!a) return;
+  const dx = target.x - e.x;
+  const dz = target.z - e.z;
+  const d = Math.max(1e-6, Math.hypot(dx, dz));
+  const gap = d - target.radius - e.radius;
+  const speed = e.speed * boss.speedFactor(e.def);
+  const minGap = a.minGap ?? 0;
+  const maxGap = a.maxGap ?? 2;
+  const inRange = gap >= minGap && gap <= maxGap;
+  let mx: number;
+  let mz: number;
+  if (gap > maxGap) {
+    mx = (dx / d) * speed;
+    mz = (dz / d) * speed;
+  } else if (gap < minGap) {
+    mx = (-dx / d) * speed * BACK_OFF_FACTOR;
+    mz = (-dz / d) * speed * BACK_OFF_FACTOR;
+  } else {
+    // Circling sideways around you, like a cat waiting for its moment.
+    mx = (dz / d) * speed * CIRCLE_FACTOR * boss.circle;
+    mz = (-dx / d) * speed * CIRCLE_FACTOR * boss.circle;
+  }
+  move(e, boss, world.mover, mx * dt, mz * dt);
+  turnTo(e, target.x, target.z, dt);
+  if (inRange && boss.elapsed >= boss.duration) {
+    beginTelegraph(e, boss, target, world);
+  } else if (gap < minGap && boss.elapsed >= boss.duration + GIVE_UP_EXTRA_SECONDS) {
+    // Cannot back off far enough (you stay glued to him): switch to an attack that fits the
+    // gap now. (Running away does not work: he is faster than you.)
+    boss.attack = attackForGap(e, gap) ?? boss.attack;
+    boss.elapsed = boss.duration;
+  }
+}
+
+function beginTelegraph(e: Enemy, boss: BossState, target: EnemyTarget, world: BossWorld): void {
+  const a = boss.attack;
+  if (!a) return;
+  boss.phase = 'telegraph';
+  boss.elapsed = 0;
+  boss.duration = a.warningSeconds;
+  boss.aimed = false;
+  e.mode = 'windup';
+  if (a.pattern === 'charge') {
+    // The red line is fixed from the start: step off it.
+    aimAt(e, boss, target.x, target.z);
+    const length = a.length ?? 10;
+    boss.fromX = e.x;
+    boss.fromZ = e.z;
+    clampEnd(e, boss, e.x + boss.dirX * length, e.z + boss.dirZ * length);
+    e.heading = Math.atan2(boss.dirX, boss.dirZ);
+  }
+  world.bossEvent(e, 'telegraph', a);
+}
+
+function telegraph(e: Enemy, boss: BossState, target: EnemyTarget, dt: number): void {
+  const a = boss.attack;
+  if (!a) return;
+  if (a.pattern !== 'charge' && !boss.aimed) turnTo(e, target.x, target.z, dt);
+  if (
+    a.pattern === 'pounce' &&
+    !boss.aimed &&
+    boss.duration - boss.elapsed <= (a.aimLockSeconds ?? 0)
+  ) {
+    // From here on the leap goes to where you are now: dash sideways to dodge.
+    boss.aimed = true;
+    aimAt(e, boss, target.x, target.z);
+    const d = Math.hypot(target.x - e.x, target.z - e.z);
+    const stop = Math.max(0, d - target.radius - e.radius - POUNCE_CONTACT);
+    boss.fromX = e.x;
+    boss.fromZ = e.z;
+    clampEnd(e, boss, e.x + boss.dirX * stop, e.z + boss.dirZ * stop);
+  }
+  if (boss.elapsed < boss.duration) return;
+  boss.phase = 'attack';
+  boss.elapsed = 0;
+  boss.struck = false;
+  e.mode = 'strike';
+  switch (a.pattern) {
+    case 'combo':
+      boss.duration = 0;
+      boss.hitsLeft =
+        a.minHits !== undefined
+          ? a.minHits + Math.floor(e.rng.next() * (a.hits - a.minHits + 1))
+          : a.hits;
+      boss.hitTimer = 0;
+      break;
+    case 'pounce':
+    case 'charge':
+      boss.duration = a.travelSeconds ?? 0.4;
+      break;
+    default:
+      boss.duration = 0;
+      boss.hitsLeft = a.hits;
+  }
+}
+
+function attack(
+  e: Enemy,
+  boss: BossState,
+  target: EnemyTarget,
+  world: BossWorld,
+  dt: number,
+): void {
+  const a = boss.attack;
+  if (!a) return;
+  if (a.pattern === 'pounce') {
+    if (!travelTo(e, boss, world.mover)) return;
+    // Landing: hits when you are still close.
+    const gap = Math.hypot(target.x - e.x, target.z - e.z) - target.radius - e.radius;
+    if (gap <= (a.reach ?? 1)) world.hitPlayer(e, a.damage);
+    finishAttack(e, boss, target);
+    return;
+  }
+  if (a.pattern === 'charge') {
+    const fromX = e.x;
+    const fromZ = e.z;
+    const done = travelTo(e, boss, world.mover);
+    if (!boss.struck) {
+      // Did the run pass through you this step?
+      const reach = (a.width ?? 1) / 2 + target.radius;
+      if (segmentDistance(target.x, target.z, fromX, fromZ, e.x, e.z) <= reach) {
+        boss.struck = true;
+        world.hitPlayer(e, a.damage);
+      }
+    }
+    if (done) finishAttack(e, boss, target);
+    return;
+  }
+  // Combo (Claw Combo, Flurry): swipes in a row, each a small step towards you.
+  boss.hitTimer -= dt;
+  if (boss.hitTimer > 0) return;
+  if (boss.hitsLeft <= 0) {
+    finishAttack(e, boss, target);
+    return;
+  }
+  boss.hitsLeft--;
+  boss.swipes++;
+  boss.hitTimer = (a.hitIntervalSeconds ?? 0.35) / boss.speedFactor(e.def);
+  const dx = target.x - e.x;
+  const dz = target.z - e.z;
+  e.heading = turnTowards(
+    e.heading,
+    Math.atan2(dx, dz),
+    TURN_SPEED * (a.hitIntervalSeconds ?? 0.35),
+  );
+  const step = a.stepPerHit ?? 0;
+  const d = Math.hypot(dx, dz);
+  const room = Math.max(0, d - target.radius - e.radius - POUNCE_CONTACT);
+  const forward = Math.min(step, room);
+  if (forward > 0)
+    move(e, boss, world.mover, Math.sin(e.heading) * forward, Math.cos(e.heading) * forward);
+  const gap = Math.hypot(target.x - e.x, target.z - e.z) - target.radius - e.radius;
+  const delta = Math.abs(angleDelta(e.heading, Math.atan2(target.x - e.x, target.z - e.z)));
+  const widen = d > 1e-6 ? Math.asin(Math.min(1, target.radius / d)) : Math.PI;
+  if (gap <= (a.reach ?? 1) && delta <= SWIPE_HALF_ARC + widen) world.hitPlayer(e, a.damage);
+}
+
+/** After an attack: leap away from you, landing `retreatGap` m from you. */
+function finishAttack(e: Enemy, boss: BossState, target: EnemyTarget): void {
+  boss.lastAttack = boss.attack;
+  boss.attacksDone++;
+  boss.phase = 'retreat';
+  boss.elapsed = 0;
+  boss.duration = boss.def.retreatSeconds;
+  e.mode = 'recover';
+  let dx = e.x - target.x;
+  let dz = e.z - target.z;
+  let d = Math.hypot(dx, dz);
+  if (d < 1e-6) {
+    dx = -Math.sin(e.heading);
+    dz = -Math.cos(e.heading);
+    d = 1;
+  }
+  const away = boss.def.retreatGap + target.radius + e.radius;
+  boss.fromX = e.x;
+  boss.fromZ = e.z;
+  clampEnd(e, boss, target.x + (dx / d) * away, target.z + (dz / d) * away);
+}
+
+function beginOpening(e: Enemy, boss: BossState, world: BossWorld): void {
+  const a = boss.lastAttack;
+  boss.phase = 'opening';
+  boss.elapsed = 0;
+  boss.duration = a?.openingSeconds ?? boss.def.vulnerableSeconds;
+  e.mode = 'idle';
+  e.guarded = false;
+  world.bossEvent(e, 'opening', a);
+}
+
+/** Moves along from → to over `duration`; returns true when it arrived. */
+function travelTo(e: Enemy, boss: BossState, mover: Mover): boolean {
+  const t = boss.travel;
+  const x = boss.fromX + (boss.toX - boss.fromX) * t;
+  const z = boss.fromZ + (boss.toZ - boss.fromZ) * t;
+  move(e, boss, mover, x - e.x, z - e.z);
+  return boss.elapsed >= boss.duration;
+}
+
+function aimAt(e: Enemy, boss: BossState, x: number, z: number): void {
+  const dx = x - e.x;
+  const dz = z - e.z;
+  const d = Math.hypot(dx, dz);
+  if (d > 1e-6) {
+    boss.dirX = dx / d;
+    boss.dirZ = dz / d;
+  } else {
+    boss.dirX = Math.sin(e.heading);
+    boss.dirZ = Math.cos(e.heading);
+  }
+  e.heading = Math.atan2(boss.dirX, boss.dirZ);
+}
+
+/** Sets the end of a leap or run, kept inside the arena. */
+function clampEnd(e: Enemy, boss: BossState, x: number, z: number): void {
+  const a = boss.arena;
+  const max = Math.max(0, a.radius - e.radius);
+  const dx = x - a.x;
+  const dz = z - a.z;
+  const d = Math.hypot(dx, dz);
+  if (d > max) {
+    x = a.x + (dx / d) * max;
+    z = a.z + (dz / d) * max;
+  }
+  boss.toX = x;
+  boss.toZ = z;
+}
+
+/** Walks with collision, then stays inside the arena. */
+function move(e: Enemy, boss: BossState, mover: Mover, dx: number, dz: number): void {
+  if (dx !== 0 || dz !== 0) mover.moveCircle(e, e.radius, dx, dz);
+  keepInArena(e, boss.arena, e.radius);
+}
+
+/** Pushes a circle at p back inside the arena ring (also used for the player). */
+export function keepInArena(p: { x: number; z: number }, arena: Arena, radius: number): boolean {
+  const max = Math.max(0, arena.radius - radius);
+  const dx = p.x - arena.x;
+  const dz = p.z - arena.z;
+  const d2 = dx * dx + dz * dz;
+  if (d2 <= max * max) return false;
+  const d = Math.sqrt(d2);
+  p.x = arena.x + (dx / d) * max;
+  p.z = arena.z + (dz / d) * max;
+  return true;
+}
+
+function turnTo(e: Enemy, x: number, z: number, dt: number): void {
+  e.heading = turnTowards(e.heading, Math.atan2(x - e.x, z - e.z), TURN_SPEED * dt);
+}
+
+function attackForGap(e: Enemy, gap: number): BossAttack | null {
+  for (const a of e.def.attacks ?? []) {
+    if (a.onlyWhenEnraged) continue;
+    if (gap >= (a.minGap ?? 0) && gap <= (a.maxGap ?? 2)) return a;
+  }
+  return null;
+}
+
+/** Distance from point (px, pz) to the segment a → b. */
+export function segmentDistance(
+  px: number,
+  pz: number,
+  ax: number,
+  az: number,
+  bx: number,
+  bz: number,
+): number {
+  const vx = bx - ax;
+  const vz = bz - az;
+  const len2 = vx * vx + vz * vz;
+  let t = len2 > 0 ? ((px - ax) * vx + (pz - az) * vz) / len2 : 0;
+  t = Math.max(0, Math.min(1, t));
+  return Math.hypot(px - (ax + vx * t), pz - (az + vz * t));
+}

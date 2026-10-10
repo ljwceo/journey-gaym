@@ -512,7 +512,12 @@ export class IntroFightState implements GameState {
     this.input.attach();
     this.touch = new TouchControls(
       this.input,
-      { attack: t('controls.attack'), heavy: t('controls.heavy'), dash: t('controls.dash') },
+      {
+        attack: t('controls.attack'),
+        heavy: t('controls.heavy'),
+        dash: t('controls.dash'),
+        potion: t('controls.potion'),
+      },
       controls.joystickRadiusPx,
     );
     this.root.insertBefore(this.touch.root, skip);

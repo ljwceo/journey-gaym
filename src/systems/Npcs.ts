@@ -1,10 +1,13 @@
+import type { FollowTarget } from '../entities/Companion';
 import { Npc, type NpcSettings } from '../entities/Npc';
-import type { NpcDef, NpcsFile } from '../data/types';
+import type { Condition, NpcDef, NpcsFile } from '../data/types';
+import { type ConditionContext, evaluateCondition } from '../world/Conditions';
 import type { PointXZ } from '../world/Colliders';
 import type { Mover } from './Movement';
 import { turnTowards } from './NpcBehavior';
 
 const DEG = Math.PI / 180;
+const NONE: ReadonlySet<string> = new Set();
 
 /** What NPCs need from the world: walking with collision, ground height, pushing out. */
 export interface NpcWorld {
@@ -20,10 +23,11 @@ export interface NpcWorld {
  *   (the same on every graphics preset; companions are always there),
  * - static NPCs turn towards a player who comes close (or talks to them), then back,
  * - wanderers roam only near the player, where collision is loaded,
- * - companions follow the player,
+ * - companions roam around the player (Pringle, Biscuit), unless told to wait (`waitAt`),
  * - solid NPCs push the player out (you cannot walk through Brother Ansel),
  * - the nearest NPC you can talk to (within `interactRange`) or pet (within `petRange`).
- * NPCs bound to a season (`season`) only exist in that season.
+ * NPCs bound to a season (`season`) only exist in that season; `presentWhen` / `absentWhen`
+ * bring NPCs in or take them out when a condition changes (Pringle becomes Sultan).
  */
 export class Npcs {
   readonly list: Npc[];
@@ -53,6 +57,31 @@ export class Npcs {
     }
   }
 
+  /**
+   * Which NPCs are in the world now: their `presentWhen` / `absentWhen` conditions, and
+   * `hidden` (ids taken out for a moment, e.g. Pringle during the Sultan fight). Call when
+   * quests, level or the hidden list change.
+   */
+  refreshPresence(
+    conditions: Readonly<Record<string, Condition>>,
+    ctx: ConditionContext,
+    hidden: ReadonlySet<string> = NONE,
+  ): void {
+    const holds = (name: string): boolean => {
+      const condition = conditions[name];
+      return condition ? evaluateCondition(condition, ctx) : false;
+    };
+    for (const npc of this.list) {
+      const def = npc.def;
+      const present =
+        !hidden.has(npc.id) &&
+        (def.presentWhen === undefined || holds(def.presentWhen)) &&
+        (def.absentWhen === undefined || !holds(def.absentWhen));
+      npc.present = present;
+      if (!present) npc.shown = false;
+    }
+  }
+
   get shownCount(): number {
     let count = 0;
     for (let i = 0; i < this.list.length; i++) if ((this.list[i] as Npc).shown) count++;
@@ -60,14 +89,9 @@ export class Npcs {
   }
 
   /** One fixed step. `talkingTo` stands still and faces the player. */
-  update(
-    dt: number,
-    px: number,
-    pz: number,
-    playerHeading: number,
-    world: NpcWorld,
-    talkingTo: Npc | null,
-  ): void {
+  update(dt: number, player: FollowTarget, world: NpcWorld, talkingTo: Npc | null): void {
+    const px = player.x;
+    const pz = player.z;
     const cfg = this.settings;
     const show2 = cfg.showRadius * cfg.showRadius;
     const hide = cfg.showRadius + cfg.hideMargin;
@@ -79,12 +103,14 @@ export class Npcs {
     for (let i = 0; i < this.list.length; i++) {
       const npc = this.list[i] as Npc;
       const s = npc.state;
-      const companion = npc.companion;
+      // A waiting companion stays put, like any other NPC.
+      const companion = npc.waiting ? null : npc.companion;
+      if (!npc.present) continue;
 
       if (companion) {
         if (!npc.shown) {
           npc.shown = true;
-          companion.placeBehind(s, px, pz, playerHeading);
+          companion.placeBehind(s, px, pz, player.heading);
           this.settle(npc, world);
         }
       } else {
@@ -107,7 +133,7 @@ export class Npcs {
       const d2 = dx * dx + dz * dz;
 
       if (companion) {
-        if (companion.step(s, px, pz, playerHeading, dt, world.mover) === 'teleport') {
+        if (companion.step(s, player, dt, world.mover) === 'teleport') {
           this.settle(npc, world);
           continue;
         }
@@ -120,7 +146,7 @@ export class Npcs {
           npc.wander.step(s, dt, world.mover);
           s.y = world.heightAt(s.x, s.z);
         }
-      } else {
+      } else if (!npc.waiting) {
         s.heading = turnTowards(s.heading, npc.homeHeading, maxTurn);
       }
     }
@@ -173,14 +199,38 @@ export class Npcs {
     return best;
   }
 
-  /** Companions jump to the player (after a teleport). */
+  /** Companions jump to the player (after a teleport); waiting ones stay where they are. */
   snapCompanions(px: number, pz: number, heading: number, world: NpcWorld): void {
     for (const npc of this.list) {
-      if (!npc.companion) continue;
+      if (!npc.companion || !npc.present || npc.waiting) continue;
       npc.companion.placeBehind(npc.state, px, pz, heading);
       npc.shown = true;
       this.settle(npc, world);
     }
+  }
+
+  /**
+   * Hook for dungeons (phase 3 plan): a companion waits at (x, z), e.g. Biscuit at the entrance
+   * while you go in. Returns false when there is no such companion.
+   */
+  waitAt(id: string, x: number, z: number, heading: number, world: NpcWorld): boolean {
+    const npc = this.byId(id);
+    if (!npc?.companion) return false;
+    npc.waiting = true;
+    npc.place(x, world.heightAt(x, z), z, heading);
+    world.resolve(npc.state, Math.max(0.25, npc.solidRadius));
+    return true;
+  }
+
+  /** The companion follows you again; it appears beside you. */
+  stopWaiting(id: string, px: number, pz: number, heading: number, world: NpcWorld): void {
+    const npc = this.byId(id);
+    if (!npc?.companion || !npc.waiting) return;
+    npc.waiting = false;
+    if (!npc.present) return;
+    npc.companion.placeBehind(npc.state, px, pz, heading);
+    npc.shown = true;
+    this.settle(npc, world);
   }
 
   byId(id: string): Npc | undefined {

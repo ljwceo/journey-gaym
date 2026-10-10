@@ -17,6 +17,10 @@ export interface MovementConfig {
   dashCooldownSeconds: number;
   dashDistance: number;
   dashDurationSeconds: number;
+  /** False when overloaded (equip load): no dash at all. */
+  canDash: boolean;
+  /** Stuck this long after a dash (the "fat roll" when carrying a heavy load). */
+  dashRecoverySeconds: number;
 }
 
 export function movementConfig(player: PlayerConfig): MovementConfig {
@@ -31,7 +35,37 @@ export function movementConfig(player: PlayerConfig): MovementConfig {
     dashCooldownSeconds: player.dash.cooldownSeconds,
     dashDistance: player.dash.distance,
     dashDurationSeconds: player.dash.durationSeconds,
+    canDash: true,
+    dashRecoverySeconds: 0,
   };
+}
+
+/** The parts of a load tier (player.json `load.tiers`) that change how you move. */
+export interface LoadEffect {
+  walkFactor: number;
+  dashDistanceFactor: number;
+  dashExtraEnergy: number;
+  dashRecoverySeconds: number;
+  canDash: boolean;
+}
+
+/**
+ * Movement with an equip load and gear speed bonus applied, written into `out` (reused).
+ * `speedPercent` (gear, later perks) makes walking faster; the load tier makes it slower.
+ */
+export function loadedMovement(
+  base: MovementConfig,
+  load: LoadEffect,
+  speedPercent: number,
+  out: MovementConfig,
+): MovementConfig {
+  Object.assign(out, base);
+  out.walkSpeed = base.walkSpeed * load.walkFactor * (1 + speedPercent / 100);
+  out.dashDistance = base.dashDistance * load.dashDistanceFactor;
+  out.dashEnergyCost = base.dashEnergyCost + load.dashExtraEnergy;
+  out.dashRecoverySeconds = load.dashRecoverySeconds;
+  out.canDash = load.canDash && out.dashDistance > 0;
+  return out;
 }
 
 /** Anything that can move a circle through the world (CollisionWorld, or a stub in tests). */
@@ -64,6 +98,8 @@ export class MoverState implements PointXZ {
   dashTime = 0;
   dashDirX = 0;
   dashDirZ = 1;
+  /** Seconds left of getting up after a heavy-load dash (no walking, no dashing). */
+  recoverTime = 0;
   /** True while walking or dashing this step (the camera turns back behind the character). */
   moving = false;
 
@@ -99,7 +135,19 @@ export function stepMovement(
 
   const length = Math.sqrt(cmd.x * cmd.x + cmd.z * cmd.z);
 
-  if (cmd.dash && s.dashTime <= 0 && s.dashCooldown <= 0 && s.energy >= cfg.dashEnergyCost) {
+  if (s.recoverTime > 0) {
+    s.recoverTime = Math.max(0, s.recoverTime - dt);
+    s.moving = false;
+    return;
+  }
+
+  if (
+    cmd.dash &&
+    cfg.canDash &&
+    s.dashTime <= 0 &&
+    s.dashCooldown <= 0 &&
+    s.energy >= cfg.dashEnergyCost
+  ) {
     s.energy -= cfg.dashEnergyCost;
     s.sinceEnergySpent = 0;
     s.dashCooldown = cfg.dashCooldownSeconds;
@@ -121,6 +169,7 @@ export function stepMovement(
     const distance = (cfg.dashDistance / cfg.dashDurationSeconds) * time;
     world.moveCircle(s, cfg.radius, s.dashDirX * distance, s.dashDirZ * distance);
     s.dashTime = Math.max(0, s.dashTime - dt);
+    if (s.dashTime === 0) s.recoverTime = cfg.dashRecoverySeconds;
     s.moving = true;
     return;
   }

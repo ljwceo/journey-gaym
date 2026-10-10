@@ -6,10 +6,10 @@
 
 | | |
 |---|---|
-| **Huidige fase** | Fase 2 – Solo-gevecht en de eerste dag (plan goedgekeurd) |
-| **Status** | Stap 2.2 klaar + extra taak: Greyhaven uit Blender als eerste zone, dag-en-nachtcyclus, nachtspawns |
-| **Volgende stap** | Bo/Lucas testen Greyhaven op pc en iPhone (fps!) en de geschatte plekken; daarna stap 2.3: vijanden met AI (de spawns staan al klaar) |
-| **Laatste sessie** | 2026-10-10: Greyhaven-zone, dag en nacht, mobs bij nacht |
+| **Huidige fase** | Fase 3 – Je pad, Entrance Exam en gear (plan goedgekeurd 2026-10-10) |
+| **Status** | Stap 3.2 (ezel Biscuit) in een pull request. Fase 2 wacht nog op spelen en Meet 20 s op de pc |
+| **Volgende stap** | 3.3 (instances: Academy-hal en kelder van Sam) |
+| **Laatste sessie** | 2026-10-10: plan fase 3, stap 3.0, 3.1 en 3.2 |
 
 ### Open vragen
 
@@ -81,6 +81,51 @@ Doel: het spel begint met een speelbaar, episch (en komisch) gevecht tegen Lucae
 **Risico's:** veel vijanden tegelijk (AI en botsing op de vaste tijdstap) moet goedkoop blijven; vandaar één pool en de spatial hash. Gevechten moeten later in raids door een host uitgerekend kunnen worden, dus alle gevechtslogica zit in de simulatie (niet in het tekenen).
 
 **Tijdelijke namen die hierin voorkomen** (nog niet definitief): Brother Ansel, Marco the Merchant, Hilda Ironhand, Old Bertha, Sir Garrick, Treewardens, de elfenstad, Gold.
+
+## Fase 3 – Plan (goedgekeurd 2026-10-10)
+
+Doel: na Sultan kies je in de Academy je pad (Sir Garrick, Master Brink of Wizard Sam) en doe je zijn Entrance Exam tot level 5; daarna gaat de stadspoort open. Je krijgt gear (wapen, hoed, mantel, amulet, 2 ringen) in 4 zeldzaamheden, met een draaglast zoals in Elden Ring, en ezel Biscuit die je extra spullen draagt. Een mage krijgt een staf met kristal die meteen werkt (Arcane Shard + één spell), met lock-on. Elke stap is één pull request; getest op de pc.
+
+**Keuzes van Bo en Lucas (2026-10-10):**
+- **Spells in fase 3:** één basis-spell per element (eerste staf = 1 spellslot). Spellboek en meer spells: fase 4.
+- **Staf:** linkermuisknop schiet een **glintstone-achtig scherfje** (geen mana; voorlopige naam *Arcane Shard*), rechtermuisknop = je spell (mana). **Alles wat je schiet heeft een reisafstand** en verdwijnt daarna.
+- **Lock-on:** in een gevecht zet je lock-on op een vijand; dan hoef je niet te mikken (je schoten buigen naar hem toe). Je kunt wél missen: als de vijand op dat moment een aanval doet (hij beweegt weg, je schot buigt niet meer mee) of als je te ver van hem wegkijkt (bijv. meer dan 40°). **Alle richthulp-getallen zijn in het cheatmenu aan te passen**, zodat Bo en Lucas kunnen testen voor de definitieve keuze.
+- **Gewicht zoals Elden Ring**, maar realistisch voor wapens en spullen die je bij je hebt: hoe zwaarder, hoe trager. Wat Biscuit draagt telt niet voor jou, maar daar kun je ook niet bij: om het te gebruiken, aan te trekken of later te laten maken bij de Forge moet je het eerst uit zijn tas halen.
+- **Gear-stats:** max HP, schade %, minder schade %, mana, loopsnelheid; hogere zeldzaamheid geeft meer.
+- **Biscuit** krijg je van Marco direct na Sultan.
+- **Deuren/portalen naar aparte kaarten (instances):** je loopt door een deur, er volgt een kort laadscherm en er wordt een aparte kaart voor dat stuk geladen (en weer opgeruimd als je weggaat), zodat die niet de hele tijd geladen is. De eerste keer dat je bij Master Brink of Wizard Sam binnenkomt, volgt een korte cutscene waarin hij uitlegt waar zijn magie om draait.
+- **Debugvenster in groottes** (het zat echt in de weg) en **cheats ook als het venster niet in beeld staat**.
+- Exam-quests: voorstel van Claude (alleen data, namen tijdelijk).
+
+**Draaglast (naar Elden Ring, uitgezocht 2026-10-10):** in Elden Ring telt alleen wat je aan hebt; je draaglast is een percentage van je maximum, met vaste grenzen: onder 30% *licht* (snelle, verre ontwijking), 30–70% *middel* (kortere ontwijking), 70–100% *zwaar* ("fat roll": kort, langzaam herstel), boven 100% *overbelast* (niet rennen, niet rollen). Het maximum groeit met Endurance. Voor ons:
+
+| Stand | Draaglast | Lopen | Dash | Energie per dash |
+|---|---|---|---|---|
+| Licht | < 30% | 100% | 4 m, snel | 25 |
+| Middel | 30–70% | 95% | 3,2 m | 25 |
+| Zwaar | 70–100% | 85% | 2,4 m + 0,35 s herstel | 35 |
+| Overbelast | > 100% | 50% | geen dash | – |
+
+- Telt mee: wapens en gear die **jij bij je hebt** (aan én reserve in je tas). Grondstoffen, drankjes en questitems wegen niets (concept). Wat Biscuit draagt telt niet voor jou.
+- Maximum: 30 kg op level 1, +1 kg per level (later ook via de skill tree). Biscuit draagt 60 kg. Alle getallen zijn een **voorstel** in `player.json`.
+- In de tas zie je je gewicht en stand ("23,5 / 34 kg · Middel"); bij overbelast verschijnt een melding.
+
+| Stap | Wat |
+|---|---|
+| 3.0 | **Debugvenster:** groottes Groot / Normaal / Klein / Mini (alleen fps) / Verborgen (F3 wisselt, ook in het cheatmenu). Debugmodus blijft aan als het venster verborgen is, dus het cheatmenu (F6) blijft werken. Keuze onthouden per browser. |
+| 3.1 | **Gear en draaglast:** 6 slots (wapen, hoed, mantel, amulet, ring 1, ring 2), zeldzaamheidskleuren, stats, aan- en uitdoen in de tas (alleen buiten gevecht), draaglast met de vier standen hierboven (lopen en dash), placeholder-vormen op het poppetje, gear als buit in de Greenwood en een paar stukken bij Marco. Save versie 6. |
+| 3.2 | **Ezel Biscuit:** krijg je van Marco na Sultan, loopt rustig achter je aan, pakdier-tas met maximum gewicht (alleen dichtbij Biscuit en buiten gevecht), spullen op Biscuit zijn niet te gebruiken tot je ze eruit haalt. Haak "wacht bij de ingang" voor dungeons. |
+| 3.3 | **Instances:** deur/portaal-trigger → kort laadscherm → aparte kaart uit data (`instances.json`), open wereld staat zolang stil; bij weggaan wordt de kaart opgeruimd (`dispose`). Eerste twee: **de Academy-hal** (Master Brink) en **de kelder van Wizard Sam** (trap vanuit de hal). Eerste keer binnen: korte cutscene met uitleg over zijn magie. Save onthoudt in welke instance je bent. |
+| 3.4 | **Main quest *Your Resolve*:** keuzeknoppen in de dialoog; "Will you train under me?" → nee mag altijd, ja → nog één keer bevestigen → pad in de save. Sam waarschuwt voor de duistere weg, Brink zegt dat geduld wordt beloond. |
+| 3.5 | **Vechten met een staf + lock-on:** Arcane Shard (links, geen mana), één spell per element (rechts, mana) uit een pool, met reisafstand; lock-on (pc: middelste muisknop of Tab, telefoon: knop) met marker en camera die het doel in beeld houdt; missen bij een vijandaanval of te ver wegkijken; richthulp-getallen in het cheatmenu. Lock-on werkt ook met het zwaard. Op elke grafische stand gelijk. |
+| 3.6 | **Entrance Exams en pad:** 3 quests per leraar tot level 5; zwaardvechter: beter zwaard, geen mana, 115% kracht, perks Iron Body, Battle Hardened, Swift Blade; mage: Mage Staff + **Crystal Ceremony** (stripcutscene; Brink: willekeurig Water/Fire/Nature/Wind, Sam: Dark) en krachtcurves. Daarna `canLeaveCity` = Sultan verslagen + exam klaar. |
+| 3.7 | **Afronden:** balans (nagebootste speler met zwaard, licht en duister), Meet 20 s, geheugen (ook instances in/uit), documentatie. |
+
+**Niet in fase 3:** skill tree en skillpunten, spellboek en meer spells, kristallen mergen of opnieuw renderen, de echte Forge en markt (fase 4); co-op (fase 5); Warrior/Berserker (level 15), Old Rivals, Grimoire, Nine Lives, Second Wind (later).
+
+**Afspraak:** Master Brink heet in het spel overal *Master Brink*. Zijn echte naam (Ruben) komt pas uit in de quest Old Rivals en staat tot dan nergens in de data of de teksten.
+
+**Tijdelijke namen die hierin voorkomen** (nog niet definitief): Sir Garrick the Blademaster, ezel Biscuit, Marco the Merchant, Gold, Treewardens; nieuw en voorlopig: Arcane Shard, de namen van de 5 spells, de gear, het betere zwaard en de exam-quests.
 
 ## Fase-log
 
@@ -257,7 +302,7 @@ Doel: het spel begint met een speelbaar, episch (en komisch) gevecht tegen Lucae
 ---
 
 ### Fase 2 – Solo-gevecht en de eerste dag
-**Status:** bezig, stap 2.1 en 2.2 klaar.
+**Status:** alle stappen gebouwd (2.1 t/m 2.7); wacht op spelen en meten op de pc.
 **Gebouwd:**
 - 2.1 Gevechtskern:
   - **Zwaard** (`src/systems/Combat.ts`, puur en getest): fast hit met de **linkermuisknop** (10 schade, 10 energie, max 3 per seconde, elke 3e slag op rij +50% en goud gekleurd), heavy hit met de **rechtermuisknop** (25 energie vooraf, 0,9 s uithalen, dan 25 schade, daarna 0,35 s herstel). Zonder genoeg energie: fast hits nog wel, maar half zo snel; geen heavy hit. Per level +2 (fast) en +5 (heavy) schade. Alles op de vaste tijdstap: 60 en 120 Hz geven dezelfde slagen (test).
@@ -277,6 +322,124 @@ Doel: het spel begint met een speelbaar, episch (en komisch) gevecht tegen Lucae
   - Daarna gaat de intro verder met paneel 5 en 6 en word je wakker in het Monastery. **Overslaan** (knop of Escape) slaat alleen het gevecht over; Skip op de tekstkaarten slaat de hele intro over.
   - Het gevecht duurt zonder slaan ±45 s (test: altijd korter dan een minuut). Laadt als apart bestand (13 kB) en wordt al vanaf het titelscherm opgehaald.
   - Getest in headless Chromium: hele intro → gevecht → alle grappen in volgorde → "0" bij een slag → paneel 5 en 6 → wereld. Gevonden en opgelost: na het teleporteren bleef Lucael pal achter je staan en blokkeerde hij het beeld (nu teleporteert hij terug), en bij de spell keek de camera niet naar Baelor (nu wel). Geen fouten. 255 tests.
+- 2.3 Vijanden in de Greenwood (+ op verzoek: Pringle zwerft om je heen):
+  - **Eén pool voor alle vijanden** (`src/systems/Enemies.ts`): bij het bouwen van de wereld gevuld uit `spawns` en de nieuwe `spawnAreas` in `zones.json`. Vijanden gaan aan en uit (verslagen, terugkomen, splitsen); tijdens het spelen wordt niets aangemaakt. 52 plekken in de pool, 45 vijanden tegelijk in de wereld.
+  - **AI** (`src/systems/EnemyAI.ts`, puur en getest): rondlopen rond hun plek → opmerken (binnen `aggroRadius`) → achtervolgen → **windup** die je ziet (oranje gloed, achteroverleunen; slimes krimpen in) → slag → herstellen. Te ver van huis, vastgelopen of jij knock-out: terug naar huis en weer heel. Getallen per vijand in `monsters.json` (`ai`), gedeelde getallen in `monsters.json` → `settings`.
+  - **Green Slime** springt in hupjes en duikt op je af (5 schade). **Big Slime** (zelfde model, 1,8× zo groot) splitst bij doodgaan in 2 Green Slimes die meteen aanvallen. **Goblins** in groepjes van 2–3: sla je er één, dan komt het hele groepje (8 schade). **Goblin Archer** houdt afstand (stapt achteruit) en schiet pijlen (12 schade) naar waar je stond: opzij stappen of dashen = ontwijken. **Goblin Chief** in een **goblinkamp** (3 tenten en een kampvuur, met bewakers en archers): elke 3e aanval is de **Big Swing** met een **rode cirkel** op de grond die volloopt (20 schade binnen 3,5 m). **Treewarden** (nu een vijand in plaats van een NPC, zelfde 10 plekken): loopt rustig rond, valt alleen terug aan (Heavy Slam, 40 schade, rode cirkel van 4 m), wordt na 8 s zonder klappen weer rustig, en is **in de elfenstad niet aan te vallen** ("Treewarden is protected here.").
+  - **Spawngebieden:** 2 slimeveldjes, 1 Big Slime-kuil, goblins op 2 plekken, archers op een heuvelrug, het goblinkamp in het zuidwesten van het bos. Niets in de elfenstad of binnen 60 m van de ingang. Een verslagen groepje komt na 30–180 s terug, alleen als je minstens 35 m weg bent.
+  - **Jij wordt geraakt:** HP omlaag, rood getal boven je hoofd, korte rode rand om het scherm, HP-balk volgens de HUD-regels. **Bij 0 HP (voorlopig, tot stap 2.4):** "You were knocked out…", je wordt wakker bij je checkpoint met volle HP en alle vijanden zijn weer heel. Nog geen goldverlies (dat komt met gold in 2.4).
+  - **Pringle** (`src/entities/Companion.ts`): houdt geen vaste afstand meer. Sta je stil, dan zit hij, kijkt rond en wandelt af en toe naar een ander plekje naast je (1,8–4,5 m), zonder langs je voeten te lopen. Loop je echt, dan draaft hij schuin naast je mee, nooit vóór je en nooit tussen jou en de camera, en snuffelt hij soms even. Loop je naar hem toe om te aaien, dan blijft hij zitten. Getallen in `npcs.json` (`follow`).
+  - **Tekenen:** placeholder-modellen voor slime, goblin (speer), archer (kap en boog), chief (kroon en knots) en Treewarden in `EnemyFactory.ts`; pijlen en rode cirkels (die de grond volgen) in `src/render/CombatEffects.ts`.
+  - **Debug:** regel `enemies` (getoond / in de wereld / pool, vechtend, pijlen, dichtstbijzijnde vijand met zijn toestand en HP). Cheatmenu: **Monsters vallen aan** aan/uit.
+  - Getest: 270 tests (o.a. slime raakt even vaak op 60 en 120 Hz, ontwijken tijdens de windup, terug naar huis, groepje komt mee, splitsen en terugkomen, archer en ontwijken, elke 3e aanval van de Chief, Treewarden alleen terug en niet in de elfenstad, Pringle nooit vóór je en niet steeds even ver). Headless Chromium: slime valt aan en doet 5 schade, goblinkamp slaat je knock-out → wakker bij het Monastery, rode cirkel van de Big Swing onder speler en Chief, 3× wereld in/uit: geometrie terug naar 0. Geen fouten. Gevonden en opgelost: een slimeveld lag op de oever van een beek (slimes liepen vast; nu verplaatst, en vastgelopen vijanden geven het op), en Pringle liep soms vlak langs je voeten (nu niet meer).
+- 2.4 XP, levels, buit, tas, drankjes, doodgaan en rusten:
+  - **XP en levels** (`src/systems/Progression.ts`): een verslagen vijand geeft zijn XP uit `monsters.json` (Green Slime 10, Goblin 20, ...), met "+10 XP" boven de vijand. XP-curve uit `player.json` (100/150/220/300/400/520/660 = level 8 bij 2350 XP). Level omhoog: +10 HP, +5 mana, fast hit +2 en heavy hit +5 schade, HP en mana vol, melding "Level omhoog! Je bent nu level 3." De XP-balk verschijnt volgens de HUD-regels, loopt rustig vol (bij een level eerst helemaal), en daarna faden alle balken weer uit.
+  - **Buit** (`src/systems/Inventory.ts`): de `drops` uit `monsters.json` gaan meteen in je tas, met "+3 Gold" / "+1 Slime Gel" boven de vijand. Gold rechtsboven verschijnt even als het verandert. Nieuw: Health Potion als buit (Big Slime 15%, Goblin en Goblin Archer 10%, Goblin Chief altijd 1–2).
+  - **Tas** (I of B, of het tas-knopje naast pauze; ook op de telefoon): gold, level en XP, alle spullen met aantal en uitleg, "Gedragen" bij je zwaard en mantel, "Drinken" bij drankjes. Het spel wacht zolang de tas open is.
+  - **Drankjes:** Q op de pc, op de telefoon een drankknop met het aantal erop (alleen als je drankjes hebt). Health Potion = +50 HP, Greater Health Potion = +120 HP (in `items.json`), 1 s tussen twee drankjes, niet bij volle HP. Groen "+50" boven je hoofd en de HP-balk verschijnt even.
+  - **Doodgaan:** bij 0 HP wordt het scherm zwart: "Je bent verslagen" en "Je bent 5 Gold kwijt. Je wordt wakker bij je checkpoint." Je verliest 10% van je gold (naar beneden afgerond); alle spullen houd je. Je wordt wakker bij je laatste checkpoint met volle HP en mana, de vijanden zijn weer heel, en de game slaat meteen op (herladen helpt dus niet). Tijden in `player.json` → `death`.
+  - **Rusten** bij een checkpoint (E of tikken op "Rusten"): HP en mana vol, en de game slaat op.
+  - **Save versie 3** (`progress`: level, XP, HP en mana). Een oude save wordt level 1 met 0 XP en volle HP; gold en tas blijven. HP en mana worden onthouden (ook halfvol).
+  - **Events voor de quests van stap 2.5:** `monsterDefeated`, `xpGained`, `levelUp`, `itemsGained`, `potionDrunk`, `playerRested`, `playerDied` (vervangt `playerKnockedOut`).
+  - **Cheatmenu:** "Geven": +100 XP, +50 Gold, +5 Health Potion. Debugregel `combat` toont nu ook XP, gold en "dying".
+  - Getest: 291 tests (o.a. XP-curve en level 8 bij 2350 XP, meerdere levels tegelijk, max level, 10% gold, buitkansen, drankjes, save v2 → v3, validator voor drankjes). Headless Chromium (pc 1100×700 en telefoon 844×390, EN en NL): slime verslaan → +10 XP in de tas; goblinkamp → zwart scherm, 57 → 52 gold, wakker bij het heiligdom, opgeslagen als v3; Q en de drankknop (+50 HP, knop verdwijnt bij 0); "Drinken" in de tas; rusten → 100 HP; 3× +100 XP → level 3 met 120 HP en 60 mana; nieuw spel vanaf de taalkeuze → save v3 op level 1. Geen fouten.
+- 2.5 Quests van de eerste dag:
+  - **Questsysteem** (`src/systems/Quests.ts`, puur en getest; alles uit `quests.json`): praat met de gever → de quest begint meteen ("Nieuwe quest: …"). Soorten doelen: praten, iets hebben, iets brengen, vijanden verslaan, baas verslaan, **kopen**, **rusten** en **ergens heen lopen**. Praat je met de gever terwijl je nog niet klaar bent, dan zie je onder zijn laatste zin wat je nog mist ("✗ Breng Slime Gel naar Hilda Ironhand 2/3"). Ben je klaar, dan zegt hij dat bij het volgende gesprek en krijg je meteen je beloning (XP, gold, item, upgrade) met tekstjes boven je hoofd.
+  - **De vijf quests** (allemaal vanaf level 1, in elke volgorde; teksten in het Engels en Nederlands):
+    - **A Quiet Awakening** (Brother Ansel): hij vertelt hoe hij je vond en legt checkpoint en bed uit → rust in je bed → 40 XP en 20 Gold ("Marco verkoopt drankjes").
+    - **Just For You** (Marco): koop 2 Health Potions in zijn **winkel** → 40 XP en 5 Gold terug. De winkel opent na zijn laatste zin: Health Potion 10 Gold, Greater Health Potion 40 Gold.
+    - **Steel and Slime** (Hilda): breng 3 Slime Gel → 60 XP en je **Old Sword wordt Honed Old Sword** (+3 schade op elke slag). De slimes zitten op een **erf binnen de stadsmuur** (noordoosten, bij x −1580, z −175: 3 Green Slimes die na 30 s terugkomen), zodat het ook werkt als de poort later dicht is.
+    - **A Patch of Earth** (Rose): loop naar je eigen stukje grond aan de zuidkant van de Garden (nieuw bruin vakje bij de heg) → 50 XP, 3 Herb Seeds, en het stukje grond is van jou (`unlocks` in de save; kweken komt later).
+    - **Tales by the Fire** (Old Bertha): ze vertelt over Lucael en Baelor, de god die ze versloegen en de corruptie uit het oosten → 40 XP.
+    - Samen 230 XP; met de slimes voor Hilda ben je dan level 3 (test). De quest "Defeat Sultan" wacht nu op alle vijf quests en level 3 (voor stap 2.6).
+  - **Markeringen:** een gouden ruit boven een NPC met een nieuwe quest, een blauwe als je er een kunt inleveren.
+  - **Tas:** onder je spullen staan je lopende quests met ✓/✗ per doel.
+  - **Meldingen:** voortgang ("Steel and Slime · … 2/3"), "ga terug naar Hilda Ironhand", "Quest voltooid", "Old Sword is nu Honed Old Sword".
+  - **Save versie 4** (`quests` en `unlocks`); een oude save begint zonder quests (level, gold en tas blijven).
+  - **Cheatmenu:** "Geven" heeft nu ook +3 Slime Gel. Debugregel `quests` (lopende quests met tellers, aantal klaar, unlocks, wapenbonus).
+  - Brother Ansel zegt na zijn quest andere zinnen (niet meer "ik vond je langs de weg").
+  - Getest: 308 tests (o.a. tellen pas na aannemen, "2/3" en inleveren, kopen alleen bij de juiste winkel, wie wat zegt, data-wijzigingen in een oude save, alle vijf vanaf level 1, ±level 3, Hilda's upgrade, genoeg slimes binnen de stadsmuur, Bertha meteen klaar, wapenbonus, save v3 → v4, validator). Headless Chromium (pc 1100×700, EN en NL): met een oude v3-save alle vijf quests achter elkaar (praten, rusten, winkel met 2× kopen en "Niet genoeg Gold", Slime Gel via het cheatmenu, naar het stukje grond lopen, het verhaal van Bertha) → level 2 met 130 XP, 5 Gold, Honed Old Sword gedragen (+3), Herb Seeds, `garden_plot`; gouden ruit boven Marco; tas met quests in het Nederlands. Geen fouten.
+
+- 2.6 Sultan, de beginnersbaas:
+  - **Hoe het begint:** zodra de vijf quests van de eerste dag klaar zijn en je level 3 bent, begint de quest **Defeat Sultan** vanzelf ("Nieuwe quest: Defeat Sultan" en "Verlaat de stad: versla Sultan bij de stadspoort."). Loop je dan naar de stadspoort (het stuk vlak vóór de poort, binnen de muur), dan speelt de **stripcutscene "Pringle"**: 5 plaatjes die in beeld schuiven met een onderschrift (wat je ziet; er is nog geen tekening) en een tekstballon, met inzoomen, schudden en een flits, precies de teksten uit het concept. Tikken, klikken, spatie of Enter = volgende; **Overslaan** of Escape slaat hem over. Hij speelt maar één keer.
+  - **Het gevecht** (`src/systems/BossAI.ts`, puur en getest): Sultan (800 HP, snel) en jij staan in een **gouden ring** van 15 m binnen de stadspoort waar niemand uit kan; zijn naam en HP-balk staan bovenin, Pringle is weg (hij ís Sultan). Sultan cirkelt om je heen als een kat en kiest steeds een andere aanval, elk met een **duidelijke waarschuwing** die je ruim de tijd geeft:
+    - **Claw Combo** (2–3 klauwslagen, 12 schade per slag): hij gloeit oranje en leunt achterover (0,7 s). Stap achteruit of dash weg.
+    - **Pounce** (15 schade): hij zakt door zijn knieën en gloeit goud (0,9 s), en springt dan naar waar je stond. Dash opzij.
+    - **Dash Strike** (15 schade): er verschijnt een **rode streep** op de grond die volloopt (1 s), dan rent hij er in een rechte lijn doorheen. Stap van de streep af.
+    - Na **elke** aanval springt hij weg (hij landt vlak bij je) en **staat hij 1 s stil**: alleen dan kun je hem raken. Sla je eerder, dan ontwijkt hij ("Ontweken!").
+    - **Onder 50% HP:** "Niet slecht… Nu wordt het menens!", hij wordt 25% sneller en elke 3e aanval is **Flurry** (5 klauwslagen), waarna hij **2 s buiten adem** is.
+  - **Tips de eerste keer** (één keer per tip, onthouden in de save): "Zijn klauwen lichten op: stap achteruit of dash weg!", "Hij zakt door zijn knieën, zijn ogen gloeien: dash opzij!", "Een rode streep: ga eraf voordat hij rent!", "Flurry! …", "Hij staat stil: nu slaan!" (op de telefoon: "tik nu op Slaan!") en "Hij ontwijkt alles. Wacht tot hij stilstaat na een aanval."
+  - **Winnen:** Sultan valt om: "Heh… je hebt toch klauwen. Je bent klaar voor de wereld daarbuiten.", +200 XP, "Quest voltooid: Defeat Sultan". Daarna staat **Sultan als NPC buiten de stadspoort** (praten: hij vertelt dat Pringle een vermomming was en wil later een herkansing) en loopt Pringle niet meer mee.
+  - **Verliezen** = gewoon doodgaan (−10% gold, wakker in het Monastery). Pringle loopt weer mee; loop terug naar de poort en het gevecht begint meteen opnieuw, zonder cutscene ("Ben je terug? Probeer me maar bij te houden!").
+  - **Data:** `boss` en de aanvallen (met `pattern`, afstanden, waarschuwingstijden, `hint`) bij Sultan in `monsters.json`; trigger `sultan_gate` en conditie `sultanDefeated` in `triggers.json`; NPC Sultan (`presentWhen`) en Pringle (`absentWhen`) in `npcs.json`; de stripplaatjes in `cutscenes.json`. De poortvoorwaarde `canLeaveCity` blijft "altijd" tot de klassekeuze (fase 3).
+  - **Save versie 5** (`seenCutscenes`, `seenHints`); een oude save heeft nog niets gezien.
+  - **Cheatmenu:** "Baasgevecht → Vecht tegen Sultan" start het gevecht meteen (ook zonder quests). Teleporteren tijdens het gevecht stopt het gevecht.
+  - Getest: 325 tests (o.a. alleen raakbaar in de opening van 1 s, elke aanval eerst een waarschuwing, stilstaan = geraakt, ontwijken van Claw Combo, Pounce en Dash Strike lukt, 60 en 120 Hz gelijk, Flurry elke 3e aanval onder 50% en 2 s buiten adem, nooit buiten de ring, stopt als je knock-out bent, Pringle/Sultan wisselen, save v4 → v5, validator). Headless Chromium (pc 1100×700 in EN en NL, telefoon 844×390): poort → nieuwe quest → cutscene (tikken en Overslaan) → gevecht met waarschuwingen, rode streep, tips en HP-balk; winnen (met een tamme Sultan via aangepaste data) → quest klaar, +200 XP, Sultan praat buiten de poort; verliezen → zwart scherm, 50 → 45 gold, wakker in het Monastery met Pringle, opnieuw naar de poort = meteen gevecht met "Back again?". Geen fouten. Gevonden en opgelost: de stripplaatjes waren onzichtbaar en op de telefoon te hoog, de HP-balk van de baas lag op de telefoon over je eigen balken, de ring was gestippeld, en na de cutscene sprong de camera omhoog (de muis wordt nu niet meer vanzelf gevangen; één klik is genoeg).
+- 2.7 Afronden (balans, meten, geheugen, documentatie):
+  - **Balans van Sultan getest met een gesimuleerde speler** (`src/systems/Balance.test.ts`): een nagebootste speler vecht met de échte zwaard-, beweeg- en baascode op de vaste tijdstap (level 3, Honed Old Sword, geen drankjes), 8 gevechten per soort speler:
+
+    | Speler | Gewonnen | Duur | HP over (van 120) |
+    |---|---|---|---|
+    | Ontwijkt op tijd (reageert na 0,3 s) | 8/8 | ±63 s | ±79 |
+    | Beginner (reageert pas na 0,5 s) | 8/8 | ±96 s | ±37 (spannend!) |
+    | Ontwijkt nooit, blijft alleen slaan | 0/8 | binnen een minuut verslagen | 0 |
+
+    De nagebootste speler raakt Sultan in élke opening; een echte speler mist er een paar, dus in het echt duurt het gevecht langer (richting de 2 minuten uit het concept). Precies wat het concept wil: "semi lastig: wie niet op tijd ontwijkt, verliest".
+  - **Bijgesteld na de balanstest** (alleen data, `monsters.json`): pauze tussen twee aanvallen 1,0–2,0 s (was 0,8–1,6), Pounce mikt 0,3 s vóór de sprong (was 0,25), Flurry waarschuwt 0,9 s (was 0,8) en loopt per klauwslag 0,4 m mee (was 0,5). Zonder deze aanpassing won een beginner maar 1 van de 8 keer.
+  - **Fout gevonden en opgelost:** bleef je pal tegen Sultan aan staan terwijl hij een Pounce of Dash Strike wilde doen (die hebben afstand nodig), dan bleef hij eindeloos achteruit lopen zonder aan te vallen. Nu kiest hij na 2 s een aanval die wél past (Claw Combo).
+  - **Rekentijd van de vijanden** (`src/systems/EnemiesPerf.test.ts`): op de drukste plek van de wereld (8 vijanden binnen 60 m) 0,02 ms per stap; stresstest met **alle 45 vijanden tegelijk om je heen** (26 vechtend, pijlen) 0,03 ms per stap. Dat is minder dan 1% van een frame op 120 fps.
+  - **Draw calls en geheugen** in de testbrowser (die tekent zonder videokaart, dus de fps zegt niets):
+
+    | Plek | Low | Mid | High |
+    |---|---|---|---|
+    | Goblinkamp (8 vijanden in beeld, vechtend) | 54 calls | 117 calls | 155 calls |
+    | Sultan-gevecht | 46 calls | 83 calls | 94 calls |
+
+    Vijanden kosten per soort model een vast aantal draw calls (instanced), hoeveel er ook rondlopen. 3× wereld in en uit (met een Sultan-gevecht ertussen) op Low, Mid en High: geometrie/textures elke keer terug naar 0 op het titelscherm, en weer gelijk in de wereld. Geen fouten.
+  - **Nog te doen door Bo en Lucas (pc):** Cheats → **Meet 20 s** op Mid en High, één keer bij het goblinkamp (teleport naar de Greenwood en loop naar het zuidwesten) en één keer tijdens het Sultan-gevecht (Cheats → Vecht tegen Sultan). Stuur de regel `measure` door.
+  - 330 tests. Documentatie bijgewerkt (`ARCHITECTURE.md`: balans- en prestatietests).
+
+**Definition of Done fase 2** (✅ = gebouwd en getest in tests en de testbrowser, 🎮 = nog door Bo/Lucas te spelen of te meten op de pc)
+
+| | Punt | Waar / opmerking |
+|---|---|---|
+| ✅🎮 | Fast en heavy hits met de muis (en knoppen op de telefoon); energie, combo en schade kloppen | Stap 2.1, getest (10/15/25 schade, energie) |
+| ✅🎮 | Slimes en goblins in de Greenwood: rondlopen, aanvallen, terugkomen; Treewarden valt alleen terug aan, niet in de elfenstad | Stap 2.3 |
+| ✅🎮 | XP, levels, balken volgens de HUD-regels, buit, drankjes | Stap 2.4 |
+| ✅🎮 | Doodgaan kost 10% gold, wakker bij je checkpoint; rusten = vol HP en mana | Stap 2.4 |
+| ✅🎮 | De vijf quests van de eerste dag in NL en EN, samen ±level 3 | Stap 2.5 (test: level 3) |
+| ✅🎮 | Speelbaar, onwinbaar en komisch intro-gevecht tegen Lucael en Baelor, overslaanbaar | Stap 2.2 |
+| ✅🎮 | Sultan: cutscene (overslaanbaar), duidelijke waarschuwingen, momenten om te slaan, tips de eerste keer, winnen en verliezen werken | Stap 2.6, balans 2.7. **Graag laten weten of hij te makkelijk of te moeilijk is** |
+| ✅🎮 | 60/120 fps op de pc, ook met veel vijanden; op elke stand hetzelfde gevecht | Rekenwerk gemeten (0,03 ms met alle vijanden), draw calls per stand hierboven; gevecht staat los van de grafische stand (tests). **Fps op de pc nog meten** |
+| ✅ | Tests (gevechtsformules, XP, quests, save-migratie) en de DataValidator slagen | 330 tests |
+
+### Fase 3 – Je pad, Entrance Exam en gear
+**Status:** plan goedgekeurd; stap 3.0, 3.1 en 3.2 gebouwd.
+**Gebouwd:**
+- 3.0 Debugvenster in groottes:
+  - **F3** (of tikken met drie vingers) zet debugmodus aan en wisselt daarna de grootte: **Groot** (alles, zoals eerst) → **Normaal** (alles, kleiner en doorzichtiger) → **Klein** (fps, draw calls, grafische stand, positie en zone) → **Alleen fps** (één regel) → **Verborgen** → Groot. Ook te kiezen bovenin het cheatmenu (**Debugvenster**). De keuze wordt per browser onthouden (niet in de save).
+  - **Debugmodus blijft aan als het venster verborgen is:** de knop Cheats, F6, F4 (seizoen) en alle cheats blijven werken. Debugmodus helemaal uit gaat via Settings.
+  - Gebouwlabels in de wereld en de rode foutlijst staan alleen bij Groot en Normaal; bij Klein, Alleen fps en Verborgen wordt de tekst van de wereld niet eens opgebouwd (scheelt rekenwerk).
+  - Getest: 336 tests (o.a. de volgorde van F3, welke regels in Klein staan). Headless Chromium (pc 1100×700, NL): titelscherm F3 door alle groottes; in de wereld verborgen → Cheats-knop en F6 werken, Klein kiezen in het cheatmenu. Geen fouten.
+
+- 3.1 Gear en draaglast:
+  - **6 slots:** wapen, hoed, mantel, amulet, ring en ring. In de tas (I of B) staat bovenaan je **draaglast** ("Draaglast 23,5 / 34 kg · Middel", gekleurd per stand), dan wat je **draagt** (met Uitdoen; je wapen kun je alleen wisselen, niet uitdoen), dan je **spullen**. Gear heeft een knop **Aandoen**, en onder de naam staan zeldzaamheid, gewicht en stats ("Zeldzaam · 6 kg · +25 HP · −6% schade ontvangen"). Namen van zeldzame, epische en legendarische spullen hebben hun kleur uit de stijlgids. Wisselen kan alleen buiten een gevecht ("Je kunt geen spullen wisselen tijdens een gevecht.").
+  - **Draaglast zoals Elden Ring** (`src/systems/Gear.ts`, puur en getest): alle wapens en gear in je tas tellen mee, ook wat je niet aan hebt; grondstoffen, drankjes en questitems wegen niets. Je kunt 30 kg dragen op level 1, +1 kg per level. **Licht** (≤ 30%): zoals altijd. **Middel** (≤ 70%): 95% lopen, dash 3,2 m. **Zwaar** (≤ 100%): 85% lopen, dash 2,4 m, kost 35 energie en je staat daarna 0,35 s stil ("fat roll"). **Overbelast** (> 100%): 50% lopen en geen dash ("Te zwaar om te dashen."). Bij een andere stand verschijnt een korte uitleg. Alles in `player.json` → `load`.
+  - **Stats** (`stats` in `items.json`): HP, mana, schade %, minder schade % (max 80%) en loopsnelheid %. Gaan meteen in je HP-maximum, je slagen en de schade die je krijgt.
+  - **13 nieuwe spullen** (namen voorlopig): Goblin Cleaver (zeldzaam zwaard, 8 kg), Chief's Greatblade (episch zwaard, 14 kg), Straw Hat, Leather Cap, Iron Helm (6 kg), Padded Mantle, Ironweave Mantle (9 kg), Copper Amulet, Goblin Tooth Necklace, Brass Ring, Swift Ring, Chief's Signet en Heartwood Ring (legendarisch). Als **buit** in de Greenwood (goblins, archers en Big Slimes soms iets kleins; de Goblin Chief vaak iets zwaars, heel soms de Heartwood Ring) en bij **Marco** (Straw Hat 15, Brass Ring 25, Copper Amulet 30, Padded Mantle 60 Gold).
+  - **Op het poppetje:** hoed en amulet in hun zeldzaamheidskleur, de mantel alleen als je hem draagt, een zwaarder zwaard is groter.
+  - **Cheatmenu:** "Geven → + alle gear" (één van elk: meteen overbelast, handig om de standen te testen). Debugregel `load` (kg, stand, loopsnelheid, dash, schadefactoren).
+  - Geen nieuwe saveversie nodig: wat je draagt stond al in de save (`character.equipment`).
+  - Getest: 349 tests (o.a. gewicht tellen, grenzen van de standen, ringen twee keer, wapen nooit uit, stats optellen, licht = oude beweging, fat roll, overbelast = geen dash en geen energie kwijt, 60 en 120 Hz gelijk, validator). Headless Chromium (pc 1100×760, NL): start 5/30 kg licht → alle gear 55,2/30 kg overbelast met melding → Iron Helm, Heartwood Ring en Chief's Greatblade aandoen (HP 165, schade ×1,20, schade ontvangen ×0,94) → dash doet niets met "Te zwaar om te dashen.". Geen fouten.
+
+- 3.2 Ezel Biscuit:
+  - **Biscuit krijgen:** na Sultan heeft Marco een nieuwe quest (gouden ruit): *A Friend for the Road* (naam voorlopig). Hij geeft je zijn ezel Biscuit (+20 XP). Daarna loopt Biscuit met je mee, net als Pringle eerst: rustig, wat verder weg (3,2–6 m), nooit voor je of tussen jou en de camera, grazend als je stilstaat. Na een teleport staat hij weer naast je.
+  - **Biscuits tas:** loop naar Biscuit en druk E ("Open de tas van Biscuit"). Bovenaan staan je eigen draaglast en wat Biscuit draagt ("Biscuit draagt 22 / 60 kg"). Met **Opladen** gaat iets van jouw tas naar Biscuit, met **Pakken** terug; bij een stapel ook **Alles**. Wat je draagt (je wapen, je mantel) blijft bij jou ("Gedragen"). Biscuit draagt max 60 kg aan wapens en gear; grondstoffen en drankjes passen altijd. Alleen buiten een gevecht ("Nu niet, je bent in een gevecht.").
+  - **Niet bruikbaar op Biscuit:** wat op Biscuit ligt telt niet voor je draaglast, maar je kunt het ook niet drinken, aandoen of inleveren voor een quest tot je het eruit haalt.
+  - **Haak "wacht bij de ingang"** voor dungeons (`Npcs.waitAt` / `stopWaiting`), nog niet in gebruik.
+  - **Save versie 6:** Biscuits tas (`character.pack`); oude saves krijgen een lege tas.
+  - **Cheatmenu:** "Geven → + pakdier" (Biscuit meteen, zonder Sultan).
+  - Getest: 358 tests (o.a. opladen/pakken, gedragen gear blijft, maximum gewicht, Biscuit pas na de quest, meelopen 30 s, wachten en terugroepen, save v5 → v6). Headless Chromium (pc 1100×760, NL en EN) met een oude v5-save: praten met Marco → quest klaar en Biscuit verschijnt → E bij Biscuit → Chief's Greatblade en een Goblin Cleaver opladen (41/33 kg overbelast → 19/33 kg middel, Biscuit 22/60 kg) → 6 s lopen, Biscuit loopt mee → herladen + Continue: Biscuits tas is bewaard. Geen fouten.
 - Extra taak (2026-10-10, opdracht van Bo): **Greyhaven uit Blender, dag en nacht, mobs bij nacht**
   - **Greyhaven als eerste echte zone** (`public/zones/greyhaven/`: `greyhaven.glb`, `player.glb`, `materials.json`, `tex/`). In `zones.json` heeft Greyhaven nu een blok `scene`: een zone die uit Blender komt in plaats van uit het gestreamde terrein. Hij laadt **async met een laadscherm en voortgangsbalk** (`src/world/scene/SceneAssets.ts`). De Blender-oorsprong ligt in de wereld op `offset` (−1765, 0, 0), zodat alle posities in de data gewoon wereldcoördinaten blijven (Blender x, y, z ⇒ wereld x − 1765, z, −y).
   - **Spawn bij het Monastery**: Blender (−32,21; −52,95; 8,94) = wereld (−1797,21; 8,94; 52,95), kijkend naar de stad (−z). Een nieuw spel begint daar (`placeAtStart` gebruikt nu `headingDegrees` van het spawnpunt).
@@ -387,6 +550,57 @@ Doel: het spel begint met een speelbaar, episch (en komisch) gevecht tegen Lucae
 | 2026-10-09 | De grappen in het intro-gevecht zijn een **voorstel** (teksten in `lang`, volgorde in `cutscenes.json`) | Het concept noemt alleen de twee zinnen en "één krachtige spell"; zeg het als het anders moet |
 | 2026-10-09 | Overslaan in het gevecht slaat alleen het gevecht over (paneel 5 en 6 volgen nog) | Zo mis je het verhaal niet; Skip op de tekstkaarten slaat de hele intro over |
 | 2026-10-09 | PerfTest verplaatst naar `experiments/perftest/` | Oude test-code hoort in `/experiments` (§5). Er was geen PeerJS-netwerktest in de repo, dus `experiments/net-test/` bestaat (nog) niet |
+| 2026-10-10 | Treewardens zijn nu vijanden (`spawns` in `zones.json`) in plaats van NPC's | Zo gebruiken ze dezelfde gevechtscode als slimes en goblins. Zelfde 10 plekken. NPC-velden `monster` en `safeAreas` zijn weg; `safeAreas` staat nu bij de vijand in `monsters.json` |
+| 2026-10-10 | Bij 0 HP voorlopig "knock-out": wakker bij je checkpoint met volle HP, vijanden weer heel, geen goldverlies | Doodgaan (−10% gold, cutscene) is stap 2.4 |
+| 2026-10-10 | De dash maakt je niet onkwetsbaar; ontwijken = uit het bereik of de rode cirkel stappen, of opzij voor een pijl | Voorstel uit het plan. Zeg het als de dash even onkwetsbaar moet maken |
+| 2026-10-10 | Vijanden bewegen en vechten alleen binnen 60 m van jou (`settings.simulateRadius`); verder weg staan ze stil, en wie je achtervolgde gaat naar huis | Alleen daar is botsing geladen; op elke grafische stand hetzelfde |
+| 2026-10-10 | Een goblin-`spawn` op een vaste plek wordt ook een groepje van 2–3 | `groupSize` hoort bij de soort; zo zijn goblins altijd met meer |
+| 2026-10-10 | Aanvallen: Green Slime/Big Slime springen (`lunge`), goblins steken (`strike`), archers schieten (`shoot`); windup 0,45–1,2 s, alle getallen in `monsters.json` | Voorstel; het concept geeft alleen HP, schade, snelheid en XP |
+| 2026-10-10 | Rode cirkel alleen bij de grote aanvallen (Big Swing, Heavy Slam); gewone aanvallen waarschuwen met een oranje gloed en een houding | Concept: "grote aanvallen met waarschuwing"; anders staat het scherm vol rood |
+| 2026-10-10 | Het goblinkamp ligt in het zuidwesten van de Greenwood (rond x −1300, z −1030), met 3 tenten en een kampvuur | Ver van de ingang en buiten de elfenstad; plek is een voorstel |
+| 2026-10-10 | Een verslagen groepje komt pas terug als je minstens 35 m weg bent | Zo verschijnt er nooit een vijand vlak voor je neus |
+| 2026-10-10 | Pringle: geen vaste afstand meer (1,8–4,5 m), zit en wandelt als je stilstaat, draaft schuin naast je als je loopt, nooit vóór je of tussen jou en de camera | Verzoek: "om je heen, niet irritant, niet in de weg, een beetje wanderen, niet steeds dezelfde afstand" |
+| 2026-10-10 | Pringle gaat pas meelopen als je langer dan ~1,2 s loopt | Anders liep hij weg als je naar hem toe liep om hem te aaien |
+| 2026-10-10 | Buit gaat meteen in je tas (niets op de grond om op te rapen) | Simpel, en in raids krijgt iedereen toch zijn eigen buit (concept). Zeg het als je buit wilt oprapen |
+| 2026-10-10 | Level omhoog maakt HP en mana vol (`levelUpRefill` in `player.json`) | Voorstel; voelt als een beloning. Uit te zetten in de data |
+| 2026-10-10 | Na level 8 kost elk level 660 XP (de laatste stap uit het concept) | Concept geeft de curve alleen tot level 8; aan te passen in `xpToNextLevel` |
+| 2026-10-10 | Health Potion +50 HP, Greater Health Potion +120 HP, 1 s tussen twee drankjes | Voorstel; concept noemt geen getallen |
+| 2026-10-10 | Health Potions vallen soms uit Big Slimes en goblins, altijd uit de Goblin Chief | Anders zijn er tot stap 2.5 (Marco verkoopt ze) geen drankjes te krijgen |
+| 2026-10-10 | Drinken: Q op de pc, een drankknop (met aantal) linksboven de knoppen op de telefoon | Q ligt naast WASD; de knop zit in de knoppenzone, dus nooit onder de HUD |
+| 2026-10-10 | De tas pauzeert het spel (I of B, of het tas-knopje naast pauze) | Simpel en veilig op de telefoon; drinken tijdens een gevecht gaat snel met Q of de drankknop. In raids (fase 5) kan de tas niet pauzeren; dan passen we het aan |
+| 2026-10-10 | Doodgaan: 0,8 s naar zwart, 1,6 s zwart met tekst, 0,8 s terug (`death` in `player.json`) | Voorstel; de "cutscene" bij doodgaan uit het plan is nu dit korte zwarte scherm |
+| 2026-10-10 | Doodgaan en een level omhoog slaan meteen op | Anders kun je de goldstraf ontlopen door te herladen |
+| 2026-10-10 | Een quest begint meteen als de gever hem vertelt (geen ja/nee) | Simpel; het concept noemt geen weigeren bij kleine quests. Bij "Your Resolve" (fase 3) komt wel een keuze |
+| 2026-10-10 | Questnamen (voorstel, Engels): A Quiet Awakening, Just For You, Steel and Slime, A Patch of Earth, Tales by the Fire | Het concept noemt alleen wat je bij elke NPC doet; namen zijn tijdelijk |
+| 2026-10-10 | Beloningen: Ansel 40 XP + 20 Gold, Marco 40 XP + 5 Gold, Hilda 60 XP + zwaard-upgrade, Rose 50 XP + 3 Herb Seeds + stukje grond, Bertha 40 XP | Samen met een paar slimes ±level 3 (concept). Ansels gold is genoeg voor Marco's 2 drankjes |
+| 2026-10-10 | Marco verkoopt Health Potion (10 Gold) en Greater Health Potion (40 Gold); alleen kopen, nog niet verkopen | "Simpele versie: Marco verkoopt een paar drankjes" (plan). Prijzen zijn een voorstel |
+| 2026-10-10 | Hilda's upgrade: Old Sword → Honed Old Sword, +3 schade op elke slag (fast en heavy), voor 3 Slime Gel | Plan: "oude zwaard één keer upgraden voor Slime Gel". Het getal staat in `items.json` (`damageBonus`) |
+| 2026-10-10 | Rose: je stukje grond is een bruin vakje (3 × 3 m) aan de zuidkant van de Garden; Herb Seeds zijn nu alleen een item | Kweken komt later (concept: groeit ook als je niet speelt) |
+| 2026-10-10 | Slimes voor Hilda op een erf binnen de stadsmuur (noordoosten), niet in de Greenwood | Keuze van Bo en Lucas (optie a): de stadspoort gaat pas open na de klassekeuze, dus de eerste dag moet binnen de stad kunnen |
+| 2026-10-10 | Questmarkeringen: gouden ruit = nieuwe quest, blauwe ruit = inleveren | Zo vind je de gevers zonder vaste route; zeg het als jullie ze niet willen |
+| 2026-10-10 | Sultan-gevecht in een ring van 15 m net binnen de stadspoort (niemand kan eruit) | Zo blijft het gevecht overzichtelijk en loopt niemand weg door de poort; het concept noemt alleen "bij de stadspoort". Plek in `monsters.json` → `boss.arena` |
+| 2026-10-10 | Waarschuwingen iets langer dan in het concept: Claw Combo 0,7 s (concept 0,4), Pounce 0,9 s, Dash Strike 1 s, Flurry 0,8 s | Plan: "je hebt ruim de tijd om weg te dashen"; het is een beginnersbaas. Aan te passen in `warningSeconds` |
+| 2026-10-10 | Na elke aanval landt Sultan 1,5 m van je af en staat 1 s stil (na Flurry 2 s): alleen dan raakbaar, anders "Ontweken!" | Concept: "je kunt hem alleen raken in de korte momenten na zijn aanvallen". Dichtbij landen, zodat je in die 1 s echt kunt slaan |
+| 2026-10-10 | Sultan kiest steeds een andere aanval dan de vorige; onder 50% is elke 3e aanval Flurry | Voorstel; zo zie je alle aanvallen en leer je ze |
+| 2026-10-10 | Tips verschijnen één keer per tip (onthouden in de save), niet bij elke herkansing | Concept: "de eerste keer"; zeg het als ze bij elke poging moeten komen |
+| 2026-10-10 | Verliezen tegen Sultan is gewoon doodgaan: ook −10% gold | Concept: "verlies je, dan word je wakker in het Monastery"; de goldstraf hoort bij doodgaan. Zeg het als dit gevecht zonder straf moet |
+| 2026-10-10 | Na het gevecht is Pringle weg en staat Sultan als NPC buiten de poort (zinnen over de vermomming en een herkansing) | Concept: "na het gevecht wordt Sultan een NPC"; Pringle wás Sultan. Wil je Pringle terug als kat, haal dan `absentWhen` bij Pringle weg |
+| 2026-10-10 | De stripcutscene heeft nog geen tekeningen: elk plaatje is een kleurvlak met een onderschrift van wat je ziet | De beeldprompts staan in het concept; plaatjes komen later in de art-pass (fase 6) |
+| 2026-10-10 | Na een cutscene wordt de muis niet vanzelf gevangen; één klik en je kijkt weer rond | Vanzelf vangen liet de camera soms een sprong maken |
+| 2026-10-10 | Sultan iets vriendelijker na de balanstest: pauze 1,0–2,0 s, Pounce mikt 0,3 s vóór de sprong, Flurry waarschuwt 0,9 s en loopt minder mee | Een beginner (0,5 s reactietijd) won anders maar 1 van de 8 keer; nu wint hij net (±37 HP over). Wie niet ontwijkt verliest nog steeds |
+| 2026-10-10 | Balans wordt getest met een nagebootste speler in de tests (`Balance.test.ts`) | Zo zien we bij elke wijziging in `monsters.json` meteen of het gevecht te makkelijk of te moeilijk wordt |
+| 2026-10-10 | Debugvenster in 5 groottes (F3 wisselt), debugmodus en cheats blijven aan als het venster verborgen is; F3 zet debug niet meer uit (dat kan in Settings) | Verzoek van Bo/Lucas: "het zit echt in de weg" en cheats zonder venster in beeld. Vervangt "F3 = debug aan/uit" |
+| 2026-10-10 | Draaglast zoals Elden Ring (licht < 30%, middel 30–70%, zwaar 70–100%, overbelast > 100%), maar voor alle gear die je bij je hebt; wat Biscuit draagt telt niet, maar is ook niet bruikbaar tot je het eruit haalt | Verzoek van Bo/Lucas; getallen zijn een voorstel in `player.json` |
+| 2026-10-10 | Lock-on met schoten die meebuigen; missen als de vijand aanvalt of als je meer dan ±40° wegkijkt; alle richthulp-getallen in het cheatmenu | Verzoek van Bo/Lucas, om te testen voor de definitieve keuze |
+| 2026-10-10 | Academy-hal en kelder van Sam worden instances (deur → laadscherm → aparte kaart) | Verzoek van Bo/Lucas; oefent meteen de interface voor De Wortelgrotten |
+| 2026-10-10 | Draaglast: alle wapens en gear in je tas tellen mee (aan én reserve), 30 kg op level 1 +1 per level; licht/middel/zwaar/overbelast op 30/70/100% | Elden Ring telt alleen wat je aan hebt; Bo/Lucas wilden het "echt voor wat je bij je hebt", zodat Biscuit (3.2) zin heeft. Getallen zijn een voorstel |
+| 2026-10-10 | Je wapen kun je niet uitdoen, alleen wisselen | Zonder wapen kun je niet vechten (en een staf komt pas in 3.5) |
+| 2026-10-10 | Gear aandoen geeft extra max HP, maar vult je HP niet bij | Anders kun je HP "bijvullen" door gear uit en aan te doen |
+| 2026-10-10 | Zeldzaamheidskleuren in de tas gemengd met de tekstkleur | Puur magieblauw en spreukviolet waren te donker op het paneel |
+| 2026-10-10 | Biscuit krijg je via een korte quest van Marco (*A Friend for the Road*, +20 XP) die meteen na Sultan beschikbaar is | Plan: "krijg je van Marco direct na Sultan"; zo zie je de gouden ruit boven Marco en weet je waar je heen moet |
+| 2026-10-10 | Biscuit draagt 60 kg aan wapens en gear; grondstoffen en drankjes wegen niets en passen altijd | Zelfde regel als jouw draaglast; 60 kg komt uit het plan (`pack.maxKg` in `npcs.json`) |
+| 2026-10-10 | Wat je aan hebt kan niet op Biscuit (eerst uitdoen); je wapen dus nooit | Anders sta je zonder wapen of stats die je niet ziet |
+| 2026-10-10 | Biscuit is niet solide (je loopt door hem heen) en praat niet; E opent meteen zijn tas | Een ezel die je de weg verspert is irritant in smalle straatjes. Zeg het als hij wel solide moet zijn of iets moet zeggen |
 | 2026-10-10 | **Greyhaven uit Blender is een losse zone** (eigen scène met laadscherm); door de oostkant naar de open wereld en terug. Je begint daar | Keuze van Bo ("Losse zone + poort"). Het Blender-model en het gestreamde terrein passen niet naadloos op elkaar (hoogtes, kust); het concept noemt "zone-based architectuur met async laden per zone" |
 | 2026-10-10 | NPC's, plekken, trainingspoppen en checkpoint van Greyhaven zijn **geschat** verhuisd naar het Blender-Greyhaven | Keuze van Bo ("Verhuizen, ik schat"). Het Blender-bestand heeft geen gebouwnamen (meshes per materiaal); alleen data, dus makkelijk te verschuiven |
 | 2026-10-10 | Blender-oorsprong in de wereld op (−1765, 0, 0) (`scene.offset`) | Zo blijven alle posities wereldcoördinaten (saves, NPC's, triggers) en past de stad binnen de oude grenzen van Greyhaven |
@@ -431,4 +645,12 @@ Doel: het spel begint met een speelbaar, episch (en komisch) gevecht tegen Lucae
 - Eerste echte meting (pc, Chrome, 120 Hz-scherm, 1920×945): Mid avg 60,0 / 1% low 59,5 / worst 16,8 ms; High avg 120,0 / 1% low 117,6 / worst 8,5 ms. Beide precies op hun fps-doel, langste frame = één schermverversing, dus geen haperingen. Low en iPhone nog niet gemeten.
 
 ### 2026-10-10
+- Stap 2.3 gebouwd: vijanden in de Greenwood (Green Slime, Big Slime, Goblin, Goblin Archer, Goblin Chief in een goblinkamp, Treewarden) uit één pool, met AI, spawngebieden en terugkomen; pijlen en rode waarschuwingscirkels; knock-out bij 0 HP (voorlopig); debugregel en cheat "Monsters vallen aan". Op verzoek: Pringle zwerft om je heen in plaats van op vaste afstand te volgen. 270 tests, headless Chromium zonder fouten. Tijdelijke namen gebruikt (alleen in data): Treewarden, de elfenstad (`elven_city`), Big Swing, Heavy Slam, Gold, Slime Gel; nieuw: "Goblin tent" en "Campfire" (alleen labels in debug). Volgende stap: 2.4 (XP, levels, buit, doodgaan).
+- Stap 2.4 gebouwd: XP en levels, buit in de tas, tas-venster, drankjes (Q / drankknop), doodgaan met 10% goldverlies en zwart scherm, rusten bij een checkpoint, save versie 3 met migratie, nieuwe events voor de quests, cheats "Geven". 291 tests, headless Chromium (pc en telefoon, EN en NL) zonder fouten. Tijdelijke namen gebruikt (alleen in data): Gold, Health Potion, Greater Health Potion, Slime Gel. Volgende stap: 2.5 (quests van de eerste dag).
+- Stap 2.5 gebouwd: questsysteem uit `quests.json` (praten, hebben, brengen, verslaan, kopen, rusten, ergens heen lopen), de vijf quests van de eerste dag (Brother Ansel, Marco, Hilda, Rose, Old Bertha) in EN en NL, winkel van Marco, Hilda slijpt je zwaard (+3 schade), stukje grond in de Garden, questmarkeringen, quests in de tas, save versie 4. 307 tests, headless Chromium (EN en NL) zonder fouten. Tijdelijke namen gebruikt (alleen in data): Brother Ansel, Marco the Merchant, Hilda Ironhand, Old Bertha, Gold, Slime Gel; nieuw: de vijf questnamen, Honed Old Sword, Herb Seeds, "Your plot". Op verzoek (optie a): een slime-erf binnen de stadsmuur voor Hilda's Slime Gel. Volgende stap: 2.6 (Sultan).
+- Stap 2.6 gebouwd: Sultan, de beginnersbaas: quest begint vanzelf na de eerste dag, stripcutscene "Pringle" (één keer, overslaanbaar), baasgevecht in een ring bij de stadspoort (Claw Combo, Pounce, Dash Strike, Flurry onder 50%, alleen raakbaar na een aanval, tips de eerste keer, HP-balk), winnen = Sultan wordt een NPC buiten de poort en Pringle is weg, verliezen = doodgaan en meteen een herkansing. Save versie 5. Cheat "Vecht tegen Sultan". 325 tests, headless Chromium (pc EN/NL en telefoon) zonder fouten. Tijdelijke namen gebruikt (alleen in data): Gold; nieuw: geen (Sultan, Pringle en de aanvalsnamen komen uit het concept). Volgende stap: 2.7 (afronden).
+- Stap 2.7 gebouwd: balanstest met een nagebootste speler tegen Sultan (en Sultan iets vriendelijker gemaakt), fout opgelost waarbij Sultan niet aanviel als je tegen hem aan bleef staan, rekentijd van alle vijanden gemeten (0,03 ms per stap met alle 45 vijanden om je heen), draw calls per stand bij het goblinkamp en tegen Sultan, geheugen na 3× wereld in/uit gelijk, Definition of Done van fase 2 nagelopen. 330 tests. Open: spelen en Meet 20 s op de pc door Bo en Lucas.
+- Plan fase 3 geschreven en goedgekeurd met aanpassingen (glintstone-achtig schot met reisafstand, lock-on met missen en instelbare richthulp, draaglast zoals Elden Ring, instances via deuren met uitleg-cutscene, debugvenster in groottes). Stap 3.0 gebouwd: debugvenster in groottes, cheats ook met verborgen venster. 336 tests. Tijdelijke namen: geen nieuwe. Volgende stap: 3.1 (gear en draaglast).
+- Stap 3.1 gebouwd: gear in 6 slots met zeldzaamheid en stats, draaglast zoals Elden Ring (licht/middel/zwaar/overbelast), aan- en uitdoen in de tas, gear als buit en bij Marco, hoed en amulet op het poppetje, cheat "+ alle gear". 349 tests. Tijdelijke namen (nieuw, alleen in data): de 13 gear-namen. Volgende stap: 3.2 (Biscuit).
+- Stap 3.2 gebouwd: ezel Biscuit via Marco's quest na Sultan, loopt mee, pakdier-tas met 60 kg (opladen/pakken, gedragen gear blijft bij jou, alleen buiten gevecht), haak "wacht bij de ingang", save versie 6, cheat "+ pakdier". 358 tests. Tijdelijke namen gebruikt (alleen in data): Biscuit, Marco the Merchant; nieuw: de quest *A Friend for the Road*. Volgende stap: 3.3 (instances).
 - Extra taak van Bo: Greyhaven uit Blender als eerste zone, dag-en-nachtcyclus (40 min, echte klok), mobs bij schemer en nacht buiten NPC-gebieden. Vragen aan Bo: Node.js installeren (ja), losse zone + poort (ja), NPC's geschat verhuizen (ja). Gebouwd en getest (zie fase-log). Gevonden en opgelost tijdens het testen: de stad stond 1792 m verschoven (twee keer de floating origin), en "onder water" rekende met de hoogste rivier in plaats van de zee. Lokaal testen in deze sessie: de dev-server weigerde de terrein-worker door het Windows-AppData-pad van de sessiemap; met de productie-build (`npm run preview`) werkt alles. Open: fps op echte pc en iPhone, de geschatte plekken nalopen, open vragen 1–4 bovenaan. Tijdelijke namen in deze taak (alleen in data): Brother Ansel, Marco the Merchant, Hilda Ironhand, Professor Fizzwick, Old Bertha, Sir Garrick, Treewardens, de elfenstad.

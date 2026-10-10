@@ -27,6 +27,55 @@
     "distance": 4,
     "durationSeconds": 0.18
   },
+  "load": {
+    "baseKg": 30,
+    "perLevelKg": 1,
+    "tiers": [
+      {
+        "id": "light",
+        "label": "load.light",
+        "message": "load.lightMessage",
+        "maxRatio": 0.3,
+        "walkFactor": 1,
+        "dashDistanceFactor": 1,
+        "dashExtraEnergy": 0,
+        "dashRecoverySeconds": 0,
+        "canDash": true
+      },
+      {
+        "id": "medium",
+        "label": "load.medium",
+        "message": "load.mediumMessage",
+        "maxRatio": 0.7,
+        "walkFactor": 0.95,
+        "dashDistanceFactor": 0.8,
+        "dashExtraEnergy": 0,
+        "dashRecoverySeconds": 0,
+        "canDash": true
+      },
+      {
+        "id": "heavy",
+        "label": "load.heavy",
+        "message": "load.heavyMessage",
+        "maxRatio": 1,
+        "walkFactor": 0.85,
+        "dashDistanceFactor": 0.6,
+        "dashExtraEnergy": 10,
+        "dashRecoverySeconds": 0.35,
+        "canDash": true
+      },
+      {
+        "id": "overloaded",
+        "label": "load.overloaded",
+        "message": "load.overloadedMessage",
+        "walkFactor": 0.5,
+        "dashDistanceFactor": 0,
+        "dashExtraEnergy": 0,
+        "dashRecoverySeconds": 0,
+        "canDash": false
+      }
+    ]
+  },
   "camera": {
     "fovDegrees": 55,
     "targetHeight": 1.45,
@@ -83,8 +132,15 @@
   "combat": {
     "lingerSeconds": 4
   },
+  "levelUpRefill": true,
+  "potions": {
+    "cooldownSeconds": 1,
+    "quickOrder": ["health_potion", "greater_health_potion"]
+  },
   "death": {
-    "goldLossFraction": 0.1
+    "goldLossFraction": 0.1,
+    "fadeSeconds": 0.8,
+    "blackSeconds": 1.6
   },
   "lowHpThreshold": 0.3,
   "hud": {

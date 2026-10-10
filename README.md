@@ -57,7 +57,7 @@ Dubbelklikken op `index.html` werkt níet: de browser mag dan de kleurenlijst ni
 **Bediening**
 | Wat | Pc | iPhone |
 |---|---|---|
-| Debug-overlay aan/uit | F3 | tik met drie vingers |
+| Debug-overlay aan, daarna grootte wisselen (Groot → Normaal → Klein → Alleen fps → Verborgen) | F3 | tik met drie vingers |
 | Lopen | WASD of pijltjes | sleep met één vinger |
 | Aantal vijanden (0–300) en projectielen (0–500) | schuifregelaars rechtsonder | idem |
 | Zone B laden op de achtergrond | L of de knop | de knop |

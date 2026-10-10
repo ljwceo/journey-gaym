@@ -37,6 +37,7 @@ function sampleSave() {
     gold: 0,
     inventory: [{ item: 'old_sword', count: 1 }],
     equipment: { weapon: 'old_sword' },
+    pack: [],
   };
   save.world = {
     zone: 'greyhaven',
@@ -172,5 +173,111 @@ describe('migrate', () => {
     // Everything else stays as it was.
     expect(result.save.settings.volume).toBe(0.3);
     expect(result.save.character?.name).toBe('Zoë42');
+  });
+
+  it('upgrades a version 2 save: level 1, no XP, full HP and mana; gold and bag stay', () => {
+    const current = sampleSave();
+    const character = current.character;
+    if (!character) throw new Error('sample has a character');
+    character.gold = 42;
+    character.inventory.push({ item: 'slime_gel', count: 3 });
+    const v2: Record<string, unknown> = { ...current, version: 2 };
+    delete v2.progress;
+    delete v2.quests;
+    delete v2.unlocks;
+    const storage = new MemoryStorage();
+    storage.setItem(SAVE_KEY, JSON.stringify(v2));
+    const result = new SaveManager(storage).load();
+    expect(result.status).toBe('ok');
+    if (result.status !== 'ok') return;
+    expect(result.save.version).toBe(SAVE_VERSION);
+    expect(result.save.progress).toEqual({ level: 1, xp: 0, hp: null, mana: null });
+    expect(result.save.character?.gold).toBe(42);
+    expect(result.save.character?.inventory).toContainEqual({ item: 'slime_gel', count: 3 });
+  });
+
+  it('upgrades a version 3 save: no quests started, nothing unlocked; level stays', () => {
+    const current = sampleSave();
+    current.progress = { level: 3, xp: 12, hp: 80, mana: null };
+    const v3: Record<string, unknown> = { ...current, version: 3 };
+    delete v3.quests;
+    delete v3.unlocks;
+    delete v3.seenCutscenes;
+    delete v3.seenHints;
+    const storage = new MemoryStorage();
+    storage.setItem(SAVE_KEY, JSON.stringify(v3));
+    const result = new SaveManager(storage).load();
+    expect(result.status).toBe('ok');
+    if (result.status !== 'ok') return;
+    expect(result.save.version).toBe(SAVE_VERSION);
+    expect(result.save.quests).toEqual({ active: [], completed: [] });
+    expect(result.save.unlocks).toEqual([]);
+    expect(result.save.progress.level).toBe(3);
+  });
+
+  it('upgrades a version 4 save: no cutscenes or tips seen; quests stay', () => {
+    const current = sampleSave();
+    current.quests = { active: [], completed: ['a_quiet_awakening'] };
+    const v4: Record<string, unknown> = { ...current, version: 4 };
+    delete v4.seenCutscenes;
+    delete v4.seenHints;
+    const storage = new MemoryStorage();
+    storage.setItem(SAVE_KEY, JSON.stringify(v4));
+    const result = new SaveManager(storage).load();
+    expect(result.status).toBe('ok');
+    if (result.status !== 'ok') return;
+    expect(result.save.version).toBe(SAVE_VERSION);
+    expect(result.save.seenCutscenes).toEqual([]);
+    expect(result.save.seenHints).toEqual([]);
+    expect(result.save.quests.completed).toEqual(['a_quiet_awakening']);
+  });
+
+  it('upgrades a version 5 save: an empty pack; the bag stays', () => {
+    const current = sampleSave();
+    const character: Record<string, unknown> = { ...current.character };
+    delete character.pack;
+    const v5: Record<string, unknown> = { ...current, version: 5, character };
+    const storage = new MemoryStorage();
+    storage.setItem(SAVE_KEY, JSON.stringify(v5));
+    const result = new SaveManager(storage).load();
+    expect(result.status).toBe('ok');
+    if (result.status !== 'ok') return;
+    expect(result.save.version).toBe(SAVE_VERSION);
+    expect(result.save.character?.pack).toEqual([]);
+    expect(result.save.character?.inventory).toEqual([{ item: 'old_sword', count: 1 }]);
+  });
+
+  it('upgrades a version 5 save without a character', () => {
+    const v5: Record<string, unknown> = { ...createNewSave('en'), version: 5 };
+    const storage = new MemoryStorage();
+    storage.setItem(SAVE_KEY, JSON.stringify(v5));
+    const result = new SaveManager(storage).load();
+    expect(result.status === 'ok' && result.save.character).toBe(null);
+  });
+
+  it('keeps quests and unlocks through writing and loading', () => {
+    const save = sampleSave();
+    save.quests = { active: [{ id: 'q1', counts: [1, 0] }], completed: ['q0'] };
+    save.unlocks = ['garden_plot'];
+    const saves = new SaveManager(new MemoryStorage());
+    expect(saves.write(save)).toBe(true);
+    const result = saves.load();
+    expect(result.status === 'ok' && result.save.quests).toEqual(save.quests);
+    expect(result.status === 'ok' && result.save.unlocks).toEqual(['garden_plot']);
+  });
+
+  it('keeps level, XP, HP and mana through writing and loading', () => {
+    const save = sampleSave();
+    save.progress = { level: 4, xp: 37, hp: 61.5, mana: 20 };
+    const storage = new MemoryStorage();
+    const saves = new SaveManager(storage);
+    expect(saves.write(save)).toBe(true);
+    const result = saves.load();
+    expect(result.status === 'ok' && result.save.progress).toEqual({
+      level: 4,
+      xp: 37,
+      hp: 61.5,
+      mana: 20,
+    });
   });
 });

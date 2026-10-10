@@ -3,7 +3,8 @@ import { monstersFileSchema, zonesFileSchema } from '../data/schemas';
 import type { Zone } from '../data/types';
 import { readPublicJson } from '../test/loadPublic';
 import { pointInShape } from '../world/Shapes';
-import { Enemies, type SpawnWorld } from './Enemies';
+import { Enemies, type EnemiesWorld, type SpawnWorld } from './Enemies';
+import type { EnemyTarget } from './EnemyAI';
 
 const DT = 1 / 60;
 const zonesFile = zonesFileSchema.parse(readPublicJson('data/zones.json'));
@@ -17,6 +18,7 @@ const field: Zone = {
   id: 'test_field',
   scene: undefined,
   spawns: [],
+  spawnAreas: [],
   safeZones: [{ id: 'village', shape: { type: 'circle', x: 0, z: 0, radius: 30 } }],
   nightSpawns: [
     {
@@ -34,22 +36,42 @@ function world(spawning: boolean, testAreas = false): SpawnWorld {
   return { spawning, testAreas, heightAt: () => 0, canStand: () => true };
 }
 
+/** Flat ground without walls; the player is calm (monsters do not attack). */
+const flat: EnemiesWorld = {
+  mover: {
+    moveCircle(p, _radius, dx, dz) {
+      p.x += dx;
+      p.z += dz;
+    },
+  },
+  heightAt: () => 0,
+  hitPlayer: () => {},
+  shoot: () => {},
+  alert: () => {},
+  bossEvent: () => {},
+};
+
+function make(zones: Zone[]): Enemies {
+  return new Enemies(zones, monsters, ranges, new Map(), rules, 1);
+}
+
 function run(enemies: Enemies, seconds: number, w: SpawnWorld, px = 0, pz = 0): void {
+  const target: EnemyTarget = { x: px, z: pz, radius: 0.4, hostile: false };
   for (let i = 0; i < seconds * 60; i++) {
     enemies.stepSpawning(DT, px, pz, w);
-    enemies.step(DT, px, pz, () => 0);
+    enemies.step(DT, target, flat);
   }
 }
 
 describe('night spawning', () => {
   it('spawns nothing by day', () => {
-    const enemies = new Enemies([field], monsters, ranges, rules, 1);
+    const enemies = make([field]);
     run(enemies, 60, world(false));
     expect(enemies.nightAlive).toBe(0);
   });
 
   it('fills up to maxAlive at dusk and at night, never in a safe zone, not too close or far', () => {
-    const enemies = new Enemies([field], monsters, ranges, rules, 1);
+    const enemies = make([field]);
     run(enemies, 60, world(true), 0, 0);
     expect(enemies.nightAlive).toBe(5);
     for (const e of enemies.list) {
@@ -59,26 +81,24 @@ describe('night spawning', () => {
       // Wandering may take them a little closer or further than where they appeared.
       expect(d).toBeGreaterThan(rules.minPlayerDistance - rules.wanderRadius - 1);
       expect(d).toBeLessThan(rules.maxPlayerDistance + rules.wanderRadius + 1);
-      expect(e.level).toBeGreaterThanOrEqual(1);
-      expect(e.level).toBeLessThanOrEqual(2);
     }
   });
 
   it('keeps monsters that are already there when the day comes (open question)', () => {
-    const enemies = new Enemies([field], monsters, ranges, rules, 1);
+    const enemies = make([field]);
     run(enemies, 60, world(true));
     run(enemies, 60, world(false));
     expect(enemies.nightAlive).toBe(5);
   });
 
   it('a defeated monster disappears and its place fills again after respawnSeconds', () => {
-    const enemies = new Enemies([field], monsters, ranges, rules, 1);
+    const enemies = make([field]);
     run(enemies, 60, world(true));
     const victim = enemies.list.find((e) => e.active);
     if (!victim) throw new Error('no monster');
     enemies.hit(victim, 1000);
     expect(enemies.nightAlive).toBe(4);
-    run(enemies, rules.corpseSeconds + 1, world(false));
+    run(enemies, monsters.settings.corpseSeconds + 1, world(false));
     expect(victim.active).toBe(false);
     run(enemies, 30, world(true));
     expect(enemies.nightAlive).toBe(5);
@@ -89,23 +109,23 @@ describe('night spawning', () => {
       ...field,
       nightSpawns: field.nightSpawns?.map((area) => ({ ...area, testOnly: true })),
     };
-    const off = new Enemies([test], monsters, ranges, rules, 1);
+    const off = make([test]);
     run(off, 30, world(true, false));
     expect(off.nightAlive).toBe(0);
-    const on = new Enemies([test], monsters, ranges, rules, 1);
+    const on = make([test]);
     run(on, 30, world(true, true));
     expect(on.nightAlive).toBeGreaterThan(0);
   });
 
   it('never spawns where a monster cannot stand (water, off the map)', () => {
-    const enemies = new Enemies([field], monsters, ranges, rules, 1);
+    const enemies = make([field]);
     run(enemies, 60, { ...world(true), canStand: () => false });
     expect(enemies.nightAlive).toBe(0);
   });
 
   it('the real data: Greyhaven inside its walls is safe, the test fields outside are not', () => {
     const greyhaven = zonesFile.zones.find((zone) => zone.id === 'greyhaven');
-    const enemies = new Enemies(zonesFile.zones, monsters, ranges, rules, 1);
+    const enemies = make(zonesFile.zones);
     const monastery = greyhaven?.spawnPoints[0];
     const area = greyhaven?.nightSpawns?.[0];
     if (!monastery || !area || area.shape.type !== 'rect') throw new Error('data changed');

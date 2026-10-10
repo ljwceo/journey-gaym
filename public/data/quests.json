@@ -1,13 +1,216 @@
 {
   "quests": [
     {
+      "id": "a_quiet_awakening",
+      "name": "A Quiet Awakening",
+      "kind": "main",
+      "giver": "brother_ansel",
+      "description": "quest.a_quiet_awakening.desc",
+      "objectives": [
+        {
+          "type": "rest",
+          "checkpoint": "greyhaven_monastery",
+          "text": "quest.a_quiet_awakening.objective"
+        }
+      ],
+      "requires": {},
+      "dialogue": {
+        "offer": [
+          "quest.a_quiet_awakening.offer.1",
+          "quest.a_quiet_awakening.offer.2",
+          "quest.a_quiet_awakening.offer.3"
+        ],
+        "progress": ["quest.a_quiet_awakening.progress.1"],
+        "complete": ["quest.a_quiet_awakening.complete.1", "quest.a_quiet_awakening.complete.2"]
+      },
+      "rewards": {
+        "xp": 40,
+        "gold": 20,
+        "items": []
+      }
+    },
+    {
+      "id": "just_for_you",
+      "name": "Just For You",
+      "kind": "main",
+      "giver": "marco",
+      "description": "quest.just_for_you.desc",
+      "objectives": [
+        {
+          "type": "buy",
+          "item": "health_potion",
+          "count": 2,
+          "npc": "marco"
+        }
+      ],
+      "requires": {},
+      "dialogue": {
+        "offer": ["quest.just_for_you.offer.1", "quest.just_for_you.offer.2"],
+        "progress": ["quest.just_for_you.progress.1"],
+        "complete": ["quest.just_for_you.complete.1", "quest.just_for_you.complete.2"]
+      },
+      "rewards": {
+        "xp": 40,
+        "gold": 5,
+        "items": []
+      }
+    },
+    {
+      "id": "steel_and_slime",
+      "name": "Steel and Slime",
+      "kind": "main",
+      "giver": "hilda",
+      "description": "quest.steel_and_slime.desc",
+      "objectives": [
+        {
+          "type": "deliver",
+          "item": "slime_gel",
+          "count": 3,
+          "npc": "hilda"
+        }
+      ],
+      "requires": {},
+      "dialogue": {
+        "offer": [
+          "quest.steel_and_slime.offer.1",
+          "quest.steel_and_slime.offer.2",
+          "quest.steel_and_slime.offer.3"
+        ],
+        "progress": ["quest.steel_and_slime.progress.1"],
+        "complete": ["quest.steel_and_slime.complete.1", "quest.steel_and_slime.complete.2"]
+      },
+      "rewards": {
+        "xp": 60,
+        "gold": 0,
+        "items": [],
+        "upgrades": [
+          {
+            "from": "old_sword",
+            "to": "honed_old_sword"
+          }
+        ]
+      }
+    },
+    {
+      "id": "a_patch_of_earth",
+      "name": "A Patch of Earth",
+      "kind": "main",
+      "giver": "rose",
+      "description": "quest.a_patch_of_earth.desc",
+      "objectives": [
+        {
+          "type": "visit",
+          "trigger": "garden_plot",
+          "text": "quest.a_patch_of_earth.objective"
+        }
+      ],
+      "requires": {},
+      "dialogue": {
+        "offer": ["quest.a_patch_of_earth.offer.1", "quest.a_patch_of_earth.offer.2"],
+        "progress": ["quest.a_patch_of_earth.progress.1"],
+        "complete": ["quest.a_patch_of_earth.complete.1", "quest.a_patch_of_earth.complete.2"]
+      },
+      "rewards": {
+        "xp": 50,
+        "gold": 0,
+        "items": [
+          {
+            "item": "herb_seeds",
+            "count": 3
+          }
+        ],
+        "unlocks": ["garden_plot"]
+      }
+    },
+    {
+      "id": "tales_by_the_fire",
+      "name": "Tales by the Fire",
+      "kind": "main",
+      "giver": "bertha",
+      "description": "quest.tales_by_the_fire.desc",
+      "objectives": [
+        {
+          "type": "talk",
+          "npc": "bertha"
+        }
+      ],
+      "requires": {},
+      "dialogue": {
+        "offer": [
+          "quest.tales_by_the_fire.offer.1",
+          "quest.tales_by_the_fire.offer.2",
+          "quest.tales_by_the_fire.offer.3",
+          "quest.tales_by_the_fire.offer.4",
+          "quest.tales_by_the_fire.offer.5"
+        ],
+        "progress": ["quest.tales_by_the_fire.progress.1"],
+        "complete": ["quest.tales_by_the_fire.complete.1", "quest.tales_by_the_fire.complete.2"]
+      },
+      "rewards": {
+        "xp": 40,
+        "gold": 0,
+        "items": []
+      }
+    },
+    {
       "id": "defeat_sultan",
       "name": "Defeat Sultan",
       "kind": "main",
       "description": "quest.defeat_sultan.desc",
-      "objectives": [{ "type": "boss", "monster": "sultan" }],
-      "requires": { "level": 3 },
-      "rewards": { "xp": 0, "gold": 0, "items": [] }
+      "objectives": [
+        {
+          "type": "boss",
+          "monster": "sultan"
+        }
+      ],
+      "requires": {
+        "level": 3,
+        "quests": [
+          "a_quiet_awakening",
+          "just_for_you",
+          "steel_and_slime",
+          "a_patch_of_earth",
+          "tales_by_the_fire"
+        ]
+      },
+      "rewards": {
+        "xp": 0,
+        "gold": 0,
+        "items": []
+      }
+    },
+    {
+      "id": "a_friend_for_the_road",
+      "name": "A Friend for the Road",
+      "kind": "main",
+      "giver": "marco",
+      "description": "quest.a_friend_for_the_road.desc",
+      "objectives": [
+        {
+          "type": "talk",
+          "npc": "marco"
+        }
+      ],
+      "requires": {
+        "quests": ["defeat_sultan"]
+      },
+      "dialogue": {
+        "offer": [
+          "quest.a_friend_for_the_road.offer.1",
+          "quest.a_friend_for_the_road.offer.2",
+          "quest.a_friend_for_the_road.offer.3"
+        ],
+        "progress": ["quest.a_friend_for_the_road.progress.1"],
+        "complete": [
+          "quest.a_friend_for_the_road.complete.1",
+          "quest.a_friend_for_the_road.complete.2"
+        ]
+      },
+      "rewards": {
+        "xp": 20,
+        "gold": 0,
+        "items": []
+      }
     },
     {
       "id": "your_resolve",
@@ -15,9 +218,25 @@
       "kind": "main",
       "giver": "master_brink",
       "description": "quest.your_resolve.desc",
-      "objectives": [{ "type": "talk", "npc": "master_brink" }],
-      "requires": { "quests": ["defeat_sultan"] },
-      "rewards": { "xp": 50, "gold": 0, "items": [] }
+      "objectives": [
+        {
+          "type": "talk",
+          "npc": "master_brink"
+        }
+      ],
+      "requires": {
+        "quests": ["defeat_sultan"]
+      },
+      "rewards": {
+        "xp": 50,
+        "gold": 0,
+        "items": []
+      },
+      "dialogue": {
+        "offer": ["quest.your_resolve.offer.1"],
+        "progress": ["quest.your_resolve.progress.1"],
+        "complete": ["quest.your_resolve.complete.1"]
+      }
     },
     {
       "id": "first_harvest",
@@ -25,12 +244,31 @@
       "kind": "side",
       "giver": "rose",
       "description": "quest.first_harvest.desc",
-      "objectives": [{ "type": "deliver", "item": "blossom", "count": 5, "npc": "rose" }],
-      "requires": {},
+      "objectives": [
+        {
+          "type": "deliver",
+          "item": "blossom",
+          "count": 5,
+          "npc": "rose"
+        }
+      ],
+      "requires": {
+        "quests": ["a_patch_of_earth", "your_resolve"]
+      },
       "rewards": {
         "xp": 40,
         "gold": 10,
-        "items": [{ "item": "recipe_greater_health_potion", "count": 1 }]
+        "items": [
+          {
+            "item": "recipe_greater_health_potion",
+            "count": 1
+          }
+        ]
+      },
+      "dialogue": {
+        "offer": ["quest.first_harvest.offer.1"],
+        "progress": ["quest.first_harvest.progress.1"],
+        "complete": ["quest.first_harvest.complete.1"]
       }
     }
   ]

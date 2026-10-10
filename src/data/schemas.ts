@@ -194,8 +194,40 @@ const zoneSchema = z.strictObject({
   areas: z.array(z.strictObject({ id, shape: shapeSchema, noScatter: optional(z.boolean()) })),
   /** Placeholder buildings and landmarks (later real models), loaded with the chunks they touch. */
   structures: optional(z.array(structureSchema)),
-  /** Where monsters (monsters.json) stand or roam in this zone. */
-  spawns: optional(z.array(z.strictObject({ id, monster: id, x: coord, z: coord }))),
+  /**
+   * Single monsters at a fixed spot (training dummies, Treewardens, the Goblin Chief). They roam
+   * within `wanderRadius` of the spot and come back `respawnSeconds` after being defeated.
+   */
+  spawns: optional(
+    z.array(
+      z.strictObject({
+        id,
+        monster: id,
+        x: coord,
+        z: coord,
+        wanderRadius: optional(max(nonNegative, 500)),
+        respawnSeconds: optional(max(positive, 3600)),
+      }),
+    ),
+  ),
+  /**
+   * Spawn areas: `count` packs of a monster roam inside the circle (a pack is one monster, or
+   * `groupSize` monsters for e.g. goblins). A defeated pack comes back after `respawnSeconds`,
+   * once the player is away.
+   */
+  spawnAreas: optional(
+    z.array(
+      z.strictObject({
+        id,
+        monster: id,
+        x: coord,
+        z: coord,
+        radius: max(positive, 500),
+        count: intRange(1, 50),
+        respawnSeconds: max(positive, 3600),
+      }),
+    ),
+  ),
   /** NPC areas (cities, villages, Monasteries, shrines): no monster ever appears here. */
   safeZones: optional(z.array(z.strictObject({ id, shape: shapeSchema }))),
   /** Areas where monsters appear at dusk and at night. */
@@ -269,8 +301,6 @@ export const zonesFileSchema = z.strictObject({
       maxPlayerDistance: range(1, 2000),
       /** Seconds between spawn attempts per area. */
       checkSeconds: range(0.1, 60),
-      /** Seconds a defeated monster lies there before it disappears. */
-      corpseSeconds: range(0, 60),
       /** How far (m) a monster wanders around the spot where it appeared. */
       wanderRadius: range(0, 100),
     }),
@@ -287,18 +317,32 @@ const npcSchema = z.strictObject({
   role: id,
   zone: id,
   position: pointSchema,
-  interaction: z.enum(['talk', 'pet', 'none']),
+  /** talk (dialogue), pet (Pringle), pack (opens the pack animal's bag: Biscuit), none. */
+  interaction: z.enum(['talk', 'pet', 'pack', 'none']),
   behavior: z.enum(['static', 'follow', 'wander']),
   dialogue: z.array(textKey),
-  follow: optional(z.strictObject({ distance: positive, speed: max(positive, 20) })),
+  /**
+   * Following the player (Pringle): roams between `minDistance` and `maxDistance` around the
+   * player, strolls at `strollSpeed` while the player stands still (pausing `idlePauseSeconds`),
+   * and catches up at `speed`.
+   */
+  follow: optional(
+    z.strictObject({
+      minDistance: positive,
+      maxDistance: positive,
+      speed: max(positive, 20),
+      strollSpeed: max(positive, 20),
+      idlePauseSeconds: z.tuple([nonNegative, nonNegative]),
+    }),
+  ),
   wander: optional(z.strictObject({ radius: positive, speed: max(positive, 20) })),
   petText: optional(textKey),
-  /** Stats come from this monster entry (e.g. Treewardens). */
-  monster: optional(id),
-  /** Area ids (zones.json) where this NPC can never be attacked. */
-  safeAreas: optional(z.array(id)),
   /** Only present in this season. */
   season: optional(id),
+  /** Only present while this condition (triggers.json `conditions`) holds (Sultan after his fight). */
+  presentWhen: optional(name),
+  /** Gone once this condition holds (Pringle after he turned out to be Sultan). */
+  absentWhen: optional(name),
   /** Where a static NPC faces when nobody is near, in degrees (0 = +z). */
   heading: optional(range(-360, 360)),
   /**
@@ -307,6 +351,14 @@ const npcSchema = z.strictObject({
    */
   dialogueWhen: optional(
     z.array(z.strictObject({ condition: name, lines: atLeast(z.array(textKey)) })),
+  ),
+  /** A pack animal (Biscuit): carries up to `maxKg` of your gear (interaction "pack"). */
+  pack: optional(z.strictObject({ maxKg: range(1, 10_000) })),
+  /** A simple shop that opens after talking (Marco): items and their price in gold. */
+  shop: optional(
+    z.strictObject({
+      items: atLeast(z.array(z.strictObject({ item: id, price: intRange(1, 1_000_000) }))),
+    }),
   ),
 });
 
@@ -372,6 +424,33 @@ export const playerFileSchema = z.strictObject({
     cooldownSeconds: max(nonNegative, 30),
     distance: max(positive, 30),
     durationSeconds: max(positive, 2),
+  }),
+  /**
+   * Equip load (like Elden Ring): the weight of the weapons and gear you carry (worn or spare in
+   * the bag; resources, potions and quest items weigh nothing) as a share of what you can carry.
+   * Tiers are checked in order; the first whose `maxRatio` is not exceeded applies, the last one
+   * (no `maxRatio`) is "overloaded".
+   */
+  load: z.strictObject({
+    baseKg: max(positive, 1000),
+    perLevelKg: max(nonNegative, 100),
+    tiers: atLeast(
+      z.array(
+        z.strictObject({
+          id,
+          label: textKey,
+          /** Shown when you enter this tier (what it does to you); none for light. */
+          message: optional(textKey),
+          maxRatio: optional(max(positive, 10)),
+          walkFactor: max(nonNegative, 2),
+          dashDistanceFactor: max(nonNegative, 2),
+          dashExtraEnergy: max(nonNegative, 100),
+          /** Stuck after a dash this long (s): the "fat roll". */
+          dashRecoverySeconds: max(nonNegative, 5),
+          canDash: z.boolean(),
+        }),
+      ),
+    ),
   }),
   /**
    * Third-person camera over the shoulder (like Genshin Impact). Sharpness values are per
@@ -444,7 +523,20 @@ export const playerFileSchema = z.strictObject({
     /** You count as "in a fight" until this long after the last hit given or taken. */
     lingerSeconds: max(positive, 60),
   }),
-  death: z.strictObject({ goldLossFraction: fraction }),
+  /** Reaching a new level fills HP and mana. */
+  levelUpRefill: z.boolean(),
+  potions: z.strictObject({
+    /** Seconds before the next potion can be drunk. */
+    cooldownSeconds: max(nonNegative, 60),
+    /** The drink key / button takes the first of these potions you have. */
+    quickOrder: atLeast(z.array(id)),
+  }),
+  death: z.strictObject({
+    goldLossFraction: fraction,
+    /** The screen fades to black in this time, stays black, then fades back in. */
+    fadeSeconds: max(nonNegative, 10),
+    blackSeconds: max(nonNegative, 10),
+  }),
   lowHpThreshold: fraction,
   /** Subtle HUD (seconds): things fade in when needed and fade out again. */
   hud: z.strictObject({
@@ -482,6 +574,89 @@ const attackSchema = z.strictObject({
   warningSeconds: max(nonNegative, 5),
   recoverySeconds: optional(max(nonNegative, 10)),
   onlyWhenEnraged: optional(z.boolean()),
+  /** Used instead of the normal attack every n-th attack (1 = always). */
+  everyNth: optional(intRange(1, 100)),
+  /** Hits everything within this radius (m) around the monster; a red circle warns first. */
+  areaRadius: optional(max(positive, 50)),
+  /**
+   * Boss attacks (`boss` below): `combo` = `hits` claw swipes in a row (`hitIntervalSeconds`
+   * apart, each reaching `reach` m in front), `pounce` = a leap at where you stand (aimed
+   * `aimLockSeconds` before the warning ends, `travelSeconds` in the air, hits within `reach` of
+   * the landing), `charge` = a run along a red line `length` m long and `width` m wide.
+   */
+  pattern: optional(z.enum(['combo', 'pounce', 'charge'])),
+  /** The boss picks this attack when the gap to you lies in [minGap, maxGap] (m). */
+  minGap: optional(max(nonNegative, 50)),
+  maxGap: optional(max(positive, 50)),
+  hitIntervalSeconds: optional(max(positive, 5)),
+  reach: optional(max(positive, 20)),
+  stepPerHit: optional(max(nonNegative, 5)),
+  aimLockSeconds: optional(max(nonNegative, 5)),
+  travelSeconds: optional(max(positive, 5)),
+  length: optional(max(positive, 60)),
+  width: optional(max(positive, 10)),
+  /** Seconds the boss stands still after this attack (your chance); default `vulnerableSeconds`. */
+  openingSeconds: optional(max(positive, 10)),
+  /** Shown the first time this attack is wound up (a short tip, e.g. "Dash sideways!"). */
+  hint: optional(textKey),
+});
+
+/**
+ * A boss fight in the open world (Sultan at the city gate). Walking into `trigger` while
+ * `quest` can start (or runs) plays `cutscene` once, then the fight: the boss appears at `start`,
+ * you at `playerStart`, inside a ring of `arena.radius` m that neither of you can leave. The
+ * boss waits `pauseSeconds` between attacks, leaps away after each one (landing `retreatGap`
+ * m from you) and then stands still for a moment: only then can it be hit.
+ */
+const bossSchema = z.strictObject({
+  quest: id,
+  trigger: id,
+  cutscene: id,
+  arena: z.strictObject({ x: coord, z: coord, radius: range(5, 100) }),
+  start: z.strictObject({ x: coord, z: coord }),
+  playerStart: z.strictObject({ x: coord, z: coord }),
+  /** Seconds between two attacks [min, max] (shorter when enraged); longer while out of range. */
+  pauseSeconds: z.tuple([nonNegative, nonNegative]),
+  retreatGap: max(nonNegative, 20),
+  retreatSeconds: max(positive, 5),
+  vulnerableSeconds: max(positive, 10),
+  /** Spoken when the fight starts again without the cutscene (a rematch after losing). */
+  retryLine: optional(textKey),
+  /** Spoken when the boss falls below `enrage.belowHpFraction`. */
+  enrageLine: optional(textKey),
+  /** Spoken when you win. */
+  winLine: textKey,
+  /** Tips shown the first time: "now strike!" (it can be hit) and "wait for it" (it dodged). */
+  strikeHint: optional(textKey),
+  guardHint: optional(textKey),
+  /** A short floating word when a hit is dodged ("Dodged!"). */
+  guardText: textKey,
+});
+
+/**
+ * How a monster fights (enemy AI). `range` is the gap (m) between the bodies at which the
+ * normal attack starts: a `strike` hits in front, a `lunge` jumps `lungeDistance` forward and
+ * hits on contact, a `shoot` fires an arrow at `projectileSpeed` m/s.
+ */
+const monsterAiSchema = z.strictObject({
+  /** Notices the player within this distance (0 = only fights back, e.g. Treewardens). */
+  aggroRadius: max(nonNegative, 100),
+  /** Gives up and walks home when it is this far from its spot. */
+  leashRadius: max(positive, 500),
+  /** Ranged monsters step back when the player comes closer than this. */
+  keepDistance: optional(max(positive, 50)),
+  /** Moves in hops (slimes): `seconds` in the air, then `pauseSeconds` on the ground. */
+  hop: optional(z.strictObject({ seconds: max(positive, 5), pauseSeconds: max(nonNegative, 5) })),
+  attack: z.strictObject({
+    style: z.enum(['strike', 'lunge', 'shoot']),
+    range: max(positive, 50),
+    windupSeconds: max(nonNegative, 5),
+    recoverySeconds: max(nonNegative, 10),
+    cooldownSeconds: max(nonNegative, 30),
+    strikeSeconds: optional(max(positive, 5)),
+    lungeDistance: optional(max(positive, 20)),
+    projectileSpeed: optional(max(positive, 100)),
+  }),
 });
 
 const monsterSchema = z.strictObject({
@@ -498,6 +673,12 @@ const monsterSchema = z.strictObject({
   model: optional(name),
   /** Body radius (m): what you hit and what you cannot walk through. */
   radius: optional(max(positive, 10)),
+  /** Size of the placeholder model (1 = as built), e.g. a Big Slime is a bigger slime. */
+  scale: optional(range(0.1, 10)),
+  /** Area ids (zones.json) where this monster can never be attacked (and stops fighting). */
+  safeAreas: optional(z.array(id)),
+  /** Walking, noticing and attacking; required for melee and ranged monsters. */
+  ai: optional(monsterAiSchema),
   /** A defeated dummy stands up again (full HP) after this many seconds. */
   resetSeconds: optional(max(positive, 600)),
   range: optional(positive),
@@ -508,6 +689,8 @@ const monsterSchema = z.strictObject({
   transformsFrom: optional(id),
   enrage: optional(z.strictObject({ belowHpFraction: fraction, speedFactor: positive })),
   attacks: optional(z.array(attackSchema)),
+  /** Boss fight settings (bosses only; see bossSchema). */
+  boss: optional(bossSchema),
   drops: z.array(
     z.strictObject({
       item: id,
@@ -521,6 +704,28 @@ const monsterSchema = z.strictObject({
 export const monstersFileSchema = z.strictObject({
   /** Meters per second for each speed class used in the concept ("slow", "fast", ...). */
   speedClasses: z.record(z.string(), max(positive, 30)),
+  /** Enemy AI numbers shared by all monsters (the same on every graphics preset). */
+  settings: z.strictObject({
+    /** Monsters move and fight only within this distance (m) of the player. */
+    simulateRadius: range(10, 500),
+    turnDegreesPerSecond: range(1, 3600),
+    /** Seconds a wandering monster waits between walks [min, max]. */
+    wanderPauseSeconds: z.tuple([nonNegative, nonNegative]),
+    /** Wandering speed as a fraction of the monster's speed. */
+    wanderSpeedFactor: range(0.05, 1),
+    /** Seconds a defeated monster lies on the ground before it disappears. */
+    corpseSeconds: max(nonNegative, 60),
+    /** A defeated pack only comes back while the player is at least this far (m) away. */
+    respawnMinPlayerDistance: max(nonNegative, 500),
+    /** A strike still hits when the player is this much (m) beyond its range when it lands. */
+    hitGraceMeters: max(nonNegative, 10),
+    /** Width (degrees) of the arc in front of a monster that its strike hits. */
+    hitArcDegrees: range(1, 360),
+    /** A neutral monster (Treewarden) stops fighting this long (s) after the last hit. */
+    calmDownSeconds: max(positive, 600),
+    /** When one monster of a pack notices you, its pack mates within this distance (m) join. */
+    packAggroRadius: max(nonNegative, 100),
+  }),
   monsters: z.array(monsterSchema),
 });
 
@@ -548,6 +753,23 @@ const itemSchema = z.strictObject({
     }),
   ),
   crystal: optional(z.strictObject({ elements: atLeast(z.array(id)), size: id })),
+  /** What wearing it adds (weapons and armor, while equipped). */
+  stats: optional(
+    z.strictObject({
+      hp: optional(max(nonNegative, 10_000)),
+      mana: optional(max(nonNegative, 10_000)),
+      damagePercent: optional(max(nonNegative, 500)),
+      damageReductionPercent: optional(max(nonNegative, 90)),
+      moveSpeedPercent: optional(max(nonNegative, 100)),
+    }),
+  ),
+  /** What drinking it restores (potions only). */
+  potion: optional(
+    z.strictObject({
+      hp: optional(max(nonNegative, 100_000)),
+      mana: optional(max(nonNegative, 100_000)),
+    }),
+  ),
 });
 
 export const itemsFileSchema = z.strictObject({
@@ -683,9 +905,12 @@ export const triggersFileSchema = z.strictObject({
 // ---------------------------------------------------------------- quests.json
 
 const objectiveSchema = z.discriminatedUnion('type', [
+  /** Talk to an NPC (the giver itself counts as soon as the quest is accepted). */
   z.strictObject({ type: z.literal('talk'), npc: id }),
+  /** Have items in the bag when handing in (they stay in the bag). */
   z.strictObject({ type: z.literal('find'), item: id, count: posInt }),
   z.strictObject({ type: z.literal('kill'), monster: id, count: posInt }),
+  /** Bring items to `npc`; they leave the bag when the quest is handed in. */
   z.strictObject({
     type: z.literal('deliver'),
     item: id,
@@ -693,6 +918,12 @@ const objectiveSchema = z.discriminatedUnion('type', [
     npc: id,
   }),
   z.strictObject({ type: z.literal('boss'), monster: id }),
+  /** Buy items in a shop (optionally only from this NPC) after accepting the quest. */
+  z.strictObject({ type: z.literal('buy'), item: id, count: posInt, npc: optional(id) }),
+  /** Rest in the bed at a checkpoint (optionally a certain one); `text` says where. */
+  z.strictObject({ type: z.literal('rest'), checkpoint: optional(id), text: textKey }),
+  /** Walk into a trigger area (triggers.json); `text` says where to go. */
+  z.strictObject({ type: z.literal('visit'), trigger: id, text: textKey }),
 ]);
 
 export const questsFileSchema = z.strictObject({
@@ -709,10 +940,25 @@ export const questsFileSchema = z.strictObject({
         quests: optional(z.array(id)),
         items: optional(z.array(itemStack)),
       }),
+      /**
+       * What the giver says: when offering the quest (it starts right away), while it is not
+       * done yet (with a list of what is still missing), and when you hand it in.
+       */
+      dialogue: optional(
+        z.strictObject({
+          offer: atLeast(z.array(textKey)),
+          progress: atLeast(z.array(textKey)),
+          complete: atLeast(z.array(textKey)),
+        }),
+      ),
       rewards: z.strictObject({
         xp: nonNegInt,
         gold: nonNegInt,
         items: z.array(itemStack),
+        /** Items that are replaced by a better one (Hilda upgrades your old sword). */
+        upgrades: optional(z.array(z.strictObject({ from: id, to: id }))),
+        /** Things that are now yours, kept in the save (e.g. your plot in the Garden). */
+        unlocks: optional(z.array(id)),
       }),
     }),
   ),
@@ -834,6 +1080,14 @@ export const cutscenesFileSchema = z.strictObject({
             narration: optional(textKey),
             lines: optional(z.array(z.strictObject({ speaker: name, text: textKey }))),
             shake: optional(z.boolean()),
+            /** Comic panels (no art yet): what you would see, as a short caption. */
+            caption: optional(textKey),
+            /** Background color of a comic panel. */
+            background: optional(colorToken),
+            /** The panel slowly zooms in. */
+            zoom: optional(z.boolean()),
+            /** A bright flash when the panel appears. */
+            flash: optional(z.boolean()),
             /** This panel is played as a fight (an id in `fights`) instead of shown as a card. */
             fight: optional(id),
           }),

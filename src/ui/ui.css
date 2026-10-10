@@ -450,7 +450,7 @@
   background: color-mix(in srgb, var(--gh-lantaarnamber) 45%, transparent);
 }
 
-/* Attack (big, in the corner), heavy hit to its left, dash above it. */
+/* Attack (big, in the corner), heavy hit to its left, dash above it, drink potion diagonally. */
 .ui-attack-button {
   width: 84px;
   height: 84px;
@@ -473,6 +473,39 @@
 .ui-dash-button {
   right: calc(var(--button-right) + 11px);
   bottom: calc(var(--button-bottom) + 96px);
+}
+
+/* Drink potion: a small flask with the number of potions; hidden without potions. */
+.ui-potion-button {
+  width: 52px;
+  height: 52px;
+  right: calc(var(--button-right) + 100px);
+  bottom: calc(var(--button-bottom) + 100px);
+}
+
+.ui-potion-button::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 18px;
+  height: 18px;
+  transform: translate(-50%, -30%);
+  border-radius: 50%;
+  background: var(--gh-zonsondergang);
+  box-shadow: 0 -9px 0 -5px var(--gh-tekst-zacht);
+}
+
+.ui-potion-count {
+  position: absolute;
+  right: -4px;
+  top: -4px;
+  min-width: 20px;
+  padding: 1px 4px;
+  font: 600 12px var(--gh-font-stats);
+  color: var(--gh-nachtinkt);
+  background: var(--gh-ornamentgoud);
+  border-radius: 999px;
 }
 
 /* ------------------------------------------------------------ HUD (subtle, fades in and out) */
@@ -568,6 +601,15 @@
   height: 100%;
   transform-origin: left center;
   transition: transform 0.25s ease-out;
+}
+
+/* The XP bar fills slowly ("loopt een stukje vol"); after a level up it jumps back once. */
+.ui-hud-bar-xp .ui-hud-bar-fill {
+  transition-duration: 0.8s;
+}
+
+.ui-hud-bar-instant .ui-hud-bar-fill {
+  transition: none;
 }
 
 .ui-hud-bar-hp .ui-hud-bar-fill {
@@ -711,6 +753,27 @@
   font: 13px var(--gh-font-stats);
   text-align: right;
   color: var(--gh-zonlicht);
+}
+
+/* What a quest still needs ("✗ Slime Gel 2/3"), under the giver's last line. */
+.ui-dialog-list {
+  margin: 0 0 8px;
+  padding: 6px 10px;
+  list-style: none;
+  border-left: 2px solid var(--gh-koper);
+}
+
+.ui-dialog-list[hidden] {
+  display: none;
+}
+
+.ui-dialog-check {
+  font: 600 15px var(--gh-font-stats);
+  color: var(--gh-tekst);
+}
+
+.ui-dialog-check-done {
+  color: var(--gh-tekst-zacht);
 }
 
 /* Debug only: names above the placeholder buildings. */
@@ -910,7 +973,7 @@
 .ui-cheats-button {
   position: absolute;
   top: max(12px, env(safe-area-inset-top));
-  right: calc(max(12px, env(safe-area-inset-right)) + 52px);
+  right: calc(max(12px, env(safe-area-inset-right)) + 104px);
   height: 44px;
   padding: 0 12px;
   font: 600 14px var(--gh-font-stats);
@@ -1029,8 +1092,504 @@
 }
 
 /* Damage you take (phase 2.3: monsters hit back). */
+.ui-hud-hurt {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  box-shadow: inset 0 0 140px 30px rgb(224 64 47 / 55%);
+  opacity: 0;
+  transition: opacity 0.4s ease-out;
+}
+
+.ui-hud-hurt.ui-hud-hurt-on {
+  opacity: 1;
+  transition: opacity 0.05s linear;
+}
+
 .ui-damage-player {
   color: var(--gh-zonsondergang);
+}
+
+/* Healing, XP and loot: smaller, calm texts. */
+.ui-damage-dodged {
+  font: italic 600 16px var(--gh-font-stats);
+  white-space: nowrap;
+  color: color-mix(in srgb, var(--gh-mistpaars) 40%, var(--gh-tekst));
+}
+
+.ui-damage-heal {
+  color: color-mix(in srgb, var(--gh-terrein-mosgroen) 35%, var(--gh-tekst));
+}
+
+.ui-damage-xp,
+.ui-damage-loot {
+  font: 600 15px var(--gh-font-stats);
+  white-space: nowrap;
+}
+
+.ui-damage-xp {
+  color: var(--gh-spreukviolet);
+}
+
+.ui-damage-loot {
+  color: var(--gh-ornamentgoud);
+}
+
+/* Dying: the screen goes black with a short text, then fades back in at the checkpoint. */
+.ui-hud-blackout {
+  position: absolute;
+  inset: 0;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 24px;
+  text-align: center;
+  background: var(--gh-nachtinkt);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.ui-hud-blackout.ui-hud-blackout-on {
+  display: flex;
+  pointer-events: auto;
+}
+
+.ui-hud-blackout-title {
+  margin: 0;
+  font: 32px var(--gh-font-titel);
+  color: var(--gh-zonsondergang);
+}
+
+.ui-hud-blackout-text {
+  margin: 0;
+  font: 18px var(--gh-font-tekst);
+  color: var(--gh-tekst);
+}
+
+/* ------------------------------------------------------------ boss fight */
+
+/* The boss's name and HP bar: top center, only during a boss fight. */
+.ui-hud-boss {
+  position: absolute;
+  top: max(14px, env(safe-area-inset-top));
+  left: 50%;
+  /* Between the player's bars (top left) and the bag / pause buttons (top right). */
+  width: min(420px, calc(100vw - 2 * 260px));
+  min-width: 180px;
+  transform: translateX(-50%);
+  text-align: center;
+  opacity: 0;
+  transition: opacity 0.5s ease;
+}
+
+.ui-hud-boss.ui-hud-boss-on {
+  opacity: 1;
+}
+
+.ui-hud-boss-name {
+  margin-bottom: 4px;
+  font: 18px var(--gh-font-titel);
+  color: var(--gh-ornamentgoud);
+  text-shadow: 0 2px 8px color-mix(in srgb, var(--gh-nachtinkt) 90%, transparent);
+}
+
+.ui-hud-boss-bar {
+  height: 10px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--gh-nachtinkt) 75%, transparent);
+  border: 1px solid var(--gh-koper);
+  border-radius: 5px;
+}
+
+.ui-hud-boss-fill {
+  height: 100%;
+  background: var(--gh-zonsondergang);
+  transform-origin: left center;
+  transition: transform 0.25s ease;
+}
+
+/* Fight tips sit under the boss bar. */
+.ui-hud > .ui-hud-hint {
+  top: calc(max(14px, env(safe-area-inset-top)) + 54px);
+  font-size: 18px;
+}
+
+/* Narrow screens: no room next to the player's bars, so the boss bar goes under them. */
+@media (max-width: 700px) {
+  .ui-hud-boss {
+    top: calc(max(14px, env(safe-area-inset-top)) + 70px);
+    width: calc(100vw - 32px);
+  }
+
+  .ui-hud > .ui-hud-hint {
+    top: calc(max(14px, env(safe-area-inset-top)) + 124px);
+  }
+}
+
+/* ------------------------------------------------------------ comic cutscene */
+
+.ui-layer > .ui-comic {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 16px;
+  box-sizing: border-box;
+  background: color-mix(in srgb, var(--gh-nachtinkt) 92%, transparent);
+  pointer-events: auto;
+  overflow: hidden;
+}
+
+.ui-comic-stage {
+  display: flex;
+  justify-content: center;
+  /* 16:9 and never taller than the screen (landscape phones) minus the note below. */
+  width: min(760px, 100%, calc((100dvh - 110px) * 16 / 9));
+}
+
+.ui-comic-frame {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border: 4px solid var(--gh-tekst);
+  border-radius: 4px;
+  box-shadow: 0 10px 40px color-mix(in srgb, var(--gh-nachtinkt) 80%, transparent);
+  animation: ui-comic-in 0.45s cubic-bezier(0.2, 0.8, 0.3, 1.1);
+}
+
+.ui-comic-art {
+  position: absolute;
+  inset: 0;
+}
+
+.ui-comic-zoom .ui-comic-art {
+  animation: ui-comic-zoom 4s ease-out forwards;
+}
+
+.ui-comic-shake {
+  animation:
+    ui-comic-in 0.45s cubic-bezier(0.2, 0.8, 0.3, 1.1),
+    ui-comic-shake 0.5s linear 0.45s 2;
+}
+
+.ui-comic-flash::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: #fff;
+  animation: ui-comic-flash 0.6s ease-out forwards;
+  pointer-events: none;
+}
+
+.ui-comic-caption {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  max-width: 70%;
+  padding: 6px 10px;
+  font: italic 15px/1.35 var(--gh-font-tekst);
+  color: var(--gh-nachtinkt);
+  background: var(--gh-zonlicht);
+  border: 2px solid var(--gh-nachtinkt);
+}
+
+.ui-comic-bubble {
+  position: absolute;
+  right: 6%;
+  bottom: 10%;
+  max-width: 62%;
+  padding: 10px 16px;
+  font: 19px/1.35 var(--gh-font-tekst);
+  color: var(--gh-nachtinkt);
+  background: #fffaf0;
+  border: 3px solid var(--gh-nachtinkt);
+  border-radius: 22px;
+  animation: ui-comic-pop 0.3s ease-out 0.35s both;
+}
+
+.ui-comic-bubble::after {
+  content: '';
+  position: absolute;
+  left: 22%;
+  bottom: -18px;
+  border: 9px solid transparent;
+  border-top: 12px solid var(--gh-nachtinkt);
+}
+
+.ui-comic-speaker {
+  display: block;
+  font: 13px var(--gh-font-titel);
+  color: var(--gh-schemerviolet);
+}
+
+.ui-layer > .ui-comic > .ui-skip {
+  z-index: 1;
+}
+
+@keyframes ui-comic-in {
+  from {
+    transform: translateX(60%) rotate(3deg);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+
+@keyframes ui-comic-zoom {
+  from {
+    transform: scale(1);
+  }
+  to {
+    transform: scale(1.25);
+  }
+}
+
+@keyframes ui-comic-shake {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  20% {
+    transform: translate(-8px, 4px);
+  }
+  40% {
+    transform: translate(7px, -5px);
+  }
+  60% {
+    transform: translate(-6px, -3px);
+  }
+  80% {
+    transform: translate(5px, 5px);
+  }
+}
+
+@keyframes ui-comic-flash {
+  from {
+    opacity: 0.95;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes ui-comic-pop {
+  from {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-comic-frame,
+  .ui-comic-shake,
+  .ui-comic-zoom .ui-comic-art,
+  .ui-comic-bubble {
+    animation: none;
+  }
+}
+
+/* ------------------------------------------------------------ bag */
+
+/* Next to the pause button (top right): a small bag shape. */
+.ui-bag-button {
+  position: absolute;
+  top: max(12px, env(safe-area-inset-top));
+  right: calc(max(12px, env(safe-area-inset-right)) + 52px);
+  width: 44px;
+  height: 44px;
+  background: color-mix(in srgb, var(--gh-panel) 70%, transparent);
+  border: 1px solid var(--gh-koper);
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.ui-bag-button::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 54%;
+  width: 18px;
+  height: 15px;
+  transform: translate(-50%, -50%);
+  border: 2px solid var(--gh-ornamentgoud);
+  border-radius: 3px 3px 6px 6px;
+  box-shadow: 0 -7px 0 -4px var(--gh-ornamentgoud);
+}
+
+.ui-bag {
+  width: min(420px, 100%);
+}
+
+.ui-bag-stats {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font: 600 14px var(--gh-font-stats);
+  color: var(--gh-tekst-zacht);
+}
+
+.ui-bag-gold {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--gh-zonlicht);
+}
+
+.ui-bag-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: min(50vh, 360px);
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.ui-bag-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--gh-rand);
+  border-radius: 6px;
+}
+
+.ui-bag-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 8px;
+  min-width: 0;
+}
+
+.ui-bag-name {
+  font: 600 16px var(--gh-font-tekst);
+  color: var(--gh-tekst);
+}
+
+.ui-bag-count {
+  font: 600 14px var(--gh-font-stats);
+  color: var(--gh-ornamentgoud);
+}
+
+.ui-bag-desc {
+  flex-basis: 100%;
+  font: 14px var(--gh-font-tekst);
+  color: var(--gh-tekst-zacht);
+}
+
+.ui-bag-equipped {
+  font: 13px var(--gh-font-tekst);
+  color: var(--gh-tekst-zacht);
+}
+
+/* Gear: weight and stats under the name; equip load and the 6 worn slots above the items. */
+.ui-bag-gear {
+  flex-basis: 100%;
+  font: 13px var(--gh-font-stats);
+  color: var(--gh-ornamentgoud);
+}
+
+.ui-bag-load {
+  margin: 0;
+  font: 600 14px var(--gh-font-stats);
+  color: var(--gh-tekst);
+}
+
+.ui-bag-load-medium {
+  color: var(--gh-zonlicht);
+}
+
+.ui-bag-load-heavy {
+  color: var(--gh-zonsondergang);
+}
+
+.ui-bag-load-overloaded {
+  color: var(--gh-lantaarnamber);
+  text-decoration: underline;
+}
+
+.ui-bag-slots {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ui-bag-slot {
+  display: grid;
+  grid-template-columns: 5.5em 1fr auto;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  padding: 2px 10px;
+  border: 1px solid var(--gh-rand);
+  border-radius: 6px;
+}
+
+.ui-bag-slot-label {
+  font: 13px var(--gh-font-tekst);
+  color: var(--gh-tekst-zacht);
+}
+
+.ui-bag-slot .ui-bag-name {
+  font-size: 15px;
+}
+
+.ui-bag-slot-empty {
+  color: var(--gh-tekst-zacht);
+}
+
+/* Quests in the bag: name, then each objective with ✓ / ✗. */
+.ui-bag-subheading {
+  margin: 4px 0 0;
+  font: 600 15px var(--gh-font-titel);
+  color: var(--gh-ornamentgoud);
+}
+
+.ui-bag-quest {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 2px;
+}
+
+.ui-bag-objective {
+  font: 14px var(--gh-font-stats);
+  color: var(--gh-tekst);
+}
+
+.ui-bag-objective-done {
+  color: var(--gh-tekst-zacht);
+}
+
+/* Shop (Marco): the same rows as the bag, with a price and a Buy button. */
+.ui-shop-price {
+  font: 600 14px var(--gh-font-stats);
+  color: var(--gh-zonlicht);
+}
+
+.ui-shop-message {
+  min-height: 1.4em;
+  margin: 0;
+  font: 14px var(--gh-font-tekst);
+  color: var(--gh-tekst-zacht);
+  text-align: center;
 }
 
 /* ------------------------------------------------------------ intro fight */
@@ -1121,4 +1680,11 @@
 .ui-fight-overlay.ui-fight-black {
   background: var(--gh-nachtinkt);
   transition: background-color 1.2s ease;
+}
+
+/* Pack animal (Biscuit): Take / Load and All side by side. */
+.ui-pack-actions {
+  display: flex;
+  flex-shrink: 0;
+  gap: 6px;
 }

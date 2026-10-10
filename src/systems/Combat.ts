@@ -65,6 +65,13 @@ export type SwingKind = 'none' | 'fast' | 'heavy';
  */
 export class CombatState {
   level = 1;
+  /** Extra damage of the equipped weapon (items.json `weapon.damageBonus`), on every hit. */
+  weaponBonus = 0;
+  /** Worn gear: extra max HP / mana, and damage dealt and taken as factors (1 = no change). */
+  gearHp = 0;
+  gearMana = 0;
+  damageFactor = 1;
+  damageTakenFactor = 1;
   hp = 0;
   maxHp = 0;
   mana = 0;
@@ -97,21 +104,26 @@ export class CombatState {
 /** Sets HP, mana and their maxima for a level (level 1 = the base values). */
 export function applyLevel(c: CombatState, player: PlayerConfig, level: number): void {
   c.level = level;
-  c.maxHp = player.base.hp + player.perLevel.hp * (level - 1);
-  c.maxMana = player.base.mana + player.perLevel.mana * (level - 1);
+  c.maxHp = player.base.hp + player.perLevel.hp * (level - 1) + c.gearHp;
+  c.maxMana = player.base.mana + player.perLevel.mana * (level - 1) + c.gearMana;
   c.hp = Math.min(c.hp, c.maxHp);
   c.mana = Math.min(c.mana, c.maxMana);
 }
 
 /** Damage of a fast hit; `comboIndex` is its place in the combo (1, 2, 3, ...). */
-export function fastHitDamage(cfg: SwordConfig, level: number, comboIndex: number): number {
-  const base = cfg.fastDamage + cfg.fastDamagePerLevel * (level - 1);
+export function fastHitDamage(
+  cfg: SwordConfig,
+  level: number,
+  comboIndex: number,
+  weaponBonus = 0,
+): number {
+  const base = cfg.fastDamage + cfg.fastDamagePerLevel * (level - 1) + weaponBonus;
   const isComboHit = comboIndex > 0 && comboIndex % cfg.comboEveryNthHit === 0;
   return Math.round(base * (isComboHit ? 1 + cfg.comboBonus : 1));
 }
 
-export function heavyHitDamage(cfg: SwordConfig, level: number): number {
-  return cfg.heavyDamage + cfg.heavyDamagePerLevel * (level - 1);
+export function heavyHitDamage(cfg: SwordConfig, level: number, weaponBonus = 0): number {
+  return cfg.heavyDamage + cfg.heavyDamagePerLevel * (level - 1) + weaponBonus;
 }
 
 /** Is a circle (tx, tz, radius) inside the swing arc of someone at (px, pz) facing `heading`? */
@@ -212,7 +224,7 @@ export function stepSword(
     c.swingTime = cfg.fastSwingSeconds;
     c.attackCooldown = cfg.heavyRecoverySeconds;
     out.landed = 'heavy';
-    out.damage = heavyHitDamage(cfg, c.level);
+    out.damage = Math.round(heavyHitDamage(cfg, c.level, c.weaponBonus) * c.damageFactor);
     return out;
   }
   if (c.attackCooldown > 0) return out;
@@ -240,10 +252,18 @@ export function stepSword(
     c.swing = 'fast';
     c.swingTime = cfg.fastSwingSeconds;
     out.landed = 'fast';
-    out.damage = fastHitDamage(cfg, c.level, c.comboCount);
+    out.damage = Math.round(
+      fastHitDamage(cfg, c.level, c.comboCount, c.weaponBonus) * c.damageFactor,
+    );
     out.combo = c.comboCount % cfg.comboEveryNthHit === 0;
   }
   return out;
+}
+
+/** Damage that reaches you after worn gear softened it (at least 1 for any hit). */
+export function damageTaken(c: CombatState, damage: number): number {
+  if (damage <= 0) return 0;
+  return Math.max(1, Math.round(damage * c.damageTakenFactor));
 }
 
 /** HP refills slowly outside a fight (player.json `regen.hpPerSecondOutOfCombat`). */

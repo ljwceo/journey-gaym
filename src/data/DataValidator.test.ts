@@ -81,7 +81,9 @@ describe('validateGameData catches broken data', () => {
   it('reports references to things that do not exist', () => {
     const raw = freshData();
     raw.npcs.npcs[0].role = 'dragon_tamer';
-    raw.quests.quests[2].rewards.items[0].item = 'golden_spoon';
+    raw.quests.quests.find(
+      (q: { rewards: { items: unknown[] } }) => q.rewards.items.length > 0,
+    ).rewards.items[0].item = 'golden_spoon';
     raw.monsters.monsters.find((m: { drops: unknown[] }) => m.drops.length > 0).drops[0].item =
       'nothing';
     raw.zones.zones[1].scatter[0].prop = 'palm_tree';
@@ -92,6 +94,36 @@ describe('validateGameData catches broken data', () => {
     expect(found).toContainEqual(expect.stringContaining('unknown role "dragon_tamer"'));
     expect(found).toContainEqual(expect.stringContaining('unknown item "golden_spoon"'));
     expect(found).toContainEqual(expect.stringContaining('unknown item "nothing"'));
+  });
+
+  it('checks quests: places, checkpoints, shops, dialogue and upgrades', () => {
+    const raw = freshData();
+    const quest = (id: string) => raw.quests.quests.find((q: { id: string }) => q.id === id);
+    quest('a_patch_of_earth').objectives[0].trigger = 'moon';
+    quest('a_quiet_awakening').objectives[0].checkpoint = 'bed_of_nails';
+    quest('just_for_you').objectives[0].item = 'slime_gel';
+    delete quest('tales_by_the_fire').dialogue;
+    quest('steel_and_slime').rewards.upgrades[0].to = 'excalibur';
+    raw.npcs.npcs.find((n: { id: string }) => n.id === 'marco').shop.items[0].item = 'gold';
+    const found = messages(raw);
+    expect(found).toContainEqual(expect.stringContaining('unknown trigger "moon"'));
+    expect(found).toContainEqual(expect.stringContaining('unknown checkpoint "bed_of_nails"'));
+    expect(found).toContainEqual(expect.stringContaining('no shop sells "slime_gel"'));
+    expect(found).toContainEqual(expect.stringContaining('needs dialogue'));
+    expect(found).toContainEqual(expect.stringContaining('unknown item "excalibur"'));
+    expect(found).toContainEqual(expect.stringContaining('gold is not sold'));
+  });
+
+  it('checks potions: what they restore, and the drink key order', () => {
+    const raw = freshData();
+    const potion = raw.items.items.find((item: { id: string }) => item.id === 'health_potion');
+    delete potion.potion;
+    raw.items.items.find((item: { id: string }) => item.id === 'wood').potion = { hp: 5 };
+    raw.player.potions.quickOrder = ['slime_gel', 'elixir'];
+    const found = messages(raw);
+    expect(found).toContainEqual(expect.stringContaining('required for) potions'));
+    expect(found).toContainEqual(expect.stringContaining('"slime_gel" is not a potion'));
+    expect(found).toContainEqual(expect.stringContaining('unknown item "elixir"'));
   });
 
   it('reports NPCs placed outside their zone', () => {
@@ -140,5 +172,38 @@ describe('validateGameData catches broken data', () => {
     const raw = freshData();
     raw.triggers.conditions.canLeaveCity = { type: 'questCompleted', quest: 'slay_moon' };
     expect(messages(raw)).toContainEqual(expect.stringContaining('unknown quest "slay_moon"'));
+  });
+
+  it('reports a boss fight with wrong references, a missing pattern or a start outside its arena', () => {
+    const raw = freshData();
+    const sultan = raw.monsters.monsters.find((m: { id: string }) => m.id === 'sultan');
+    sultan.boss.quest = 'slay_moon';
+    sultan.boss.trigger = 'nowhere';
+    sultan.boss.start = { x: sultan.boss.arena.x + 100, z: sultan.boss.arena.z };
+    delete sultan.attacks[0].pattern;
+    delete sultan.attacks[1].travelSeconds;
+    const found = messages(raw);
+    expect(found).toContainEqual(expect.stringContaining('unknown quest "slay_moon"'));
+    expect(found).toContainEqual(expect.stringContaining('unknown trigger "nowhere"'));
+    expect(found).toContainEqual(expect.stringContaining('must lie inside the arena'));
+    expect(found).toContainEqual(expect.stringContaining('a boss attack needs a pattern'));
+    expect(found).toContainEqual(expect.stringContaining('a pounce attack needs travelSeconds'));
+  });
+
+  it('reports NPCs that come and go with an unknown condition', () => {
+    const raw = freshData();
+    raw.npcs.npcs.find((n: { id: string }) => n.id === 'sultan').presentWhen = 'moonIsBlue';
+    expect(messages(raw)).toContainEqual(expect.stringContaining('unknown condition "moonIsBlue"'));
+  });
+
+  it('checks gear weight, stats and the load tiers', () => {
+    const raw = freshData();
+    delete raw.items.items.find((i: { id: string }) => i.id === 'iron_helm').weight;
+    raw.items.items.find((i: { id: string }) => i.id === 'health_potion').stats = { hp: 5 };
+    raw.player.load.tiers[1].maxRatio = 0.1;
+    const found = messages(raw);
+    expect(found).toContainEqual(expect.stringContaining('need a weight'));
+    expect(found).toContainEqual(expect.stringContaining('only weapons and armor have stats'));
+    expect(found).toContainEqual(expect.stringContaining('from light to heavy'));
   });
 });

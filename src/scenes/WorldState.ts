@@ -29,11 +29,14 @@ import { disposeSceneAssets, loadSceneAssets, type SceneAssets } from '../world/
 import { buildPlayerModel, type ScenePlayerModel } from '../world/scene/ScenePlayerModel';
 import { SceneZone } from '../world/scene/SceneZone';
 import { pointInShape } from '../world/Shapes';
+import { Random } from '../core/Random';
 import { Input, type LookDelta } from '../core/Input';
 import type { GameState } from '../core/StateMachine';
-import type { GameData, QualityPreset } from '../data/types';
+import type { GameData, ItemDef, NpcDef, QualityPreset, QuestDef } from '../data/types';
 import { chosenLevel, presetFor } from '../render/quality';
-import { dialogueLines, isAttackable, type Npc } from '../entities/Npc';
+import type { FollowTarget } from '../entities/Companion';
+import type { Enemy } from '../entities/Enemy';
+import { dialogueLines, type Npc } from '../entities/Npc';
 import { Player } from '../entities/Player';
 import { PropLibrary } from '../entities/PropFactory';
 import { CameraRig } from '../render/CameraRig';
@@ -43,6 +46,8 @@ import { Cheats, stepFlying } from '../systems/Cheats';
 import {
   applyLevel,
   assistedHeading,
+  type CombatState,
+  damageTaken,
   inSwingArc,
   regenOutOfCombat,
   type SwordConfig,
@@ -51,12 +56,43 @@ import {
   stepSword,
   swordConfig,
 } from '../systems/Combat';
-import { Enemies } from '../systems/Enemies';
+import { Enemies, type EnemiesWorld } from '../systems/Enemies';
+import {
+  carriedWeight,
+  dropMissingEquipment,
+  emptyGearStats,
+  equip,
+  type EquipmentSlot,
+  gearStats,
+  isGear,
+  loadTier,
+  maxLoad,
+  unequip,
+} from '../systems/Gear';
+import {
+  addItem,
+  countItem,
+  type DrinkResult,
+  drinkPotion,
+  GOLD_ITEM,
+  type ItemStack,
+  removeItem,
+  rollDrops,
+} from '../systems/Inventory';
+import { moveFromPack, moveToPack } from '../systems/PackAnimal';
+import { QuestBook, type QuestEventKind } from '../systems/Quests';
+import { addXp, deathGoldLoss, xpFraction, xpToNext } from '../systems/Progression';
+import type { EnemyTarget } from '../systems/EnemyAI';
+import { keepInArena } from '../systems/BossAI';
+import { BossEncounter } from './BossEncounter';
+import { ARROW_HEIGHT, Projectiles, type ProjectileWorld } from '../systems/Projectiles';
 import { EnemyRenderer } from '../render/EnemyRenderer';
+import { ProjectileRenderer, WarningRenderer } from '../render/CombatEffects';
 import { DamageNumbers } from '../ui/DamageNumbers';
 import { type Bounds, CollisionWorld } from '../systems/Collision';
 import {
   type MoveCommand,
+  loadedMovement,
   type MovementConfig,
   movementConfig,
   screenToWorld,
@@ -68,7 +104,13 @@ import { Dialog } from '../ui/Dialog';
 import { HUD } from '../ui/HUD';
 import { StructureLabels } from '../ui/StructureLabels';
 import { el } from '../ui/dom';
+import { bagPanel } from '../ui/menus/BagPanel';
+import { packPanel } from '../ui/menus/PackPanel';
+import { type BuyResult, shopPanel } from '../ui/menus/ShopPanel';
+import { QuestTexts } from '../ui/questText';
+import type { ChecklistRow } from '../ui/Dialog';
 import { pausePanel } from '../ui/menus/PausePanel';
+import type { Panel } from '../ui/Overlays';
 import { TouchControls } from '../ui/TouchControls';
 import { Checkpoints, checkpointsOf } from '../world/Checkpoints';
 import { ChunkDebug } from '../world/ChunkDebug';
@@ -88,7 +130,7 @@ import { Triggers } from '../world/Triggers';
 import { type StreamerStats, WorldStreamer } from '../world/WorldStreamer';
 import { ZoneLocator } from '../world/ZoneLocator';
 import { normalizeAppearance } from './creator';
-import type { SceneDef, Shape, Zone } from '../data/types';
+import type { SceneDef, Zone } from '../data/types';
 import { placeAtStart } from './flow';
 
 const DEG = Math.PI / 180;
@@ -102,6 +144,9 @@ const DEBUG_KEYS = [
   'npcs',
   'energy',
   'combat',
+  'load',
+  'enemies',
+  'quests',
   'camera',
   'daynight',
   'cheats',
@@ -124,6 +169,14 @@ const SUN_DISTANCE = 150;
 const NO_SWORD_INPUT: SwordInput = { fast: false, heavy: false };
 /** Seconds over which fog and sky change color after entering another zone. */
 const FOG_SHARPNESS = 1.5;
+/** The text on the interaction icon per kind of NPC ("Talk to Marco", "Pet Pringle"). */
+const INTERACTION_LABELS: Readonly<Record<NpcDef['interaction'], string>> = {
+  talk: 'hud.talkTo',
+  pet: 'hud.pet',
+  pack: 'hud.pack',
+  none: 'hud.talkTo',
+};
+
 /** The interaction icon stays this far (CSS px) from the screen edges. */
 const ICON_MARGIN = 60;
 /** The sea plane is this many times the view distance wide (it follows the player). */
@@ -132,6 +185,19 @@ const WATER_SCALE = 3;
 const ICON_ABOVE_HEAD = 0.35;
 /** A conversation ends by itself when the player is this many interact ranges away. */
 const TALK_BREAK_RANGES = 3;
+/** "Protected here" shows at most this often (s) while you keep hitting a protected monster. */
+const PROTECTED_MESSAGE_SECONDS = 4;
+/** Arrows stop at colliders; this is their thickness (m) for that test. */
+const ARROW_COLLIDE_RADIUS = 0.05;
+/** Loot texts above a defeated monster stack this far (m) apart. */
+const LOOT_TEXT_SPACING = 0.45;
+/** What the cheat menu gives (debug only). */
+const CHEAT_XP = 100;
+const CHEAT_GOLD = 50;
+const CHEAT_POTIONS = 5;
+const CHEAT_SLIME_GEL = 3;
+/** Not dying (the death timer is off). */
+const NOT_DYING = -1;
 
 /**
  * The open world: terrain chunks stream in around the player from a Web Worker (WorldStreamer),
@@ -203,6 +269,36 @@ export class WorldState implements GameState, InstanceHost {
   private npcWorld: NpcWorld | null = null;
   private enemies: Enemies | null = null;
   private enemyRenderer: EnemyRenderer | null = null;
+  private projectiles: Projectiles | null = null;
+  private projectileRenderer: ProjectileRenderer | null = null;
+  private warningRenderer: WarningRenderer | null = null;
+  private enemiesWorld: EnemiesWorld | null = null;
+  private projectileWorld: ProjectileWorld | null = null;
+  /** Boss fights (Sultan at the city gate): trigger, cutscene, arena, tips, win or lose. */
+  private encounter: BossEncounter | null = null;
+  /** A comic cutscene plays over the world: the simulation waits. */
+  private cutscenePlaying = false;
+  /** NPCs out of the world for now (Pringle while he is Sultan). */
+  private hiddenNpcs: ReadonlySet<string> = new Set();
+  /** HP reached 0 during this step; handled once the monsters finished their step. */
+  private knockedOut = false;
+  /** Seconds since dying started (fade to black, wake up, fade in); NOT_DYING otherwise. */
+  private deathTimer = NOT_DYING;
+  /** Gold lost by this death (taken from the save at once, shown when you wake up). */
+  private deathGoldLost = 0;
+  /** Where you wake up after dying. */
+  private readonly respawn = { x: 0, z: 0 };
+  private deathTitle = '';
+  private deathText = '';
+  /** Seconds until the next potion may be drunk. */
+  private potionCooldown = 0;
+  /** Rolls loot; a new seed every time the world is entered. */
+  private lootRng = new Random(1);
+  private items: ReadonlyMap<string, ItemDef> = new Map();
+  /** Seconds until "protected here" may show again. */
+  private protectedMessageTimer = 0;
+  /** Seconds since the world was entered (drawing only: pulsing warnings). */
+  private time = 0;
   private damageNumbers: DamageNumbers | null = null;
   private sword: SwordConfig | null = null;
   /** Whether the HUD currently shows the fight bars (changes only on transitions). */
@@ -215,11 +311,14 @@ export class WorldState implements GameState, InstanceHost {
   /** Cached icon label (made only when the target or the language changes). */
   private iconLabel = '';
   private iconLabelFor: Npc | 'rest' | null = null;
-  private safeAreas: Map<string, Shape> | null = null;
   /** True while the closed city gate holds the player back (the message shows once). */
   private gateBlocked = false;
   private readonly fogTarget = new Color();
   private readonly conditionContext: ConditionContext = { level: 1, completedQuests: new Set() };
+  /** Quests from quests.json with the player's progress (changes the save in place). */
+  private quests: QuestBook | null = null;
+  private questTexts: QuestTexts | null = null;
+  private readonly changedQuests: QuestDef[] = [];
   private readonly placesInside: string[] = [];
   private readonly labelPoint = new Vector3();
   private water: Mesh | null = null;
@@ -233,12 +332,21 @@ export class WorldState implements GameState, InstanceHost {
   private readonly cheats = new Cheats();
   private surface: HTMLElement | null = null;
   private pauseButton: HTMLButtonElement | null = null;
+  private bagButton: HTMLButtonElement | null = null;
   private lookHint: HTMLElement | null = null;
   private lookHintShown = false;
   /** Phones and tablets: no "click to look around" hint (there is no mouse). */
   private coarsePointer = false;
   private movement: MovementConfig | null = null;
+  /** Movement from player.json before gear and equip load (see `applyGear`). */
+  private baseMovement: MovementConfig | null = null;
+  /** Walking speed with gear and load, before cheats and the heavy-hit slowdown. */
   private baseWalkSpeed = 0;
+  private readonly gearStatsOut = emptyGearStats();
+  /** Equip load: carried kg, what you can carry, and the tier ('' until first computed). */
+  private carriedKg = 0;
+  private maxLoadKg = 0;
+  private loadTierId = '';
   private preset: QualityPreset | null = null;
   private paused = false;
   /** Set after importing a save: leaving the world must not write the old state over it. */
@@ -253,6 +361,17 @@ export class WorldState implements GameState, InstanceHost {
   private readonly swordInput: SwordInput = { fast: false, heavy: false };
   private readonly swordResult: SwordResult = { landed: 'none', damage: 0, combo: false };
   private readonly look: LookDelta = { yaw: 0, pitch: 0, zoom: 1 };
+  private readonly enemyTarget: EnemyTarget = { x: 0, z: 0, radius: 0.4, hostile: true };
+  private readonly followTarget: FollowTarget = {
+    x: 0,
+    z: 0,
+    heading: 0,
+    moving: false,
+    viewYaw: 0,
+  };
+  private readonly arrowProbe = { x: 0, z: 0 };
+  private readonly drops: ItemStack[] = [];
+  private readonly healed = { item: '', hp: 0, mana: 0 };
   private readonly stats: StreamerStats = {
     near: 0,
     far: 0,
@@ -279,7 +398,11 @@ export class WorldState implements GameState, InstanceHost {
 
     const t = ctx.i18n.t.bind(ctx.i18n);
     this.movement = movementConfig(data.player);
+    this.baseMovement = movementConfig(data.player);
     this.baseWalkSpeed = this.movement.walkSpeed;
+    this.loadTierId = '';
+    // Gear stats (max HP) are needed before HP is restored from the save in buildScene.
+    this.items = new Map(data.items.items.map((item) => [item.id, item]));
     this.cheats.reset();
 
     // Input surface first, so the pause button and touch buttons lie on top of it.
@@ -319,6 +442,25 @@ export class WorldState implements GameState, InstanceHost {
     this.damageNumbers = new DamageNumbers();
     ctx.ui.append(this.damageNumbers.root);
     this.hudInCombat = false;
+    this.knockedOut = false;
+    this.deathTimer = NOT_DYING;
+    this.potionCooldown = 0;
+    this.lootRng = new Random((Date.now() >>> 0) ^ 0x5eed);
+    this.quests = new QuestBook(data.quests.quests, session.quests);
+    this.questTexts = new QuestTexts(data, t);
+    this.conditionContext.completedQuests = this.quests.completed;
+    this.applyGear(false);
+    this.updatePlayerGear();
+    this.cutscenePlaying = false;
+    this.hiddenNpcs = new Set();
+    this.encounter = new BossEncounter(this.encounterHost());
+    this.startGiverlessQuests();
+    this.refreshNpcPresence();
+    this.refreshQuestMarkers();
+    this.hud.setGold(session.character?.gold ?? 0);
+    this.hud.setXp(xpFraction(data.player, session.progress), false);
+    this.refreshPotions();
+    this.time = 0;
     this.talkingTo = null;
     this.targetNpc = null;
     this.iconLabelFor = null;
@@ -336,11 +478,16 @@ export class WorldState implements GameState, InstanceHost {
         importSave: (code) => this.importSave(code),
         rerunBenchmark: () => this.rerunBenchmark(),
         nightMonsters: () => this.enemies?.nightAlive ?? 0,
+        grant: (kind) => this.grant(kind),
+        bossFight: () => {
+          this.cheatPanel?.toggle();
+          this.encounter?.forceStart('sultan');
+        },
       },
     );
     // Next to the UI layer (not inside it), so it can sit above the debug overlay.
     (ctx.ui.parentElement ?? ctx.ui).append(this.cheatPanel.root);
-    this.cheatPanel.setDebugVisible(ctx.debug.isVisible);
+    this.cheatPanel.setDebugVisible(ctx.debug.isEnabled);
 
     this.pauseButton = el('button', {
       className: 'ui-pause-button',
@@ -349,6 +496,12 @@ export class WorldState implements GameState, InstanceHost {
       onClick: () => this.pause(),
     });
     ctx.ui.append(this.pauseButton);
+    this.bagButton = el('button', {
+      className: 'ui-bag-button',
+      attrs: { type: 'button', 'aria-label': t('bag.title') },
+      onClick: () => this.openBag(),
+    });
+    ctx.ui.append(this.bagButton);
     // Mouse only: "click to look around" until the mouse is captured.
     this.lookHint = el('div', { className: 'ui-look-hint', text: t('controls.clickToLook') });
     this.lookHintShown = false;
@@ -360,6 +513,7 @@ export class WorldState implements GameState, InstanceHost {
       ctx.events.on('languageChanged', () => {
         this.touch?.setLabels(this.touchLabels());
         this.pauseButton?.setAttribute('aria-label', ctx.i18n.t('pause.title'));
+        this.bagButton?.setAttribute('aria-label', ctx.i18n.t('bag.title'));
         if (this.lookHint) this.lookHint.textContent = ctx.i18n.t('controls.clickToLook');
         this.cheatPanel?.updateTexts();
         this.dialog?.updateTexts();
@@ -379,6 +533,30 @@ export class WorldState implements GameState, InstanceHost {
         if (def?.firstVisitText) this.hud?.showMessage(ctx.i18n.t(def.firstVisitText));
       }),
       ctx.events.on('checkpointSet', () => this.hud?.showMessage(ctx.i18n.t('hud.checkpointSet'))),
+      // Quests count what happens in the world.
+      ctx.events.on('monsterDefeated', ({ monsterId }) => {
+        this.recordQuest('kill', monsterId, 1);
+        this.recordQuest('boss', monsterId, 1);
+      }),
+      ctx.events.on('playerRested', ({ checkpointId }) =>
+        this.recordQuest('rest', checkpointId, 1),
+      ),
+      ctx.events.on('triggerEntered', ({ triggerId }) => {
+        this.recordQuest('visit', triggerId, 1);
+        this.encounter?.onTrigger(triggerId);
+      }),
+      ctx.events.on('itemBought', ({ itemId, count, npcId }) =>
+        this.recordQuest('buy', itemId, count, npcId),
+      ),
+      ctx.events.on('itemsGained', ({ itemId, count }) => {
+        this.itemQuestProgress(itemId, count);
+        if (isGear(this.items.get(itemId))) this.applyGear(true);
+      }),
+      ctx.events.on('levelUp', () => {
+        this.applyGear(true);
+        this.startGiverlessQuests();
+        this.refreshQuestMarkers();
+      }),
     );
     this.debugTimer = window.setInterval(this.updateDebug, DEBUG_REFRESH_MS);
     // From now on frames count for the benchmark / auto-downgrade (not while a zone loads).
@@ -414,6 +592,8 @@ export class WorldState implements GameState, InstanceHost {
     this.surface = null;
     this.pauseButton?.remove();
     this.pauseButton = null;
+    this.bagButton?.remove();
+    this.bagButton = null;
     this.lookHint?.remove();
     this.lookHint = null;
     this.hud?.dispose();
@@ -424,6 +604,11 @@ export class WorldState implements GameState, InstanceHost {
     this.damageNumbers = null;
     this.talkingTo = null;
     this.targetNpc = null;
+    this.encounter?.dispose();
+    this.encounter = null;
+    this.cutscenePlaying = false;
+    this.quests = null;
+    this.questTexts = null;
     this.labels?.dispose();
     this.labels = null;
     this.ctx.renderer.setCamera(null);
@@ -432,7 +617,8 @@ export class WorldState implements GameState, InstanceHost {
 
   update(dt: number): void {
     const { player, input, mover, movement, rig, streamer, sceneZone } = this;
-    if (this.paused || this.travelling || !player || !input || !mover || !movement || !rig) return;
+    if (this.paused || this.travelling || this.cutscenePlaying) return;
+    if (!player || !input || !mover || !movement || !rig) return;
     if (!streamer && !sceneZone) return;
     const session = this.ctx.session;
     if (session) session.playTimeSeconds += dt;
@@ -451,6 +637,8 @@ export class WorldState implements GameState, InstanceHost {
       // A click both confirms and attacks; while talking it only shows the next line.
       input.consumePressed('attack');
       input.consumePressed('heavy');
+      input.consumePressed('potion');
+      input.consumePressed('bag');
       if (input.consumePressed('confirm') || next || dash) this.dialog.advance();
       this.swordInput.fast = false;
       this.swordInput.heavy = false;
@@ -461,6 +649,21 @@ export class WorldState implements GameState, InstanceHost {
       // Fast hit: left mouse button or the attack button (held = keeps attacking).
       this.swordInput.fast = input.consumePressed('attack') || input.isPressed('attack');
       this.swordInput.heavy = input.consumePressed('heavy');
+      if (input.consumePressed('potion')) this.drink(null);
+      if (input.consumePressed('bag')) {
+        this.openBag();
+        return;
+      }
+    }
+    this.potionCooldown = Math.max(0, this.potionCooldown - dt);
+    if (this.deathTimer !== NOT_DYING) {
+      // Dying: you can do nothing until you wake up at your checkpoint.
+      this.command.x = 0;
+      this.command.z = 0;
+      input.consumePressed('dash');
+      this.swordInput.fast = false;
+      this.swordInput.heavy = false;
+      this.stepDeath(dt);
     }
 
     player.beginStep();
@@ -483,10 +686,14 @@ export class WorldState implements GameState, InstanceHost {
       );
     } else {
       this.command.dash = input.consumePressed('dash');
+      if (this.command.dash && !movement.canDash) this.sayTooHeavy();
       this.stepSwordAndMove(dt);
       // You cannot walk through people (or Treewardens, or monsters).
       if (this.npcs?.pushOut(s, movement.radius)) this.resolveCircle(s, movement.radius);
       if (this.enemies?.pushOut(s, movement.radius)) this.resolveCircle(s, movement.radius);
+      // A boss fight: nobody leaves the ring.
+      const arena = this.encounter?.arena;
+      if (arena) keepInArena(s, arena, movement.radius);
       this.checkGate(fromX, fromZ);
       if (sceneZone) {
         // Stairs, ledges and falling; under the water or off the map: back to the spawn.
@@ -510,9 +717,10 @@ export class WorldState implements GameState, InstanceHost {
     this.updateNpcs(dt);
     // Monsters appear at dusk and at night; test areas only in debug mode.
     this.spawnWorld.spawning = this.ctx.dayNight?.spawning() ?? false;
-    this.spawnWorld.testAreas = this.ctx.debug.isVisible;
+    this.spawnWorld.testAreas = this.ctx.debug.isEnabled;
     this.enemies?.stepSpawning(dt, s.x, s.z, this.spawnWorld);
-    this.enemies?.step(dt, s.x, s.z, this.groundHeight, mover);
+    this.updateEnemies(dt);
+    this.encounter?.step(dt);
     this.updateCombatHud();
     this.hud?.rules.setEnergyFraction(s.energy / movement.maxEnergy);
     this.hud?.setBar('energy', s.energy / movement.maxEnergy);
@@ -565,17 +773,292 @@ export class WorldState implements GameState, InstanceHost {
     let hitAny = false;
     for (let i = 0; i < enemies.shown.length; i++) {
       const e = enemies.shown[i];
-      if (!e || !e.hittable) continue;
+      if (!e?.alive) continue;
       if (!inSwingArc(s.x, s.z, s.heading, e.x, e.z, e.radius, sword.range, sword.halfArc)) {
         continue;
       }
-      enemies.hit(e, result.damage);
+      if (!e.hittable) {
+        if (e.guarded) this.encounter?.onGuardedHit(e, e.y + (enemyRenderer?.heightOf(e) ?? 1.5));
+        else this.showProtected(e);
+        continue;
+      }
+      const defeated = enemies.hit(e, result.damage);
       hitAny = true;
       const top = e.y + (enemyRenderer?.heightOf(e) ?? 1.5);
       const kind = result.landed === 'heavy' ? 'heavy' : result.combo ? 'combo' : 'normal';
       this.damageNumbers?.spawn(e.x, top, e.z, result.damage, kind);
+      if (defeated) this.defeated(e, top);
     }
     if (hitAny) player.combat.sinceCombat = 0;
+  }
+
+  /** Dash pressed while overloaded: say why nothing happens (not more often than every few seconds). */
+  private sayTooHeavy(): void {
+    if (this.protectedMessageTimer > 0) return;
+    this.protectedMessageTimer = PROTECTED_MESSAGE_SECONDS;
+    this.hud?.showMessage(this.ctx.i18n.t('load.cannotDash'));
+  }
+
+  /** "Treewarden is protected here." (elven city), not more often than every few seconds. */
+  private showProtected(e: Enemy): void {
+    if (this.protectedMessageTimer > 0) return;
+    this.protectedMessageTimer = PROTECTED_MESSAGE_SECONDS;
+    this.hud?.showMessage(this.ctx.i18n.t('hud.protected', { name: e.def.name }));
+  }
+
+  /**
+   * Monsters and their arrows for one step. They only attack while the player can be attacked
+   * (not with monsters switched off in the cheat menu).
+   */
+  private updateEnemies(dt: number): void {
+    const { enemies, player, movement, enemiesWorld, projectiles, projectileWorld } = this;
+    if (!enemies || !player || !movement || !enemiesWorld) return;
+    const t = this.enemyTarget;
+    t.x = player.state.x;
+    t.z = player.state.z;
+    t.radius = movement.radius;
+    t.hostile = this.cheats.monsters && !this.cheats.fly && this.deathTimer === NOT_DYING;
+    enemies.step(dt, t, enemiesWorld);
+    if (projectiles && projectileWorld) projectiles.step(dt, t, projectileWorld, this.hurtPlayer);
+    this.protectedMessageTimer = Math.max(0, this.protectedMessageTimer - dt);
+    if (this.knockedOut) this.startDying();
+  }
+
+  /** A monster or an arrow hits the player: HP down, a red number and glow, maybe knocked out. */
+  private readonly hurtPlayer = (damage: number): void => {
+    const player = this.player;
+    if (!player || damage <= 0) return;
+    const c = player.combat;
+    const s = player.state;
+    if (this.knockedOut || this.deathTimer !== NOT_DYING) return;
+    const taken = damageTaken(c, damage);
+    c.hp = Math.max(0, c.hp - taken);
+    c.sinceCombat = 0;
+    this.damageNumbers?.spawn(s.x, s.y + 2, s.z, taken, 'player');
+    this.hud?.hurt();
+    if (c.hp <= 0) this.knockedOut = true;
+  };
+
+  /**
+   * HP reached 0 (concept "Doodgaan"): the screen fades to black, you lose 10% of your gold
+   * (items, gear and resources stay), and you wake up at your last checkpoint with full HP
+   * and mana. The monsters are back at full strength. The save gets the result at once (gold,
+   * checkpoint, full health), so leaving or reloading during the black screen changes nothing.
+   */
+  private startDying(): void {
+    this.knockedOut = false;
+    const session = this.ctx.session;
+    const data = this.ctx.data;
+    const player = this.player;
+    if (!session || !data || !player || this.deathTimer !== NOT_DYING) return;
+    const t = this.ctx.i18n;
+    this.deathTimer = 0;
+    this.encounter?.abort();
+    this.deathGoldLost = deathGoldLoss(
+      session.character?.gold ?? 0,
+      data.player.death.goldLossFraction,
+    );
+    if (session.character) session.character.gold -= this.deathGoldLost;
+    // From now on the save holds where you will wake up (syncSave waits until then).
+    const checkpoint = this.checkpoints?.byId(session.world.checkpoint);
+    const zone = data.zones.zones.find((entry) => entry.id === data.player.start.zone);
+    const start = zone?.spawnPoints.find((point) => point.id === data.player.start.spawnPoint);
+    this.respawn.x = checkpoint?.x ?? start?.x ?? player.state.x;
+    this.respawn.z = checkpoint?.z ?? start?.z ?? player.state.z;
+    session.world.position = { x: this.respawn.x, y: 0, z: this.respawn.z };
+    session.world.zone =
+      this.zones?.zoneAt(this.respawn.x, this.respawn.z)?.id ?? session.world.zone;
+    session.progress.hp = null;
+    session.progress.mana = null;
+    this.ctx.persist();
+    this.deathTitle = t.t('death.title');
+    this.deathText =
+      this.deathGoldLost > 0
+        ? t.t('death.goldLost', { amount: this.deathGoldLost, gold: this.goldName() })
+        : t.t('death.wakeUp');
+    this.dialog?.close();
+  }
+
+  /** One step of dying: fade out, (black) wake up at the checkpoint, fade back in. */
+  private stepDeath(dt: number): void {
+    const death = this.ctx.data?.player.death;
+    if (!death) return;
+    const before = this.deathTimer;
+    this.deathTimer += dt;
+    const wakeAt = death.fadeSeconds + death.blackSeconds;
+    if (before < wakeAt && this.deathTimer >= wakeAt) this.wakeUpAfterDeath();
+    if (this.deathTimer >= wakeAt + death.fadeSeconds) this.deathTimer = NOT_DYING;
+  }
+
+  private wakeUpAfterDeath(): void {
+    const { player, enemies } = this;
+    const session = this.ctx.session;
+    const data = this.ctx.data;
+    if (!player || !session || !data) return;
+    enemies?.resetAll();
+    this.projectiles?.clear();
+    this.placePlayer(this.respawn.x, this.respawn.z);
+    const c = player.combat;
+    c.hp = c.maxHp;
+    c.mana = c.maxMana;
+    c.sinceCombat = Infinity;
+    c.heavyWindup = 0;
+    c.swing = 'none';
+    player.state.energy = data.player.base.energy;
+    const lost = this.deathGoldLost;
+    if (session.character && lost > 0) {
+      this.hud?.setGold(session.character.gold);
+      this.hud?.rules.goldChanged();
+    }
+    this.ctx.events.emit('playerDied', { goldLost: lost });
+    this.syncSave(true);
+    this.ctx.persist();
+  }
+
+  /** The screen during dying (drawn every frame from the simulation's death timer). */
+  private updateBlackout(): void {
+    const death = this.ctx.data?.player.death;
+    const hud = this.hud;
+    if (!death || !hud) return;
+    const time = this.deathTimer;
+    if (time === NOT_DYING) {
+      hud.setBlackout(0, '', '');
+      return;
+    }
+    const fade = Math.max(1e-3, death.fadeSeconds);
+    const wakeAt = death.fadeSeconds + death.blackSeconds;
+    const opacity = time < wakeAt ? time / fade : 1 - (time - wakeAt) / fade;
+    hud.setBlackout(opacity, this.deathTitle, this.deathText);
+  }
+
+  /**
+   * The player defeated a monster: XP (maybe a level up) and its loot straight into the bag,
+   * with short texts above the monster. Quests listen to `monsterDefeated`.
+   */
+  private defeated(e: Enemy, top: number): void {
+    const data = this.ctx.data;
+    const session = this.ctx.session;
+    const player = this.player;
+    if (!data || !session || !player) return;
+    this.ctx.events.emit('monsterDefeated', { monsterId: e.def.id });
+    let y = top + LOOT_TEXT_SPACING;
+    if (e.def.xp > 0) {
+      this.gainXp(e.def.xp);
+      this.damageNumbers?.spawnText(e.x, y, e.z, `+${e.def.xp} XP`, 'xp');
+      y += LOOT_TEXT_SPACING;
+    }
+    const drops = rollDrops(e.def, this.lootRng, this.drops);
+    for (let i = 0; i < drops.length; i++) {
+      const drop = drops[i] as ItemStack;
+      this.gainItem(drop.item, drop.count);
+      const name =
+        drop.item === GOLD_ITEM ? this.goldName() : (this.items.get(drop.item)?.name ?? drop.item);
+      this.damageNumbers?.spawnText(e.x, y, e.z, `+${drop.count} ${name}`, 'loot');
+      y += LOOT_TEXT_SPACING;
+    }
+  }
+
+  /** Adds XP; every new level gives more HP, mana and sword damage (and fills HP and mana). */
+  private gainXp(amount: number): void {
+    const data = this.ctx.data;
+    const session = this.ctx.session;
+    const player = this.player;
+    if (!data || !session || !player || amount <= 0) return;
+    const progress = session.progress;
+    const levels = addXp(data.player, progress, amount);
+    this.ctx.events.emit('xpGained', { amount });
+    this.hud?.rules.xpGained();
+    this.hud?.setXp(xpFraction(data.player, progress), levels > 0);
+    if (levels <= 0) return;
+    const c = player.combat;
+    applyLevel(c, data.player, progress.level);
+    if (data.player.levelUpRefill) {
+      c.hp = c.maxHp;
+      c.mana = c.maxMana;
+    }
+    this.conditionContext.level = progress.level;
+    this.hud?.showMessage(this.ctx.i18n.t('hud.levelUp', { level: progress.level }));
+    this.ctx.events.emit('levelUp', { level: progress.level });
+    this.syncSave();
+    this.ctx.persist();
+  }
+
+  /** Puts loot (or a reward) in the bag; gold goes to the gold counter (shown for a moment). */
+  private gainItem(itemId: string, count: number): void {
+    const character = this.ctx.session?.character;
+    if (!character || count <= 0) return;
+    if (itemId === GOLD_ITEM) {
+      character.gold += count;
+      this.hud?.setGold(character.gold);
+      this.hud?.rules.goldChanged();
+    } else {
+      addItem(character.inventory, itemId, count);
+      this.refreshPotions();
+    }
+    this.ctx.events.emit('itemsGained', { itemId, count });
+  }
+
+  /**
+   * Drinks a potion: `itemId`, or with null the first one from player.json `potions.quickOrder`
+   * (Q / the drink button). Says why when it cannot.
+   */
+  private drink(itemId: string | null): DrinkResult {
+    const data = this.ctx.data;
+    const character = this.ctx.session?.character;
+    const player = this.player;
+    if (!data || !character || !player || this.deathTimer !== NOT_DYING) return 'none';
+    const order = itemId ? [itemId] : data.player.potions.quickOrder;
+    const result = drinkPotion(
+      character.inventory,
+      order,
+      this.items,
+      player.combat,
+      this.potionCooldown,
+      this.healed,
+    );
+    const t = this.ctx.i18n;
+    if (result === 'drunk') {
+      this.potionCooldown = data.player.potions.cooldownSeconds;
+      const s = player.state;
+      if (this.healed.hp > 0)
+        this.damageNumbers?.spawnText(s.x, s.y + 2, s.z, `+${Math.round(this.healed.hp)}`, 'heal');
+      this.hud?.rules.healed();
+      this.refreshPotions();
+      this.ctx.events.emit('potionDrunk', { itemId: this.healed.item });
+    } else if (result === 'none') {
+      this.hud?.showMessage(t.t('hud.noPotion'));
+    } else if (result === 'full') {
+      this.hud?.showMessage(t.t('hud.alreadyFull'));
+    }
+    return result;
+  }
+
+  /** The number on the drink button: potions the drink key would use. */
+  private refreshPotions(): void {
+    const data = this.ctx.data;
+    const bag = this.ctx.session?.character?.inventory;
+    if (!data || !bag || !this.touch) return;
+    let count = 0;
+    for (const id of data.player.potions.quickOrder) count += countItem(bag, id);
+    this.touch.setPotions(count);
+  }
+
+  /** "Gold" is a temporary name: it comes from items.json, not from the code. */
+  private goldName(): string {
+    return this.items.get(GOLD_ITEM)?.name ?? GOLD_ITEM;
+  }
+
+  /** "Level 3 · 40 / 220 XP" for the bag. */
+  private xpLine(): string {
+    const data = this.ctx.data;
+    const progress = this.ctx.session?.progress;
+    if (!data || !progress) return '';
+    const need = xpToNext(data.player, progress.level);
+    return this.ctx.i18n.t(Number.isFinite(need) ? 'bag.level' : 'bag.levelMax', {
+      level: progress.level,
+      xp: progress.xp,
+      need,
+    });
   }
 
   /** HP and mana bars, the "in a fight" rule and the low-HP rule (HUD rules from the concept). */
@@ -593,12 +1076,13 @@ export class WorldState implements GameState, InstanceHost {
     hud.rules.setHpFraction(c.maxHp > 0 ? c.hp / c.maxHp : 1);
   }
 
-  private touchLabels(): { attack: string; heavy: string; dash: string } {
+  private touchLabels(): { attack: string; heavy: string; dash: string; potion: string } {
     const t = this.ctx.i18n;
     return {
       attack: t.t('controls.attack'),
       heavy: t.t('controls.heavy'),
       dash: t.t('controls.dash'),
+      potion: t.t('controls.potion'),
     };
   }
 
@@ -638,7 +1122,13 @@ export class WorldState implements GameState, InstanceHost {
     const { npcs, player, npcWorld } = this;
     if (!npcs || !player || !npcWorld) return;
     const s = player.state;
-    npcs.update(dt, s.x, s.z, s.heading, npcWorld, this.talkingTo);
+    const f = this.followTarget;
+    f.x = s.x;
+    f.z = s.z;
+    f.heading = s.heading;
+    f.moving = s.moving;
+    f.viewYaw = this.rig?.orbit.yaw ?? s.heading;
+    npcs.update(dt, f, npcWorld, this.talkingTo);
     const talking = this.talkingTo;
     if (talking) {
       const far = npcs.settings.interactRange * TALK_BREAK_RANGES + talking.solidRadius;
@@ -650,18 +1140,25 @@ export class WorldState implements GameState, InstanceHost {
   }
 
   /**
-   * E or a tap on the icon: talk to or pet the nearest NPC, otherwise rest at a checkpoint
-   * (health and mana follow in phase 2).
+   * E or a tap on the icon: talk to or pet the nearest NPC, otherwise rest in the bed at a
+   * checkpoint (full HP and mana, and a save).
    */
   private interact(): void {
-    if (this.paused || this.dialog?.isOpen) return;
+    if (this.paused || this.dialog?.isOpen || this.deathTimer !== NOT_DYING) return;
     const npc = this.targetNpc;
     if (npc) {
       this.interactWith(npc);
       return;
     }
-    if (!this.checkpoints?.near) return;
+    const near = this.checkpoints?.near;
+    const c = this.player?.combat;
+    if (!near || !c) return;
+    c.hp = c.maxHp;
+    c.mana = c.maxMana;
     this.hud?.showMessage(this.ctx.i18n.t('hud.rested'));
+    this.ctx.events.emit('playerRested', { checkpointId: near.id });
+    this.syncSave();
+    this.ctx.persist();
   }
 
   private interactWith(npc: Npc): void {
@@ -679,12 +1176,393 @@ export class WorldState implements GameState, InstanceHost {
       if (npc.def.petText) this.hud?.showMessage(ctx.i18n.t(npc.def.petText));
       return;
     }
-    const lines = dialogueLines(npc.def, data.triggers.conditions, this.conditionContext);
+    if (npc.def.interaction === 'pack') {
+      this.openPack(npc);
+      return;
+    }
+    // Talking counts for quests that send you to this NPC.
+    this.recordQuest('talk', npc.id, 1);
+    const talk = this.questConversation(npc.def);
+    const lines =
+      talk?.lines ?? dialogueLines(npc.def, data.triggers.conditions, this.conditionContext);
     this.talkingTo = npc;
     this.targetNpc = null;
-    this.dialog?.open(npc.def.name, lines, () => {
-      this.talkingTo = null;
-    });
+    const shop = npc.def.shop;
+    this.dialog?.open(
+      npc.def.name,
+      lines,
+      (finished) => {
+        this.talkingTo = null;
+        // A merchant opens the shop after the last line (not after Escape or walking away).
+        if (finished && shop) this.openShop(npc.def.name, npc.id, shop);
+      },
+      talk?.checklist ?? null,
+    );
+  }
+
+  /**
+   * What an NPC says about its quest, if it has one for you now: hand in a finished quest
+   * (rewards right away), offer a new one (it starts right away), or say what is still missing.
+   * Null = no quest; the NPC says its normal lines.
+   */
+  private questConversation(
+    def: NpcDef,
+  ): { lines: readonly string[]; checklist: (() => readonly ChecklistRow[]) | null } | null {
+    const book = this.quests;
+    const session = this.ctx.session;
+    const bag = session?.character?.inventory;
+    if (!book || !session || !bag) return null;
+    const found = book.forNpc(def.id, session.progress.level, bag);
+    const dialogue = found?.def.dialogue;
+    if (!found || !dialogue) return null;
+    const quest = found.def;
+    const checklist = () => this.questTexts?.rows(book, quest, bag) ?? [];
+    if (found.status === 'ready') {
+      this.completeQuest(quest);
+      return { lines: dialogue.complete, checklist: null };
+    }
+    if (found.status === 'available') {
+      book.accept(quest.id);
+      this.ctx.events.emit('questStarted', { questId: quest.id });
+      // The giver's own "talk" objective counts now (e.g. listening to Old Bertha's tale).
+      this.recordQuest('talk', def.id, 1, undefined, true);
+      if (book.isReady(quest, bag)) {
+        this.completeQuest(quest);
+        return { lines: [...dialogue.offer, ...dialogue.complete], checklist: null };
+      }
+      this.hud?.showMessage(this.ctx.i18n.t('quest.ui.started', { name: quest.name }));
+      this.refreshQuestMarkers();
+      this.ctx.persist();
+      return { lines: dialogue.offer, checklist };
+    }
+    return { lines: dialogue.progress, checklist };
+  }
+
+  /**
+   * Counts something that happened for the running quests; says how far a quest is now, or
+   * that it can be handed in. `quiet` counts without messages.
+   */
+  private recordQuest(
+    kind: QuestEventKind,
+    target: string,
+    count: number,
+    source?: string,
+    quiet = false,
+  ): void {
+    const book = this.quests;
+    if (!book) return;
+    const changed = book.record(kind, target, count, this.changedQuests, source);
+    if (changed.length === 0) return;
+    if (!quiet) for (const def of changed) this.announceQuestProgress(def);
+    this.refreshQuestMarkers();
+    this.ctx.persist();
+  }
+
+  /** An item came into the bag: quests that need it say how far they are. */
+  private itemQuestProgress(itemId: string, gained: number): void {
+    const book = this.quests;
+    if (!book) return;
+    let any = false;
+    const bag = this.ctx.session?.character?.inventory ?? [];
+    for (const def of book.activeDefs()) {
+      // Only while it was still needed: a 5th Slime Gel for a quest that wants 3 says nothing.
+      const wants = def.objectives.some(
+        (objective) =>
+          (objective.type === 'find' || objective.type === 'deliver') &&
+          objective.item === itemId &&
+          countItem(bag, itemId) - gained < objective.count,
+      );
+      if (!wants) continue;
+      this.announceQuestProgress(def);
+      any = true;
+    }
+    if (any) this.refreshQuestMarkers();
+  }
+
+  /** "Steel and Slime · Bring Slime Gel to Hilda Ironhand 2/3", or "go back to Hilda". */
+  private announceQuestProgress(def: QuestDef): void {
+    const book = this.quests;
+    const texts = this.questTexts;
+    const bag = this.ctx.session?.character?.inventory;
+    if (!book || !texts || !bag) return;
+    const t = this.ctx.i18n;
+    if (book.isReady(def, bag) && !def.giver) {
+      // Nobody to hand it in to (Defeat Sultan): done right away.
+      this.completeQuest(def);
+      return;
+    }
+    if (book.isReady(def, bag)) {
+      this.hud?.showMessage(
+        t.t('quest.ui.ready', { name: def.name, giver: texts.npcName(def.giver) }),
+      );
+      this.ctx.events.emit('questReady', { questId: def.id });
+      return;
+    }
+    const objective = texts.firstOpenRow(book, def, bag);
+    this.hud?.showMessage(t.t('quest.ui.progress', { name: def.name, objective }));
+  }
+
+  /**
+   * Hands a quest in: delivered items leave the bag, then XP, gold, items, upgrades (Hilda's
+   * sword) and unlocks (Rose's plot). Saved at once.
+   */
+  private completeQuest(def: QuestDef): void {
+    const book = this.quests;
+    const session = this.ctx.session;
+    const character = session?.character;
+    const player = this.player;
+    if (!book || !session || !character || !player) return;
+    if (!book.complete(def.id, character.inventory)) return;
+    const t = this.ctx.i18n;
+    this.hud?.showMessage(t.t('quest.ui.completed', { name: def.name }));
+    const r = def.rewards;
+    const s = player.state;
+    let y = s.y + 2.2;
+    if (r.xp > 0) {
+      this.gainXp(r.xp);
+      this.damageNumbers?.spawnText(s.x, y, s.z, `+${r.xp} XP`, 'xp');
+      y += LOOT_TEXT_SPACING;
+    }
+    const gains = r.gold > 0 ? [{ item: GOLD_ITEM, count: r.gold }, ...r.items] : r.items;
+    for (const stack of gains) {
+      this.gainItem(stack.item, stack.count);
+      const name = stack.item === GOLD_ITEM ? this.goldName() : this.itemName(stack.item);
+      this.damageNumbers?.spawnText(s.x, y, s.z, `+${stack.count} ${name}`, 'loot');
+      y += LOOT_TEXT_SPACING;
+    }
+    for (const upgrade of r.upgrades ?? []) {
+      if (!removeItem(character.inventory, upgrade.from, 1)) continue;
+      addItem(character.inventory, upgrade.to, 1);
+      for (const [slot, itemId] of Object.entries(character.equipment)) {
+        if (itemId === upgrade.from) character.equipment[slot] = upgrade.to;
+      }
+      this.hud?.showMessage(
+        t.t('quest.ui.upgraded', {
+          from: this.itemName(upgrade.from),
+          to: this.itemName(upgrade.to),
+        }),
+      );
+    }
+    for (const unlock of r.unlocks ?? []) {
+      if (!session.unlocks.includes(unlock)) session.unlocks.push(unlock);
+    }
+    this.applyGear(true);
+    this.updatePlayerGear();
+    this.ctx.events.emit('questCompleted', { questId: def.id });
+    this.refreshNpcPresence();
+    this.startGiverlessQuests();
+    this.refreshQuestMarkers();
+    this.syncSave();
+    this.ctx.persist();
+  }
+
+  /**
+   * Quests without a giver (Defeat Sultan) start by themselves once their requirements are
+   * met: a message says what to do next.
+   */
+  private startGiverlessQuests(): void {
+    const book = this.quests;
+    const session = this.ctx.session;
+    const bag = session?.character?.inventory;
+    if (!book || !session || !bag) return;
+    for (const def of book.defs) {
+      if (def.giver || book.status(def.id, session.progress.level, bag) !== 'available') continue;
+      book.accept(def.id);
+      this.questStarted(def.id);
+    }
+  }
+
+  /** "New quest: Defeat Sultan" and what to do; saved at once. */
+  private questStarted(questId: string): void {
+    const def = this.quests?.get(questId);
+    if (!def) return;
+    const t = this.ctx.i18n;
+    this.ctx.events.emit('questStarted', { questId });
+    this.hud?.showMessage(t.t('quest.ui.started', { name: def.name }));
+    if (!def.giver) this.hud?.showMessage(t.t(def.description));
+    this.refreshQuestMarkers();
+    this.ctx.persist();
+  }
+
+  /** NPCs that come and go with conditions (Sultan after his fight) or are hidden for now. */
+  private refreshNpcPresence(): void {
+    const data = this.ctx.data;
+    if (!data) return;
+    this.npcs?.refreshPresence(data.triggers.conditions, this.conditionContext, this.hiddenNpcs);
+  }
+
+  /** What the boss fight may use from this scene. */
+  private encounterHost(): ConstructorParameters<typeof BossEncounter>[0] {
+    return {
+      ctx: this.ctx,
+      enemies: () => this.enemies,
+      quests: () => this.quests,
+      hud: () => this.hud,
+      setHiddenNpcs: (ids) => {
+        this.hiddenNpcs = ids;
+        this.refreshNpcPresence();
+      },
+      placePlayer: (x, z, heading) => this.placePlayer(x, z, heading),
+      setCutscenePlaying: (playing) => {
+        this.cutscenePlaying = playing;
+        this.input?.releaseAll();
+        // The mouse stays free afterwards: one click captures it again ("click to look
+        // around"). Capturing it by itself can turn the camera with a jump.
+        if (playing) {
+          this.input?.releasePointerLock();
+          this.dialog?.close();
+          this.hud?.setInteraction(null, 0, 0, false);
+        }
+      },
+      canStart: () =>
+        !this.paused && this.deathTimer === NOT_DYING && !this.dialog?.isOpen && !this.cheats.fly,
+      floatText: (x, y, z, text) => this.damageNumbers?.spawnText(x, y, z, text, 'dodged'),
+      usesTouch: () => (this.input?.usedTouch ?? false) || this.coarsePointer,
+      questStarted: (questId) => this.questStarted(questId),
+    };
+  }
+
+  /** Worn gear → extra max HP / mana and damage factors (no level or load changes). */
+  private applyGearStats(c: CombatState): void {
+    const character = this.ctx.session?.character;
+    if (!character) return;
+    dropMissingEquipment(character.equipment, character.inventory);
+    const stats = gearStats(character.equipment, this.items, this.gearStatsOut);
+    const weapon = character.equipment.weapon;
+    c.weaponBonus = (weapon && this.items.get(weapon)?.weapon?.damageBonus) || 0;
+    c.gearHp = stats.hp;
+    c.gearMana = stats.mana;
+    c.damageFactor = 1 + stats.damagePercent / 100;
+    c.damageTakenFactor = 1 - stats.damageReductionPercent / 100;
+  }
+
+  /**
+   * Worn gear and carried weight: stats (the weapon's damage bonus, max HP, ...) and the equip
+   * load tier, which sets how fast you walk and how far you dash. Called whenever gear, the bag
+   * or the level changes. `announce` shows a message when the load tier changes.
+   */
+  private applyGear(announce: boolean): void {
+    const data = this.ctx.data;
+    const character = this.ctx.session?.character;
+    const player = this.player;
+    const { baseMovement, movement } = this;
+    if (!data || !character || !player || !baseMovement || !movement) return;
+    const c = player.combat;
+    this.applyGearStats(c);
+    applyLevel(c, data.player, c.level);
+    this.carriedKg = carriedWeight(character.inventory, this.items);
+    this.maxLoadKg = maxLoad(data.player.load, c.level);
+    const tier = loadTier(data.player.load, this.carriedKg, this.maxLoadKg);
+    loadedMovement(baseMovement, tier, this.gearStatsOut.moveSpeedPercent, movement);
+    this.baseWalkSpeed = movement.walkSpeed;
+    if (this.cheats.speed !== 1) movement.walkSpeed = this.baseWalkSpeed * this.cheats.speed;
+    if (announce && this.loadTierId !== '' && tier.id !== this.loadTierId) {
+      this.hud?.showMessage(
+        this.ctx.i18n.t(tier.message ?? 'hud.loadChanged', { tier: this.ctx.i18n.t(tier.label) }),
+      );
+    }
+    this.loadTierId = tier.id;
+  }
+
+  /** Gold diamonds above NPCs with a new quest, blue ones above NPCs to hand a quest in. */
+  private refreshQuestMarkers(): void {
+    const { npcs, quests } = this;
+    const session = this.ctx.session;
+    const bag = session?.character?.inventory;
+    if (!npcs || !quests || !session || !bag) return;
+    for (const npc of npcs.list) {
+      const found = quests.forNpc(npc.id, session.progress.level, bag);
+      npc.questMarker =
+        found?.status === 'ready' ? 'handIn' : found?.status === 'available' ? 'offer' : 'none';
+    }
+  }
+
+  /** Marco's shop: the game waits, gold shows at the top right (HUD rule "at a shop"). */
+  private openShop(merchant: string, npcId: string, shop: NonNullable<NpcDef['shop']>): void {
+    this.hud?.rules.setShop(true);
+    this.openMenu((resume) =>
+      shopPanel(
+        this.ctx,
+        merchant,
+        shop,
+        (itemId, price) => this.buy(itemId, price, npcId),
+        () => {
+          this.hud?.rules.setShop(false);
+          resume();
+        },
+      ),
+    );
+  }
+
+  /**
+   * The pack animal's bag (Biscuit): only out of a fight (you reach it by walking up to it).
+   * Moving things changes your load at once; the game waits while the panel is open.
+   */
+  private openPack(npc: Npc): void {
+    const pack = npc.def.pack;
+    const c = this.player?.combat;
+    if (!pack || !c) return;
+    if (c.inCombat) {
+      this.hud?.showMessage(this.ctx.i18n.t('hud.packInCombat'));
+      return;
+    }
+    const moved = (): void => {
+      this.applyGear(true);
+      this.updatePlayerGear();
+      this.refreshQuestMarkers();
+      this.ctx.persist();
+    };
+    this.openMenu((resume) =>
+      packPanel(
+        this.ctx,
+        npc.def.name,
+        pack.maxKg,
+        {
+          toPack: (itemId, count) => {
+            const character = this.ctx.session?.character;
+            if (!character) return 'notInBag';
+            const result = moveToPack(
+              character.inventory,
+              character.pack,
+              character.equipment,
+              this.items,
+              itemId,
+              count,
+              pack.maxKg,
+            );
+            if (result === 'moved') moved();
+            return result;
+          },
+          fromPack: (itemId, count) => {
+            const character = this.ctx.session?.character;
+            if (!character) return 'notInPack';
+            const result = moveFromPack(character.inventory, character.pack, itemId, count);
+            if (result === 'moved') moved();
+            return result;
+          },
+          playerLoad: () => this.loadSummary(),
+          packKg: () => carriedWeight(this.ctx.session?.character?.pack ?? [], this.items),
+        },
+        resume,
+      ),
+    );
+  }
+
+  /** Buys one item for `price` gold. */
+  private buy(itemId: string, price: number, npcId: string): BuyResult {
+    const character = this.ctx.session?.character;
+    if (!character || character.gold < price) return 'notEnough';
+    character.gold -= price;
+    this.hud?.setGold(character.gold);
+    this.hud?.rules.goldChanged();
+    this.gainItem(itemId, 1);
+    this.ctx.events.emit('itemBought', { itemId, count: 1, npcId });
+    this.ctx.persist();
+    return 'bought';
+  }
+
+  private itemName(itemId: string): string {
+    return this.items.get(itemId)?.name ?? itemId;
   }
 
   private showZoneName(zoneId: string | null): void {
@@ -702,7 +1580,8 @@ export class WorldState implements GameState, InstanceHost {
       return;
     }
     // While paused the simulation stands still, so draw the last state without interpolating.
-    const a = this.paused ? 1 : alpha;
+    const waiting = this.paused || this.cutscenePlaying;
+    const a = waiting ? 1 : alpha;
     const s = player.state;
 
     if (streamer) {
@@ -719,13 +1598,18 @@ export class WorldState implements GameState, InstanceHost {
     player.syncModel(a);
     if (this.sword) player.showSword(this.sword);
     this.npcRenderer?.update(a, this.ctx.data?.npcs.settings.petHopSeconds ?? 1);
-    this.enemyRenderer?.update(a);
+    this.npcRenderer?.updateMarkers(a, this.time);
+    if (!waiting) this.time += frameSeconds;
+    this.enemyRenderer?.update(a, this.time);
+    if (this.enemies) this.warningRenderer?.update(this.enemies.shown, a);
+    this.warningRenderer?.setArena(this.encounter?.arena ?? null);
+    this.projectileRenderer?.update(a);
     input.consumeLook(this.look);
     const look = this.look;
     const turning = input.turningCamera || look.yaw !== 0 || look.pitch !== 0;
     const root = player.model.root;
     rig.orbit.update(
-      this.paused ? 0 : frameSeconds,
+      waiting ? 0 : frameSeconds,
       root.position.x,
       root.position.y,
       root.position.z,
@@ -748,7 +1632,7 @@ export class WorldState implements GameState, InstanceHost {
     this.updateFog(scene, frameSeconds);
     this.updateInteraction(rig.camera, origin.x, origin.z, input.usedTouch || this.coarsePointer);
     this.labels?.update(
-      this.ctx.debug.isVisible,
+      this.ctx.debug.isDetailed,
       rig.camera,
       window.innerWidth,
       window.innerHeight,
@@ -757,9 +1641,10 @@ export class WorldState implements GameState, InstanceHost {
       s.x,
       s.z,
     );
+    this.updateBlackout();
     this.hud?.update(frameSeconds);
     this.damageNumbers?.update(
-      this.paused ? 0 : frameSeconds,
+      waiting ? 0 : frameSeconds,
       rig.camera,
       origin.x,
       origin.z,
@@ -909,7 +1794,7 @@ export class WorldState implements GameState, InstanceHost {
     const t = this.ctx.i18n;
     this.iconLabelFor = target;
     this.iconLabel = npc
-      ? t.t(npc.def.interaction === 'pet' ? 'hud.pet' : 'hud.talkTo', { name: npc.def.name })
+      ? t.t(INTERACTION_LABELS[npc.def.interaction], { name: npc.def.name })
       : t.t('hud.rest');
     return this.iconLabel;
   }
@@ -1081,11 +1966,13 @@ export class WorldState implements GameState, InstanceHost {
     this.lookHint.classList.toggle('ui-look-hint-visible', show);
   }
 
-  /** Copies the player's position into the save (numbers only; no allocation). */
-  private syncSave(): void {
+  /** Copies the player's position, HP and mana into the save (numbers only; no allocation). */
+  private syncSave(force = false): void {
     const world = this.ctx.session?.world;
     const player = this.player;
     if (!world || !player) return;
+    // While dying the save already says where you wake up (see startDying).
+    if (this.deathTimer !== NOT_DYING && !force) return;
     const s = player.state;
     if (world.position) {
       world.position.x = s.x;
@@ -1095,9 +1982,106 @@ export class WorldState implements GameState, InstanceHost {
       world.position = { x: s.x, y: s.y, z: s.z };
     }
     world.heading = s.heading;
+    const progress = this.ctx.session?.progress;
+    if (progress) {
+      progress.hp = player.combat.hp;
+      progress.mana = player.combat.mana;
+    }
   }
 
   private pause(): void {
+    // A cutscene already waits (and has its own Skip); the pause menu comes after it.
+    if (this.cutscenePlaying) return;
+    this.openMenu((resume) => pausePanel(this.ctx, resume));
+  }
+
+  /** The bag (I / B or the bag button); the game waits while it is open. */
+  private openBag(): void {
+    if (this.dialog?.isOpen || this.deathTimer !== NOT_DYING) return;
+    this.openMenu((resume) =>
+      bagPanel(
+        this.ctx,
+        (itemId) => {
+          if (this.drink(itemId) === 'drunk') this.ctx.overlays.refreshTop();
+        },
+        () => this.xpLine(),
+        () => {
+          const bag = this.ctx.session?.character?.inventory ?? [];
+          return this.quests && this.questTexts ? this.questTexts.summaries(this.quests, bag) : [];
+        },
+        {
+          equip: (itemId) => this.changeGear(() => this.equipItem(itemId)),
+          unequip: (slot) => this.changeGear(() => this.unequipSlot(slot)),
+          load: () => this.loadSummary(),
+        },
+        resume,
+      ),
+    );
+  }
+
+  /** Carried and maximum kg and the load tier, for the bag and the pack animal. */
+  private loadSummary(): { kg: number; maxKg: number; tierId: string; tierLabel: string } {
+    return {
+      kg: this.carriedKg,
+      maxKg: this.maxLoadKg,
+      tierId: this.loadTierId,
+      tierLabel:
+        this.ctx.data?.player.load.tiers.find((tier) => tier.id === this.loadTierId)?.label ?? '',
+    };
+  }
+
+  /**
+   * Gear changes only outside a fight (concept: "wisselen alleen buiten gevechten"). After a
+   * change the stats and load are recomputed and the bag is rebuilt.
+   */
+  private changeGear(change: () => boolean): void {
+    const c = this.player?.combat;
+    if (!c) return;
+    if (c.inCombat) {
+      this.hud?.showMessage(this.ctx.i18n.t('hud.gearInCombat'));
+      return;
+    }
+    if (!change()) return;
+    this.applyGear(true);
+    this.updatePlayerGear();
+    this.ctx.overlays.refreshTop();
+  }
+
+  /** Draws worn gear on the player: hat and amulet in their rarity colour, mantle, sword size. */
+  private updatePlayerGear(): void {
+    const data = this.ctx.data;
+    const equipment = this.ctx.session?.character?.equipment;
+    const model = this.player?.model;
+    if (!data || !equipment || !model) return;
+    const colorOf = (itemId: string | undefined): number | null => {
+      const def = itemId ? this.items.get(itemId) : undefined;
+      if (!def) return null;
+      const token = data.items.rarities.find((rarity) => rarity.id === def.rarity)?.color;
+      return token ? resolveColorToken(token) : palette.steengrijs;
+    };
+    const weaponKg = (equipment.weapon && this.items.get(equipment.weapon)?.weight) || 4;
+    model.setGear({
+      hat: colorOf(equipment.hat),
+      amulet: colorOf(equipment.amulet),
+      mantle: equipment.mantle !== undefined,
+      swordScale: Math.min(1.5, Math.max(1, 1 + (weaponKg - 4) * 0.05)),
+    });
+  }
+
+  private equipItem(itemId: string): boolean {
+    const character = this.ctx.session?.character;
+    if (!character) return false;
+    return equip(character.equipment, character.inventory, this.items, itemId) === 'equipped';
+  }
+
+  private unequipSlot(slot: EquipmentSlot): boolean {
+    const character = this.ctx.session?.character;
+    if (!character) return false;
+    return unequip(character.equipment, slot) === 'unequipped';
+  }
+
+  /** Pauses the game behind a menu panel; closing the panel resumes. */
+  private openMenu(makePanel: (resume: () => void) => Panel): void {
     if (this.paused) return;
     this.paused = true;
     this.ctx.quality.setMeasuring(false);
@@ -1107,7 +2091,7 @@ export class WorldState implements GameState, InstanceHost {
     this.syncSave();
     this.ctx.persist();
     this.ctx.overlays.open(
-      pausePanel(this.ctx, () => {
+      makePanel(() => {
         // Keys pressed in the menus (Space, E) must not act once the game resumes.
         this.input?.releaseAll();
         this.paused = false;
@@ -1145,8 +2129,8 @@ export class WorldState implements GameState, InstanceHost {
     const data = this.ctx.data;
     const zone = data?.zones.zones.find((entry) => entry.id === zoneId);
     const spawn = zone?.spawnPoints[0];
-    const { player, rig, origin } = this;
-    if (!zone || !spawn || !player || !rig || !origin || !data) return;
+    if (!zone || !spawn) return;
+    this.encounter?.abort();
     const heading = (spawn.headingDegrees ?? 0) * DEG;
     if (zone.scene || this.sceneZone) {
       if (zone.id !== this.sceneZoneDef?.id) {
@@ -1157,12 +2141,25 @@ export class WorldState implements GameState, InstanceHost {
       this.syncSave();
       return;
     }
-    player.place(spawn.x, this.groundHeight(spawn.x, spawn.z), spawn.z, player.state.heading);
+    this.placePlayer(spawn.x, spawn.z);
+  }
+
+  /**
+   * Puts the player at (x, z) on the ground (teleport, waking up at the checkpoint, a boss
+   * fight), in the open world or in a Blender-built zone. With a `heading` the player faces
+   * that way and the camera turns behind them.
+   */
+  private placePlayer(x: number, z: number, heading?: number): void {
+    const data = this.ctx.data;
+    const { player, rig, origin, sceneZone } = this;
+    if (!player || !rig || !origin || !data || (!this.streamer && !sceneZone)) return;
+    player.place(x, this.groundHeight(x, z), z, heading ?? player.state.heading);
     this.resolveCircle(player.state, data.player.movement.radius);
-    player.state.y = this.groundHeight(player.state.x, player.state.z);
+    if (sceneZone) sceneZone.placeOnGround(player.state);
+    else player.state.y = this.groundHeight(player.state.x, player.state.z);
     player.place(player.state.x, player.state.y, player.state.z, player.state.heading);
     origin.reset(player.state.x, player.state.z);
-    rig.orbit.snap(player.state.x, player.state.y, player.state.z, rig.orbit.yaw);
+    rig.orbit.snap(player.state.x, player.state.y, player.state.z, heading ?? rig.orbit.yaw);
     this.dialog?.close();
     this.damageNumbers?.clear();
     if (this.npcWorld) {
@@ -1199,6 +2196,45 @@ export class WorldState implements GameState, InstanceHost {
     ctx.events.emit('settingsChanged', {});
     ctx.goto('title');
     return true;
+  }
+
+  /** Debug: XP, gold or potions for testing levels, dying and drinking. */
+  private grant(kind: 'xp' | 'gold' | 'potions' | 'slimeGel' | 'gear' | 'packAnimal'): void {
+    if (kind === 'packAnimal') {
+      this.grantPackAnimal();
+      return;
+    }
+    if (kind === 'gear') {
+      // One of every weapon and armor you do not have yet (tests the load tiers and the bag).
+      const bag = this.ctx.session?.character?.inventory ?? [];
+      for (const def of this.items.values()) {
+        if (isGear(def) && countItem(bag, def.id) === 0) this.gainItem(def.id, 1);
+      }
+      return;
+    }
+    if (kind === 'xp') this.gainXp(CHEAT_XP);
+    else if (kind === 'gold') this.gainItem(GOLD_ITEM, CHEAT_GOLD);
+    else if (kind === 'slimeGel') this.gainItem('slime_gel', CHEAT_SLIME_GEL);
+    else this.gainItem(this.ctx.data?.player.potions.quickOrder[0] ?? '', CHEAT_POTIONS);
+  }
+
+  /**
+   * Debug: the pack animal right away. Finishes the quest its `presentWhen` condition waits for
+   * (with its rewards), skipping that quest's requirements. Data-driven: no names in code.
+   */
+  private grantPackAnimal(): void {
+    const data = this.ctx.data;
+    const book = this.quests;
+    const animal = data?.npcs.npcs.find((npc) => npc.pack);
+    const condition = animal?.presentWhen ? data?.triggers.conditions[animal.presentWhen] : null;
+    if (!book || condition?.type !== 'questCompleted') return;
+    const quest = book.get(condition.quest);
+    if (!quest || book.completed.has(quest.id)) return;
+    book.accept(quest.id);
+    for (const objective of quest.objectives) {
+      if (objective.type === 'talk') this.recordQuest('talk', objective.npc, 1, undefined, true);
+    }
+    this.completeQuest(quest);
   }
 
   /** Debug: back to "Auto" without a chosen preset, so the benchmark runs again right away. */
@@ -1304,10 +2340,16 @@ export class WorldState implements GameState, InstanceHost {
     this.sword = swordConfig(data.player);
     const combat = player.combat;
     combat.lingerSeconds = this.sword.combatLingerSeconds;
-    // Levels and saved HP come with XP in step 2.4; for now you start full at level 1.
-    applyLevel(combat, data.player, 1);
-    combat.hp = combat.maxHp;
-    combat.mana = combat.maxMana;
+    // Level, HP and mana from the save (null = full).
+    const progress = session?.progress;
+    const level = Math.min(data.player.maxLevel, Math.max(1, progress?.level ?? 1));
+    this.applyGearStats(combat);
+    applyLevel(combat, data.player, level);
+    combat.hp = Math.min(combat.maxHp, progress?.hp ?? combat.maxHp);
+    combat.mana = Math.min(combat.maxMana, progress?.mana ?? combat.maxMana);
+    // Waking up with 0 HP would be dying again at once.
+    if (combat.hp <= 0) combat.hp = combat.maxHp;
+    this.conditionContext.level = level;
     if (def && this.sceneAssets && this.lighting) {
       // The Blender character in the creator's colors; a soft round shadow under the feet.
       this.scenePlayer = buildPlayerModel(
@@ -1347,22 +2389,56 @@ export class WorldState implements GameState, InstanceHost {
     this.npcs = new Npcs(data.npcs, this.ctx.seasons?.currentId() ?? '', resolveColorToken, (npc) =>
       playedIds.has(npc.zone),
     );
-    this.npcRenderer = new NpcRenderer(this.npcs.list, worldRoot);
+    this.npcRenderer = new NpcRenderer(this.npcs.list, worldRoot, {
+      offer: resolveColorToken('zonlicht'),
+      handIn: resolveColorToken('magieblauw'),
+    });
+    const safeAreas = new Map(
+      data.zones.zones.flatMap((entry) => entry.areas.map((area) => [area.id, area.shape])),
+    );
     // Monsters appear at the same distance as NPCs, on every graphics preset.
     this.enemies = new Enemies(
       playedZones,
       data.monsters,
-      {
-        showRadius: data.npcs.settings.showRadius,
-        hideMargin: data.npcs.settings.hideMargin,
-      },
+      { showRadius: data.npcs.settings.showRadius, hideMargin: data.npcs.settings.hideMargin },
+      safeAreas,
       world.nightSpawning,
       world.seed,
     );
     this.enemyRenderer = new EnemyRenderer(this.enemies.list, worldRoot);
-    this.safeAreas = new Map(
-      data.zones.zones.flatMap((entry) => entry.areas.map((area) => [area.id, area.shape])),
-    );
+    this.warningRenderer = new WarningRenderer(worldRoot, this.groundHeight);
+    const projectiles = new Projectiles();
+    this.projectiles = projectiles;
+    this.projectileRenderer = new ProjectileRenderer(projectiles.list, worldRoot);
+    const enemies = this.enemies;
+    this.enemiesWorld = {
+      mover: this.mover as Mover,
+      heightAt: this.groundHeight,
+      hitPlayer: (_e, damage) => this.hurtPlayer(damage),
+      shoot: (e, tx, tz, speed, damage) =>
+        projectiles.fire(
+          e.x,
+          e.y + ARROW_HEIGHT * (e.def.scale ?? 1),
+          e.z,
+          tx,
+          tz,
+          speed,
+          damage,
+          e.def.ai?.attack.range ?? 12,
+        ),
+      alert: (e) => enemies.alert(e),
+      bossEvent: (e, kind, attack) => this.encounter?.onBossEvent(e, kind, attack),
+    };
+    const probe = this.arrowProbe;
+    this.projectileWorld = {
+      heightAt: this.groundHeight,
+      blocked: (x, z) => {
+        probe.x = x;
+        probe.z = z;
+        this.resolveCircle(probe, ARROW_COLLIDE_RADIUS);
+        return probe.x !== x || probe.z !== z;
+      },
+    };
 
     this.rig = new CameraRig(data.player.camera, viewDistance);
     this.rig.orbit.snap(player.state.x, player.state.y, player.state.z, player.state.heading);
@@ -1582,11 +2658,17 @@ export class WorldState implements GameState, InstanceHost {
     this.npcRenderer = null;
     this.enemyRenderer?.dispose();
     this.enemyRenderer = null;
+    this.warningRenderer?.dispose();
+    this.warningRenderer = null;
+    this.projectileRenderer?.dispose();
+    this.projectileRenderer = null;
+    this.projectiles = null;
     this.enemies = null;
+    this.enemiesWorld = null;
+    this.projectileWorld = null;
     this.sword = null;
     this.npcs = null;
     this.npcWorld = null;
-    this.safeAreas = null;
     this.chunkDebug?.dispose();
     this.chunkDebug = null;
     // The streamer first: unloading its chunks also takes the structures away.
@@ -1637,11 +2719,11 @@ export class WorldState implements GameState, InstanceHost {
 
   private readonly updateDebug = (): void => {
     const debug = this.ctx.debug;
-    this.cheatPanel?.setDebugVisible(debug.isVisible);
+    this.cheatPanel?.setDebugVisible(debug.isEnabled);
     this.cheatPanel?.sync();
     const { player, rig, streamer, origin, sceneZone } = this;
     if (this.cheats.chunkLines) this.chunkDebug?.refresh();
-    if (!debug.isVisible || !player || !rig || !origin) return;
+    if (!debug.showsLines || !player || !rig || !origin) return;
     const s = player.state;
     const o = rig.orbit;
     debug.lines.set(
@@ -1678,9 +2760,28 @@ export class WorldState implements GameState, InstanceHost {
     const c = player.combat;
     debug.lines.set(
       'combat',
-      `hp ${Math.ceil(c.hp)}/${c.maxHp} · mana ${Math.round(c.mana)} · lvl ${c.level} · ` +
+      `hp ${Math.ceil(c.hp)}/${c.maxHp} · mana ${Math.round(c.mana)} · lvl ${c.level} ` +
+        `(${this.ctx.session?.progress.xp ?? 0} xp) · gold ${this.ctx.session?.character?.gold ?? 0} · ` +
+        `${this.deathTimer !== NOT_DYING ? 'dying · ' : ''}` +
         `${c.heavyWindup > 0 ? 'heavy windup' : c.swing} · combo ${c.comboCount} · ` +
-        `${c.inCombat ? 'in fight' : 'calm'} · enemies ${this.enemies?.shown.length ?? 0}/${this.enemies?.list.length ?? 0}`,
+        `${c.inCombat ? 'in fight' : 'calm'}`,
+    );
+    const m = this.movement;
+    debug.lines.set(
+      'load',
+      `${this.carriedKg.toFixed(1)}/${this.maxLoadKg} kg ${this.loadTierId} · walk ` +
+        `${m?.walkSpeed.toFixed(2) ?? '-'} m/s · dash ${m?.canDash ? `${m.dashDistance.toFixed(1)} m, ${m.dashEnergyCost} en` : 'no'}` +
+        `${s.recoverTime > 0 ? ' · getting up' : ''} · dmg ×${c.damageFactor.toFixed(2)} taken ×${c.damageTakenFactor.toFixed(2)}`,
+    );
+    debug.lines.set('enemies', this.enemyDebugLine(s.x, s.z));
+    const quests = this.ctx.session?.quests;
+    debug.lines.set(
+      'quests',
+      quests
+        ? `active ${quests.active.map((q) => `${q.id}[${q.counts.join(',')}]`).join(' ') || '-'} · ` +
+            `done ${quests.completed.length} · unlocks ${this.ctx.session?.unlocks.join(',') || '-'} · ` +
+            `weapon +${c.weaponBonus}`
+        : '-',
     );
     debug.lines.set(
       'camera',
@@ -1705,7 +2806,22 @@ export class WorldState implements GameState, InstanceHost {
     return `${phase.id} · ${left} left${speed} · ${this.lightingMode} · ${spawn} · night monsters ${this.enemies?.nightAlive ?? 0}`;
   }
 
-  /** Debug: NPCs shown, the target, met NPCs, Pringle's distance and nearby Treewardens. */
+  /** Debug: monsters shown / in the world / in the pool, fighting, arrows, the nearest one. */
+  private enemyDebugLine(px: number, pz: number): string {
+    const enemies = this.enemies;
+    if (!enemies) return '-';
+    const near = enemies.nearest(px, pz);
+    const nearText = near
+      ? ` · nearest ${near.def.id} ${Math.hypot(near.x - px, near.z - pz).toFixed(1)} m ${near.mode}${near.mode === 'windup' && near.attackKind === 'special' ? ' (special)' : ''}${near.safe ? ' (safe)' : ''} ${Math.ceil(near.hp)}/${near.maxHp}`
+      : '';
+    return (
+      `${enemies.shown.length} shown / ${enemies.activeCount} in world / ${enemies.list.length} pool · ` +
+      `fighting ${enemies.engagedCount} · arrows ${this.projectiles?.activeCount ?? 0}` +
+      `${this.cheats.monsters ? '' : ' · OFF (cheat)'}${nearText}`
+    );
+  }
+
+  /** Debug: NPCs shown, the target, met NPCs and Pringle's distance. */
   private npcDebugLine(px: number, pz: number): string {
     const npcs = this.npcs;
     if (!npcs) return '-';
@@ -1717,15 +2833,13 @@ export class WorldState implements GameState, InstanceHost {
       if (!npc.shown) continue;
       const d = Math.hypot(npc.state.x - px, npc.state.z - pz);
       if (npc.companion) parts.push(`${npc.id} ${d.toFixed(1)} m`);
-      else if (npc.def.monster && this.safeAreas) {
-        const safe = !isAttackable(npc.def, npc.state.x, npc.state.z, this.safeAreas);
-        parts.push(`${npc.id} ${Math.round(d)} m${safe ? ' safe' : ''}`);
-      }
     }
     return parts.join(' · ');
   }
 
   private readonly onKeyDown = (event: KeyboardEvent): void => {
+    // A cutscene handles its own keys (Escape skips it).
+    if (this.cutscenePlaying) return;
     // Overlays close themselves on Escape first; only an Escape with nothing open pauses.
     if (event.code === 'Escape' && !this.ctx.overlays.isOpen) {
       event.preventDefault();
@@ -1741,7 +2855,7 @@ export class WorldState implements GameState, InstanceHost {
       return;
     }
     // F6: cheat menu (debug mode only). The mouse is released so the menu can be clicked.
-    if (event.code === 'F6' && this.ctx.debug.isVisible && !this.paused) {
+    if (event.code === 'F6' && this.ctx.debug.isEnabled && !this.paused) {
       event.preventDefault();
       this.cheatPanel?.setDebugVisible(true);
       if (!this.cheatPanel?.isOpen) this.input?.releasePointerLock();

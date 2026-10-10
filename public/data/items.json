@@ -26,6 +26,16 @@
       "weapon": { "kind": "sword", "damageBonus": 0 }
     },
     {
+      "id": "honed_old_sword",
+      "name": "Honed Old Sword",
+      "type": "weapon",
+      "rarity": "common",
+      "tradeable": true,
+      "weight": 4,
+      "description": "item.honed_old_sword.desc",
+      "weapon": { "kind": "sword", "damageBonus": 3 }
+    },
+    {
       "id": "travel_mantle",
       "name": "Travel Mantle",
       "type": "armor",
@@ -35,6 +45,149 @@
       "weight": 1,
       "usesCharacterColor": true,
       "description": "item.travel_mantle.desc"
+    },
+    {
+      "id": "goblin_cleaver",
+      "name": "Goblin Cleaver",
+      "type": "weapon",
+      "rarity": "rare",
+      "tradeable": true,
+      "weight": 8,
+      "description": "item.goblin_cleaver.desc",
+      "weapon": { "kind": "sword", "damageBonus": 6 },
+      "stats": { "damagePercent": 5 }
+    },
+    {
+      "id": "chiefs_greatblade",
+      "name": "Chief's Greatblade",
+      "type": "weapon",
+      "rarity": "epic",
+      "tradeable": true,
+      "weight": 14,
+      "description": "item.chiefs_greatblade.desc",
+      "weapon": { "kind": "sword", "damageBonus": 10 },
+      "stats": { "damagePercent": 10, "hp": 10 }
+    },
+    {
+      "id": "straw_hat",
+      "name": "Straw Hat",
+      "type": "armor",
+      "slot": "hat",
+      "rarity": "common",
+      "tradeable": true,
+      "weight": 0.5,
+      "description": "item.straw_hat.desc",
+      "stats": { "hp": 5 }
+    },
+    {
+      "id": "leather_cap",
+      "name": "Leather Cap",
+      "type": "armor",
+      "slot": "hat",
+      "rarity": "common",
+      "tradeable": true,
+      "weight": 1.5,
+      "description": "item.leather_cap.desc",
+      "stats": { "hp": 10, "damageReductionPercent": 2 }
+    },
+    {
+      "id": "iron_helm",
+      "name": "Iron Helm",
+      "type": "armor",
+      "slot": "hat",
+      "rarity": "rare",
+      "tradeable": true,
+      "weight": 6,
+      "description": "item.iron_helm.desc",
+      "stats": { "hp": 25, "damageReductionPercent": 6 }
+    },
+    {
+      "id": "padded_mantle",
+      "name": "Padded Mantle",
+      "type": "armor",
+      "slot": "mantle",
+      "rarity": "rare",
+      "tradeable": true,
+      "weight": 3,
+      "description": "item.padded_mantle.desc",
+      "stats": { "hp": 15, "damageReductionPercent": 4 }
+    },
+    {
+      "id": "ironweave_mantle",
+      "name": "Ironweave Mantle",
+      "type": "armor",
+      "slot": "mantle",
+      "rarity": "epic",
+      "tradeable": true,
+      "weight": 9,
+      "description": "item.ironweave_mantle.desc",
+      "stats": { "hp": 40, "damageReductionPercent": 10 }
+    },
+    {
+      "id": "copper_amulet",
+      "name": "Copper Amulet",
+      "type": "armor",
+      "slot": "amulet",
+      "rarity": "common",
+      "tradeable": true,
+      "weight": 0.3,
+      "description": "item.copper_amulet.desc",
+      "stats": { "mana": 10 }
+    },
+    {
+      "id": "goblin_tooth_necklace",
+      "name": "Goblin Tooth Necklace",
+      "type": "armor",
+      "slot": "amulet",
+      "rarity": "rare",
+      "tradeable": true,
+      "weight": 0.4,
+      "description": "item.goblin_tooth_necklace.desc",
+      "stats": { "damagePercent": 5 }
+    },
+    {
+      "id": "brass_ring",
+      "name": "Brass Ring",
+      "type": "armor",
+      "slot": "ring",
+      "rarity": "common",
+      "tradeable": true,
+      "weight": 0.1,
+      "description": "item.brass_ring.desc",
+      "stats": { "hp": 5 }
+    },
+    {
+      "id": "swift_ring",
+      "name": "Swift Ring",
+      "type": "armor",
+      "slot": "ring",
+      "rarity": "rare",
+      "tradeable": true,
+      "weight": 0.1,
+      "description": "item.swift_ring.desc",
+      "stats": { "moveSpeedPercent": 3 }
+    },
+    {
+      "id": "chiefs_signet",
+      "name": "Chief's Signet",
+      "type": "armor",
+      "slot": "ring",
+      "rarity": "epic",
+      "tradeable": true,
+      "weight": 0.2,
+      "description": "item.chiefs_signet.desc",
+      "stats": { "damagePercent": 8, "hp": 10 }
+    },
+    {
+      "id": "heartwood_ring",
+      "name": "Heartwood Ring",
+      "type": "armor",
+      "slot": "ring",
+      "rarity": "legendary",
+      "tradeable": true,
+      "weight": 0.1,
+      "description": "item.heartwood_ring.desc",
+      "stats": { "hp": 30, "damagePercent": 10, "moveSpeedPercent": 3 }
     },
     {
       "id": "mage_staff",
@@ -69,14 +222,18 @@
       "name": "Health Potion",
       "type": "potion",
       "rarity": "common",
-      "tradeable": true
+      "tradeable": true,
+      "description": "item.health_potion.desc",
+      "potion": { "hp": 50 }
     },
     {
       "id": "greater_health_potion",
       "name": "Greater Health Potion",
       "type": "potion",
       "rarity": "rare",
-      "tradeable": true
+      "tradeable": true,
+      "description": "item.greater_health_potion.desc",
+      "potion": { "hp": 120 }
     },
     {
       "id": "recipe_greater_health_potion",
@@ -92,6 +249,14 @@
       "rarity": "common",
       "tradeable": true,
       "description": "item.slime_gel.desc"
+    },
+    {
+      "id": "herb_seeds",
+      "name": "Herb Seeds",
+      "type": "resource",
+      "rarity": "common",
+      "tradeable": true,
+      "description": "item.herb_seeds.desc"
     },
     { "id": "wood", "name": "Wood", "type": "resource", "rarity": "common", "tradeable": true },
     {

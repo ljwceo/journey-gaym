@@ -3,7 +3,7 @@ import { qualityLevelSchema } from '../data/schemas';
 import { LANGUAGES, type Language } from '../i18n/I18n';
 
 /** Current save format. Bump it and add `migrations[old]` whenever the shape changes. */
-export const SAVE_VERSION = 2;
+export const SAVE_VERSION = 6;
 
 /** Camera sensitivity for new saves (1 = 100%); the allowed range is in player.json. */
 export const DEFAULT_CAMERA_SENSITIVITY = 0.7;
@@ -42,8 +42,18 @@ export const saveDataSchema = z.object({
       gold: z.int().check(z.nonnegative()),
       inventory: z.array(z.object({ item: id, count: z.int().check(z.positive()) })),
       equipment: z.record(z.string(), id),
+      /** What your pack animal (Biscuit) carries; not usable until you take it out. */
+      pack: z.array(z.object({ item: id, count: z.int().check(z.positive()) })),
     }),
   ),
+  /** Level, XP and how much HP / mana is left (null = full, e.g. a fresh game). */
+  progress: z.object({
+    level: z.int().check(z.minimum(1)),
+    /** XP collected towards the next level. */
+    xp: z.int().check(z.nonnegative()),
+    hp: z.nullable(z.number().check(z.nonnegative())),
+    mana: z.nullable(z.number().check(z.nonnegative())),
+  }),
   /** Chosen in the main quest "Your Resolve" (phase 3); null until then. */
   path: z.nullable(z.enum(['sword', 'light', 'dark'])),
   world: z.object({
@@ -54,12 +64,30 @@ export const saveDataSchema = z.object({
   }),
   visitedPlaces: z.array(id),
   metNpcs: z.array(id),
+  /** Quests: the ones running (with a counter per objective) and the ones handed in. */
+  quests: z.object({
+    active: z.array(z.object({ id, counts: z.array(z.int().check(z.nonnegative())) })),
+    completed: z.array(id),
+  }),
+  /** Things that became yours through quests (e.g. "garden_plot"). */
+  unlocks: z.array(id),
+  /** Cutscenes that play only once (the "Pringle" cutscene; a rematch skips it). */
+  seenCutscenes: z.array(id),
+  /** Fight tips already shown once (boss hints such as "Dash sideways!"). */
+  seenHints: z.array(z.string().check(z.minLength(1))),
   playTimeSeconds: z.number().check(z.nonnegative()),
 });
 
 export type SaveData = z.infer<typeof saveDataSchema>;
 export type SaveSettings = SaveData['settings'];
 export type SaveCharacter = NonNullable<SaveData['character']>;
+export type SaveProgress = SaveData['progress'];
+export type SaveQuests = SaveData['quests'];
+
+/** Level 1, no XP, full HP and mana. */
+export function freshProgress(): SaveProgress {
+  return { level: 1, xp: 0, hp: null, mana: null };
+}
 
 /** A fresh save, created right after the language choice (character comes later). */
 export function createNewSave(language: Language, now: Date = new Date()): SaveData {
@@ -78,10 +106,15 @@ export function createNewSave(language: Language, now: Date = new Date()): SaveD
       debug: false,
     },
     character: null,
+    progress: freshProgress(),
     path: null,
     world: { zone: null, position: null, heading: 0, checkpoint: null },
     visitedPlaces: [],
     metNpcs: [],
+    quests: { active: [], completed: [] },
+    unlocks: [],
+    seenCutscenes: [],
+    seenHints: [],
     playTimeSeconds: 0,
   };
 }
@@ -102,6 +135,17 @@ export const migrations: Readonly<Record<number, Migration>> = {
       version: 2,
       settings: { ...settings, cameraSensitivity: DEFAULT_CAMERA_SENSITIVITY },
     };
+  },
+  // v3 (step 2.4): level, XP and HP / mana left; everyone starts at level 1 with full health.
+  2: (save) => ({ ...save, version: 3, progress: freshProgress() }),
+  // v4 (step 2.5): quests and unlocks; nobody had started a quest yet.
+  3: (save) => ({ ...save, version: 4, quests: { active: [], completed: [] }, unlocks: [] }),
+  // v5 (step 2.6): cutscenes and fight tips seen once; nobody had met Sultan yet.
+  4: (save) => ({ ...save, version: 5, seenCutscenes: [], seenHints: [] }),
+  // v6 (step 3.2): the pack animal's bag; nobody had Biscuit yet.
+  5: (save) => {
+    const character = save.character as Record<string, unknown> | null | undefined;
+    return { ...save, version: 6, character: character ? { ...character, pack: [] } : null };
   },
 };
 

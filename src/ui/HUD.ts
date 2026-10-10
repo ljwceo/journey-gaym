@@ -30,6 +30,11 @@ class HudPart {
  * Everything sits at the top of the screen, so it never covers the joystick or the buttons
  * (their safe zones are the lower corners). Times come from player.json `hud`.
  */
+/** Seconds the red edge glow stays on after a hit (then it fades out). */
+const HURT_SECONDS = 0.12;
+/** After a level up the XP bar stays full this long, then starts again from the leftover XP. */
+const XP_FULL_SECONDS = 0.6;
+
 export class HUD {
   readonly root: HTMLElement;
   readonly rules: HudRules;
@@ -48,6 +53,31 @@ export class HUD {
   private messageGap = 0;
   private interactX = Number.NaN;
   private interactY = Number.NaN;
+  /** Red glow at the screen edges when the player is hit. */
+  private readonly hurtGlow: HTMLElement;
+  private hurtTime = 0;
+  private hurtShown = false;
+  /** Black screen when dying (opacity 0–1) with its text. */
+  private readonly blackout: HTMLElement;
+  private readonly blackoutTitle: HTMLElement;
+  private readonly blackoutText: HTMLElement;
+  private blackoutValue = 0;
+  /** Boss fights: the boss's name and HP bar (top center), spoken lines and short tips. */
+  private readonly boss: HTMLElement;
+  private readonly bossName: HTMLElement;
+  private readonly bossFill: HTMLElement;
+  private bossValue = 1;
+  private readonly subtitle: HTMLElement;
+  private readonly subtitleName: HTMLElement;
+  private readonly subtitleText: HTMLElement;
+  private subtitleLeft = 0;
+  private readonly hint: HTMLElement;
+  private hintLeft = 0;
+  /** XP left over after a level up, shown once the full bar has been seen (-1 = none). */
+  private xpPending = -1;
+  private xpFullTime = 0;
+  /** The XP bar jumps (no animation) for one frame after a level up. */
+  private xpInstant = false;
 
   constructor(
     private readonly cfg: HudConfig,
@@ -90,14 +120,46 @@ export class HUD {
     this.goldValue = el('span', { className: 'ui-hud-gold-value', text: '0' });
     this.gold = part('ui-hud-gold', el('span', { className: 'ui-hud-gold-coin' }), this.goldValue);
 
+    this.bossName = el('div', { className: 'ui-hud-boss-name' });
+    this.bossFill = el('div', { className: 'ui-hud-boss-fill' });
+    this.boss = el(
+      'div',
+      { className: 'ui-hud-boss' },
+      this.bossName,
+      el('div', { className: 'ui-hud-boss-bar' }, this.bossFill),
+    );
+    this.subtitleName = el('div', { className: 'ui-dialog-name' });
+    this.subtitleText = el('p', { className: 'ui-dialog-text' });
+    this.subtitle = el(
+      'div',
+      { className: 'ui-fight-subtitle' },
+      this.subtitleName,
+      this.subtitleText,
+    );
+    this.hint = el('div', { className: 'ui-fight-hint ui-hud-hint' });
+
+    this.hurtGlow = el('div', { className: 'ui-hud-hurt' });
+    this.blackoutTitle = el('p', { className: 'ui-hud-blackout-title' });
+    this.blackoutText = el('p', { className: 'ui-hud-blackout-text' });
+    this.blackout = el(
+      'div',
+      { className: 'ui-hud-blackout' },
+      this.blackoutTitle,
+      this.blackoutText,
+    );
     this.root = el(
       'div',
       { className: 'ui-hud', attrs: { 'aria-live': 'polite' } },
+      this.hurtGlow,
       this.banner.element,
       this.message.element,
       barStack,
       this.gold.element,
       this.interact.element,
+      this.boss,
+      this.hint,
+      this.subtitle,
+      this.blackout,
     );
     this.root.style.setProperty('--hud-fade', `${cfg.fadeSeconds}s`);
 
@@ -132,6 +194,37 @@ export class HUD {
     this.applyFill(id, value);
   }
 
+  /**
+   * The XP bar. After a level up it first fills to the end, stays full a moment and then
+   * starts again from the XP that was left over.
+   */
+  setXp(fraction: number, leveledUp: boolean): void {
+    if (leveledUp) {
+      this.setBar('xp', 1);
+      this.xpPending = Math.min(1, Math.max(0, fraction));
+      this.xpFullTime = XP_FULL_SECONDS;
+      return;
+    }
+    if (this.xpPending >= 0) {
+      this.xpPending = Math.min(1, Math.max(0, fraction));
+      return;
+    }
+    this.setBar('xp', fraction);
+  }
+
+  /** Dying: the screen goes black (0–1) with a title and a line of text. */
+  setBlackout(opacity: number, title: string, text: string): void {
+    const value = Math.min(1, Math.max(0, opacity));
+    if (value === this.blackoutValue) return;
+    if (this.blackoutValue === 0) {
+      this.blackoutTitle.textContent = title;
+      this.blackoutText.textContent = text;
+    }
+    this.blackoutValue = value;
+    this.blackout.style.opacity = value.toFixed(3);
+    this.blackout.classList.toggle('ui-hud-blackout-on', value > 0);
+  }
+
   setGold(amount: number): void {
     const text = String(amount);
     if (this.goldValue.textContent !== text) this.goldValue.textContent = text;
@@ -158,9 +251,62 @@ export class HUD {
     this.interact.element.style.transform = `translate(${px}px, ${py}px) translate(-50%, -100%)`;
   }
 
+  /** Shows the boss bar with a name (fight starts), or hides it (null). */
+  setBoss(name: string | null): void {
+    this.boss.classList.toggle('ui-hud-boss-on', name !== null);
+    if (name !== null) {
+      this.bossName.textContent = name;
+      this.bossValue = -1;
+      this.setBossHp(1);
+    }
+  }
+
+  /** The boss's HP, 0–1 (touches the DOM only when it changed). */
+  setBossHp(fraction: number): void {
+    const value = Math.min(1, Math.max(0, fraction));
+    if (Math.abs(value - this.bossValue) < 0.002) return;
+    this.bossValue = value;
+    this.bossFill.style.transform = `scaleX(${value})`;
+  }
+
+  /** A spoken line at the bottom (name + text) for `seconds`. */
+  say(name: string, text: string, seconds: number): void {
+    this.subtitleName.textContent = name;
+    this.subtitleText.textContent = text;
+    this.subtitle.classList.add('ui-fight-show');
+    this.subtitleLeft = seconds;
+  }
+
+  /** A short fight tip near the top ("Dash sideways!") for `seconds`. */
+  showHint(text: string, seconds: number): void {
+    this.hint.textContent = text;
+    this.hint.classList.add('ui-fight-show');
+    this.hintLeft = seconds;
+  }
+
+  /** A short red glow at the screen edges: the player was hit. */
+  hurt(): void {
+    this.hurtTime = HURT_SECONDS;
+  }
+
   /** Call every rendered frame with real seconds (fades and timers are fps-independent). */
   update(seconds: number): void {
     this.updateMessages(seconds);
+    if (this.subtitleLeft > 0) {
+      this.subtitleLeft -= seconds;
+      if (this.subtitleLeft <= 0) this.subtitle.classList.remove('ui-fight-show');
+    }
+    if (this.hintLeft > 0) {
+      this.hintLeft -= seconds;
+      if (this.hintLeft <= 0) this.hint.classList.remove('ui-fight-show');
+    }
+    this.updateXp(seconds);
+    this.hurtTime = Math.max(0, this.hurtTime - seconds);
+    const hurt = this.hurtTime > 0;
+    if (hurt !== this.hurtShown) {
+      this.hurtShown = hurt;
+      this.hurtGlow.classList.toggle('ui-hud-hurt-on', hurt);
+    }
     this.banner.update(seconds);
     this.message.update(seconds);
     this.interact.update(seconds);
@@ -189,6 +335,21 @@ export class HUD {
     this.message.element.textContent = text;
     this.message.visibility.show('message', duration);
     this.messageGap = cfg.fadeSeconds;
+  }
+
+  private updateXp(seconds: number): void {
+    const xpBar = this.bars.xp.element;
+    if (this.xpInstant) {
+      this.xpInstant = false;
+      xpBar.classList.remove('ui-hud-bar-instant');
+    }
+    if (this.xpPending < 0) return;
+    this.xpFullTime -= seconds;
+    if (this.xpFullTime > 0) return;
+    xpBar.classList.add('ui-hud-bar-instant');
+    this.xpInstant = true;
+    this.setBar('xp', this.xpPending);
+    this.xpPending = -1;
   }
 
   private applyFill(id: BarId, value: number): void {
