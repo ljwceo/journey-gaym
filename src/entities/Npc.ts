@@ -31,6 +31,8 @@ export class Npc {
   readonly companion: Companion | null;
   /** Drawn and simulated right now (near the player, see Npcs). */
   shown = false;
+  /** In the world at all (`presentWhen` / `absentWhen`, or hidden during a boss fight). */
+  present = true;
   /** Seconds left of the little hop after petting (drawing only). */
   hop = 0;
   /** Marker above the head: a quest to offer, a quest to hand in, or none. */

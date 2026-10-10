@@ -255,6 +255,10 @@ const npcSchema = z.strictObject({
   petText: optional(textKey),
   /** Only present in this season. */
   season: optional(id),
+  /** Only present while this condition (triggers.json `conditions`) holds (Sultan after his fight). */
+  presentWhen: optional(name),
+  /** Gone once this condition holds (Pringle after he turned out to be Sultan). */
+  absentWhen: optional(name),
   /** Where a static NPC faces when nobody is near, in degrees (0 = +z). */
   heading: optional(range(-360, 360)),
   /**
@@ -461,6 +465,59 @@ const attackSchema = z.strictObject({
   everyNth: optional(intRange(1, 100)),
   /** Hits everything within this radius (m) around the monster; a red circle warns first. */
   areaRadius: optional(max(positive, 50)),
+  /**
+   * Boss attacks (`boss` below): `combo` = `hits` claw swipes in a row (`hitIntervalSeconds`
+   * apart, each reaching `reach` m in front), `pounce` = a leap at where you stand (aimed
+   * `aimLockSeconds` before the warning ends, `travelSeconds` in the air, hits within `reach` of
+   * the landing), `charge` = a run along a red line `length` m long and `width` m wide.
+   */
+  pattern: optional(z.enum(['combo', 'pounce', 'charge'])),
+  /** The boss picks this attack when the gap to you lies in [minGap, maxGap] (m). */
+  minGap: optional(max(nonNegative, 50)),
+  maxGap: optional(max(positive, 50)),
+  hitIntervalSeconds: optional(max(positive, 5)),
+  reach: optional(max(positive, 20)),
+  stepPerHit: optional(max(nonNegative, 5)),
+  aimLockSeconds: optional(max(nonNegative, 5)),
+  travelSeconds: optional(max(positive, 5)),
+  length: optional(max(positive, 60)),
+  width: optional(max(positive, 10)),
+  /** Seconds the boss stands still after this attack (your chance); default `vulnerableSeconds`. */
+  openingSeconds: optional(max(positive, 10)),
+  /** Shown the first time this attack is wound up (a short tip, e.g. "Dash sideways!"). */
+  hint: optional(textKey),
+});
+
+/**
+ * A boss fight in the open world (Sultan at the city gate). Walking into `trigger` while
+ * `quest` can start (or runs) plays `cutscene` once, then the fight: the boss appears at `start`,
+ * you at `playerStart`, inside a ring of `arena.radius` m that neither of you can leave. The
+ * boss waits `pauseSeconds` between attacks, leaps away after each one (landing `retreatGap`
+ * m from you) and then stands still for a moment: only then can it be hit.
+ */
+const bossSchema = z.strictObject({
+  quest: id,
+  trigger: id,
+  cutscene: id,
+  arena: z.strictObject({ x: coord, z: coord, radius: range(5, 100) }),
+  start: z.strictObject({ x: coord, z: coord }),
+  playerStart: z.strictObject({ x: coord, z: coord }),
+  /** Seconds between two attacks [min, max] (shorter when enraged); longer while out of range. */
+  pauseSeconds: z.tuple([nonNegative, nonNegative]),
+  retreatGap: max(nonNegative, 20),
+  retreatSeconds: max(positive, 5),
+  vulnerableSeconds: max(positive, 10),
+  /** Spoken when the fight starts again without the cutscene (a rematch after losing). */
+  retryLine: optional(textKey),
+  /** Spoken when the boss falls below `enrage.belowHpFraction`. */
+  enrageLine: optional(textKey),
+  /** Spoken when you win. */
+  winLine: textKey,
+  /** Tips shown the first time: "now strike!" (it can be hit) and "wait for it" (it dodged). */
+  strikeHint: optional(textKey),
+  guardHint: optional(textKey),
+  /** A short floating word when a hit is dodged ("Dodged!"). */
+  guardText: textKey,
 });
 
 /**
@@ -519,6 +576,8 @@ const monsterSchema = z.strictObject({
   transformsFrom: optional(id),
   enrage: optional(z.strictObject({ belowHpFraction: fraction, speedFactor: positive })),
   attacks: optional(z.array(attackSchema)),
+  /** Boss fight settings (bosses only; see bossSchema). */
+  boss: optional(bossSchema),
   drops: z.array(
     z.strictObject({
       item: id,
@@ -898,6 +957,14 @@ export const cutscenesFileSchema = z.strictObject({
             narration: optional(textKey),
             lines: optional(z.array(z.strictObject({ speaker: name, text: textKey }))),
             shake: optional(z.boolean()),
+            /** Comic panels (no art yet): what you would see, as a short caption. */
+            caption: optional(textKey),
+            /** Background color of a comic panel. */
+            background: optional(colorToken),
+            /** The panel slowly zooms in. */
+            zoom: optional(z.boolean()),
+            /** A bright flash when the panel appears. */
+            flash: optional(z.boolean()),
             /** This panel is played as a fight (an id in `fights`) instead of shown as a card. */
             fight: optional(id),
           }),

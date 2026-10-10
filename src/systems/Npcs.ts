@@ -1,11 +1,13 @@
 import type { FollowTarget } from '../entities/Companion';
 import { Npc, type NpcSettings } from '../entities/Npc';
-import type { NpcsFile } from '../data/types';
+import type { Condition, NpcsFile } from '../data/types';
+import { type ConditionContext, evaluateCondition } from '../world/Conditions';
 import type { PointXZ } from '../world/Colliders';
 import type { Mover } from './Movement';
 import { turnTowards } from './NpcBehavior';
 
 const DEG = Math.PI / 180;
+const NONE: ReadonlySet<string> = new Set();
 
 /** What NPCs need from the world: walking with collision, ground height, pushing out. */
 export interface NpcWorld {
@@ -24,7 +26,8 @@ export interface NpcWorld {
  * - companions roam around the player (Pringle),
  * - solid NPCs push the player out (you cannot walk through Brother Ansel),
  * - the nearest NPC you can talk to (within `interactRange`) or pet (within `petRange`).
- * NPCs bound to a season (`season`) only exist in that season.
+ * NPCs bound to a season (`season`) only exist in that season; `presentWhen` / `absentWhen`
+ * bring NPCs in or take them out when a condition changes (Pringle becomes Sultan).
  */
 export class Npcs {
   readonly list: Npc[];
@@ -41,6 +44,31 @@ export class Npcs {
       if (!role) continue;
       if (def.season && def.season !== season) continue;
       this.list.push(new Npc(def, role, file.settings, color(role.color)));
+    }
+  }
+
+  /**
+   * Which NPCs are in the world now: their `presentWhen` / `absentWhen` conditions, and
+   * `hidden` (ids taken out for a moment, e.g. Pringle during the Sultan fight). Call when
+   * quests, level or the hidden list change.
+   */
+  refreshPresence(
+    conditions: Readonly<Record<string, Condition>>,
+    ctx: ConditionContext,
+    hidden: ReadonlySet<string> = NONE,
+  ): void {
+    const holds = (name: string): boolean => {
+      const condition = conditions[name];
+      return condition ? evaluateCondition(condition, ctx) : false;
+    };
+    for (const npc of this.list) {
+      const def = npc.def;
+      const present =
+        !hidden.has(npc.id) &&
+        (def.presentWhen === undefined || holds(def.presentWhen)) &&
+        (def.absentWhen === undefined || !holds(def.absentWhen));
+      npc.present = present;
+      if (!present) npc.shown = false;
     }
   }
 
@@ -66,6 +94,7 @@ export class Npcs {
       const npc = this.list[i] as Npc;
       const s = npc.state;
       const companion = npc.companion;
+      if (!npc.present) continue;
 
       if (companion) {
         if (!npc.shown) {
@@ -162,7 +191,7 @@ export class Npcs {
   /** Companions jump to the player (after a teleport). */
   snapCompanions(px: number, pz: number, heading: number, world: NpcWorld): void {
     for (const npc of this.list) {
-      if (!npc.companion) continue;
+      if (!npc.companion || !npc.present) continue;
       npc.companion.placeBehind(npc.state, px, pz, heading);
       npc.shown = true;
       this.settle(npc, world);

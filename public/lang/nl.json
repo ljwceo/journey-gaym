@@ -163,8 +163,14 @@
       "1": "Miauw.",
       "2": "Dacht je echt dat je zomaar kon vertrekken?",
       "4": "Ik ben Sultan. Laat zien dat je klaar bent voor de wereld daarbuiten.",
-      "5": "Probeer me maar bij te houden!"
-    }
+      "5": "Probeer me maar bij te houden!",
+      "caption1": "De stadspoort bij zonsondergang. Pringle zit midden op het pad.",
+      "caption2": "Close-up: Pringles ogen gloeien goud.",
+      "caption3": "Paarse rook en wind. Pringle groeit…",
+      "caption4": "In de rook staat een lange kattenman: kattenoren, een staart, gouden ogen.",
+      "caption5": "Sultan springt naar voren. Een flits!"
+    },
+    "tapToContinue": "Tik of druk op spatie"
   },
   "hud": {
     "checkpointSet": "Checkpoint ingesteld",
@@ -246,6 +252,11 @@
     },
     "pringle": {
       "pet": "Pringle spint tevreden."
+    },
+    "sultan": {
+      "1": "Goed gevochten, kleintje. Pringle was maar een vermomming. Katten hebben hun geheimen.",
+      "2": "Ga maar, de wereld wacht. Maar kom terug als je sterker bent. Ik wil een herkansing.",
+      "3": "Negen levens, weet je nog? Ik heb er nog acht."
     }
   },
   "item": {
@@ -285,7 +296,7 @@
   },
   "quest": {
     "defeat_sultan": {
-      "desc": "Versla Sultan bij de stadspoort."
+      "desc": "Verlaat de stad: versla Sultan bij de stadspoort."
     },
     "your_resolve": {
       "offer": {
@@ -456,7 +467,9 @@
     "grantXp": "+100 XP",
     "grantGold": "+50 Gold",
     "grantPotions": "+5 Health Potion",
-    "grantSlimeGel": "+3 Slime Gel"
+    "grantSlimeGel": "+3 Slime Gel",
+    "boss": "Baasgevecht",
+    "bossSultan": "Vecht tegen Sultan"
   },
   "bag": {
     "title": "Tas",
@@ -480,5 +493,23 @@
     "notEnough": "Niet genoeg {gold}.",
     "bought": "Gekocht: {item}",
     "owned": "In je tas: {count}"
+  },
+  "boss": {
+    "dodged": "Ontweken!",
+    "sultan": {
+      "retry": "Ben je terug? Probeer me maar bij te houden!",
+      "enrage": "Niet slecht… Nu wordt het menens!",
+      "win": "Heh… je hebt toch klauwen. Je bent klaar voor de wereld daarbuiten.",
+      "hint": {
+        "claw": "Zijn klauwen lichten op: stap achteruit of dash weg!",
+        "pounce": "Hij zakt door zijn knieën, zijn ogen gloeien: dash opzij!",
+        "charge": "Een rode streep: ga eraf voordat hij rent!",
+        "flurry": "Flurry! Ga weg en sla als hij buiten adem is.",
+        "strike": "Hij staat stil: nu slaan!",
+        "strikeTouch": "Hij staat stil: tik nu op Slaan!",
+        "guard": "Hij ontwijkt alles. Wacht tot hij stilstaat na een aanval."
+      }
+    },
+    "defeated": "{name} is verslagen!"
   }
 }

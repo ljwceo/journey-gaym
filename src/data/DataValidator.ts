@@ -338,6 +338,8 @@ class CrossChecker {
       this.ref('role', f, `${p}.role`, npc.role);
       this.ref('zone', f, `${p}.zone`, npc.zone);
       this.ref('season', f, `${p}.season`, npc.season);
+      this.ref('condition', f, `${p}.presentWhen`, npc.presentWhen);
+      this.ref('condition', f, `${p}.absentWhen`, npc.absentWhen);
       npc.dialogue.forEach((key, d) => this.text(f, `${p}.dialogue[${d}]`, key));
       this.text(f, `${p}.petText`, npc.petText);
       npc.dialogueWhen?.forEach((entry, w) => {
@@ -476,10 +478,50 @@ class CrossChecker {
         this.range(f, `${p}.drops[${d}]`, drop.min, drop.max);
       });
       monster.attacks?.forEach((attack, a) => {
-        if (attack.minHits !== undefined) {
-          this.range(f, `${p}.attacks[${a}]`, attack.minHits, attack.hits);
+        const ap = `${p}.attacks[${a}]`;
+        if (attack.minHits !== undefined) this.range(f, ap, attack.minHits, attack.hits);
+        if (attack.minGap !== undefined && attack.maxGap !== undefined) {
+          this.range(f, `${ap}.minGap`, attack.minGap, attack.maxGap);
+        }
+        this.text(f, `${ap}.hint`, attack.hint);
+        if (monster.boss && !attack.pattern) {
+          this.issue(f, `${ap}.pattern`, 'a boss attack needs a pattern');
+        }
+        const needs: Record<string, (keyof typeof attack)[]> = {
+          combo: ['hitIntervalSeconds', 'reach'],
+          pounce: ['travelSeconds', 'reach'],
+          charge: ['travelSeconds', 'length', 'width'],
+        };
+        for (const field of attack.pattern ? (needs[attack.pattern] ?? []) : []) {
+          if (attack[field] === undefined) {
+            this.issue(f, `${ap}.${field}`, `a ${attack.pattern} attack needs ${field}`);
+          }
         }
       });
+      const boss = monster.boss;
+      if (boss) {
+        this.ref('quest', f, `${p}.boss.quest`, boss.quest);
+        this.ref('trigger', f, `${p}.boss.trigger`, boss.trigger);
+        this.ref('cutscene', f, `${p}.boss.cutscene`, boss.cutscene);
+        this.range(f, `${p}.boss.pauseSeconds`, ...boss.pauseSeconds);
+        for (const key of [
+          'retryLine',
+          'enrageLine',
+          'winLine',
+          'strikeHint',
+          'guardHint',
+        ] as const)
+          this.text(f, `${p}.boss.${key}`, boss[key]);
+        this.text(f, `${p}.boss.guardText`, boss.guardText);
+        const a = boss.arena;
+        for (const point of ['start', 'playerStart'] as const) {
+          const q = boss[point];
+          if (Math.hypot(q.x - a.x, q.z - a.z) > a.radius - 1) {
+            this.issue(f, `${p}.boss.${point}`, 'must lie inside the arena');
+          }
+        }
+        if (!monster.attacks?.length) this.issue(f, `${p}.attacks`, 'a boss needs attacks');
+      }
     });
   }
 
@@ -788,6 +830,8 @@ class CrossChecker {
       cutscene.panels.forEach((panel, n) => {
         const p = `cutscenes[${i}].panels[${n}]`;
         this.text(f, `${p}.narration`, panel.narration);
+        this.text(f, `${p}.caption`, panel.caption);
+        if (panel.background) this.color(f, `${p}.background`, panel.background);
         panel.lines?.forEach((line, l) => this.text(f, `${p}.lines[${l}].text`, line.text));
         this.ref('fight', f, `${p}.fight`, panel.fight);
       });

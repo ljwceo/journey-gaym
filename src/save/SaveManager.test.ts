@@ -201,15 +201,34 @@ describe('migrate', () => {
     const v3: Record<string, unknown> = { ...current, version: 3 };
     delete v3.quests;
     delete v3.unlocks;
+    delete v3.seenCutscenes;
+    delete v3.seenHints;
     const storage = new MemoryStorage();
     storage.setItem(SAVE_KEY, JSON.stringify(v3));
     const result = new SaveManager(storage).load();
     expect(result.status).toBe('ok');
     if (result.status !== 'ok') return;
-    expect(result.save.version).toBe(4);
+    expect(result.save.version).toBe(SAVE_VERSION);
     expect(result.save.quests).toEqual({ active: [], completed: [] });
     expect(result.save.unlocks).toEqual([]);
     expect(result.save.progress.level).toBe(3);
+  });
+
+  it('upgrades a version 4 save: no cutscenes or tips seen; quests stay', () => {
+    const current = sampleSave();
+    current.quests = { active: [], completed: ['a_quiet_awakening'] };
+    const v4: Record<string, unknown> = { ...current, version: 4 };
+    delete v4.seenCutscenes;
+    delete v4.seenHints;
+    const storage = new MemoryStorage();
+    storage.setItem(SAVE_KEY, JSON.stringify(v4));
+    const result = new SaveManager(storage).load();
+    expect(result.status).toBe('ok');
+    if (result.status !== 'ok') return;
+    expect(result.save.version).toBe(SAVE_VERSION);
+    expect(result.save.seenCutscenes).toEqual([]);
+    expect(result.save.seenHints).toEqual([]);
+    expect(result.save.quests.completed).toEqual(['a_quiet_awakening']);
   });
 
   it('keeps quests and unlocks through writing and loading', () => {

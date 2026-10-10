@@ -7,6 +7,7 @@ import {
   SphereGeometry,
 } from 'three';
 import { palette } from '../render/palette';
+import { catmanParts } from './EnemyFactory';
 import { colored } from './StructureFactory';
 
 /**
@@ -86,9 +87,15 @@ function cat(): NpcModel {
   };
 }
 
+/** Sultan after his fight: the same cat man as the boss, not tinted. */
+function catman(): NpcModel {
+  return { parts: [{ geometry: colored(catmanParts()), tinted: false }], height: 2.1 };
+}
+
 const builders: Record<string, () => NpcModel> = {
   'placeholder:npc_humanoid': humanoid,
   'placeholder:cat': cat,
+  'placeholder:catman': catman,
 };
 
 /** True when this factory can build the model named in npcs.json. */

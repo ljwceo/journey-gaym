@@ -7,9 +7,9 @@
 | | |
 |---|---|
 | **Huidige fase** | Fase 2 – Solo-gevecht en de eerste dag (plan goedgekeurd) |
-| **Status** | Stap 2.5 klaar (quests van de eerste dag, winkel van Marco, Hilda's zwaard; save versie 4) |
-| **Volgende stap** | Stap 2.6: Sultan, de beginnersbaas |
-| **Laatste sessie** | 2026-10-10: stap 2.5 quests van de eerste dag |
+| **Status** | Stap 2.6 klaar (Sultan, de beginnersbaas: stripcutscene, gevecht, Sultan als NPC; save versie 5) |
+| **Volgende stap** | Stap 2.7: afronden (balans, meten, documentatie) |
+| **Laatste sessie** | 2026-10-10: stap 2.6 Sultan |
 
 ---
 
@@ -248,7 +248,7 @@ Doel: het spel begint met een speelbaar, episch (en komisch) gevecht tegen Lucae
 ---
 
 ### Fase 2 – Solo-gevecht en de eerste dag
-**Status:** bezig, stap 2.1 t/m 2.5 klaar.
+**Status:** bezig, stap 2.1 t/m 2.6 klaar.
 **Gebouwd:**
 - 2.1 Gevechtskern:
   - **Zwaard** (`src/systems/Combat.ts`, puur en getest): fast hit met de **linkermuisknop** (10 schade, 10 energie, max 3 per seconde, elke 3e slag op rij +50% en goud gekleurd), heavy hit met de **rechtermuisknop** (25 energie vooraf, 0,9 s uithalen, dan 25 schade, daarna 0,35 s herstel). Zonder genoeg energie: fast hits nog wel, maar half zo snel; geen heavy hit. Per level +2 (fast) en +5 (heavy) schade. Alles op de vaste tijdstap: 60 en 120 Hz geven dezelfde slagen (test).
@@ -305,6 +305,22 @@ Doel: het spel begint met een speelbaar, episch (en komisch) gevecht tegen Lucae
   - **Cheatmenu:** "Geven" heeft nu ook +3 Slime Gel. Debugregel `quests` (lopende quests met tellers, aantal klaar, unlocks, wapenbonus).
   - Brother Ansel zegt na zijn quest andere zinnen (niet meer "ik vond je langs de weg").
   - Getest: 308 tests (o.a. tellen pas na aannemen, "2/3" en inleveren, kopen alleen bij de juiste winkel, wie wat zegt, data-wijzigingen in een oude save, alle vijf vanaf level 1, ±level 3, Hilda's upgrade, genoeg slimes binnen de stadsmuur, Bertha meteen klaar, wapenbonus, save v3 → v4, validator). Headless Chromium (pc 1100×700, EN en NL): met een oude v3-save alle vijf quests achter elkaar (praten, rusten, winkel met 2× kopen en "Niet genoeg Gold", Slime Gel via het cheatmenu, naar het stukje grond lopen, het verhaal van Bertha) → level 2 met 130 XP, 5 Gold, Honed Old Sword gedragen (+3), Herb Seeds, `garden_plot`; gouden ruit boven Marco; tas met quests in het Nederlands. Geen fouten.
+
+- 2.6 Sultan, de beginnersbaas:
+  - **Hoe het begint:** zodra de vijf quests van de eerste dag klaar zijn en je level 3 bent, begint de quest **Defeat Sultan** vanzelf ("Nieuwe quest: Defeat Sultan" en "Verlaat de stad: versla Sultan bij de stadspoort."). Loop je dan naar de stadspoort (het stuk vlak vóór de poort, binnen de muur), dan speelt de **stripcutscene "Pringle"**: 5 plaatjes die in beeld schuiven met een onderschrift (wat je ziet; er is nog geen tekening) en een tekstballon, met inzoomen, schudden en een flits, precies de teksten uit het concept. Tikken, klikken, spatie of Enter = volgende; **Overslaan** of Escape slaat hem over. Hij speelt maar één keer.
+  - **Het gevecht** (`src/systems/BossAI.ts`, puur en getest): Sultan (800 HP, snel) en jij staan in een **gouden ring** van 15 m binnen de stadspoort waar niemand uit kan; zijn naam en HP-balk staan bovenin, Pringle is weg (hij ís Sultan). Sultan cirkelt om je heen als een kat en kiest steeds een andere aanval, elk met een **duidelijke waarschuwing** die je ruim de tijd geeft:
+    - **Claw Combo** (2–3 klauwslagen, 12 schade per slag): hij gloeit oranje en leunt achterover (0,7 s). Stap achteruit of dash weg.
+    - **Pounce** (15 schade): hij zakt door zijn knieën en gloeit goud (0,9 s), en springt dan naar waar je stond. Dash opzij.
+    - **Dash Strike** (15 schade): er verschijnt een **rode streep** op de grond die volloopt (1 s), dan rent hij er in een rechte lijn doorheen. Stap van de streep af.
+    - Na **elke** aanval springt hij weg (hij landt vlak bij je) en **staat hij 1 s stil**: alleen dan kun je hem raken. Sla je eerder, dan ontwijkt hij ("Ontweken!").
+    - **Onder 50% HP:** "Niet slecht… Nu wordt het menens!", hij wordt 25% sneller en elke 3e aanval is **Flurry** (5 klauwslagen), waarna hij **2 s buiten adem** is.
+  - **Tips de eerste keer** (één keer per tip, onthouden in de save): "Zijn klauwen lichten op: stap achteruit of dash weg!", "Hij zakt door zijn knieën, zijn ogen gloeien: dash opzij!", "Een rode streep: ga eraf voordat hij rent!", "Flurry! …", "Hij staat stil: nu slaan!" (op de telefoon: "tik nu op Slaan!") en "Hij ontwijkt alles. Wacht tot hij stilstaat na een aanval."
+  - **Winnen:** Sultan valt om: "Heh… je hebt toch klauwen. Je bent klaar voor de wereld daarbuiten.", +200 XP, "Quest voltooid: Defeat Sultan". Daarna staat **Sultan als NPC buiten de stadspoort** (praten: hij vertelt dat Pringle een vermomming was en wil later een herkansing) en loopt Pringle niet meer mee.
+  - **Verliezen** = gewoon doodgaan (−10% gold, wakker in het Monastery). Pringle loopt weer mee; loop terug naar de poort en het gevecht begint meteen opnieuw, zonder cutscene ("Ben je terug? Probeer me maar bij te houden!").
+  - **Data:** `boss` en de aanvallen (met `pattern`, afstanden, waarschuwingstijden, `hint`) bij Sultan in `monsters.json`; trigger `sultan_gate` en conditie `sultanDefeated` in `triggers.json`; NPC Sultan (`presentWhen`) en Pringle (`absentWhen`) in `npcs.json`; de stripplaatjes in `cutscenes.json`. De poortvoorwaarde `canLeaveCity` blijft "altijd" tot de klassekeuze (fase 3).
+  - **Save versie 5** (`seenCutscenes`, `seenHints`); een oude save heeft nog niets gezien.
+  - **Cheatmenu:** "Baasgevecht → Vecht tegen Sultan" start het gevecht meteen (ook zonder quests). Teleporteren tijdens het gevecht stopt het gevecht.
+  - Getest: 325 tests (o.a. alleen raakbaar in de opening van 1 s, elke aanval eerst een waarschuwing, stilstaan = geraakt, ontwijken van Claw Combo, Pounce en Dash Strike lukt, 60 en 120 Hz gelijk, Flurry elke 3e aanval onder 50% en 2 s buiten adem, nooit buiten de ring, stopt als je knock-out bent, Pringle/Sultan wisselen, save v4 → v5, validator). Headless Chromium (pc 1100×700 in EN en NL, telefoon 844×390): poort → nieuwe quest → cutscene (tikken en Overslaan) → gevecht met waarschuwingen, rode streep, tips en HP-balk; winnen (met een tamme Sultan via aangepaste data) → quest klaar, +200 XP, Sultan praat buiten de poort; verliezen → zwart scherm, 50 → 45 gold, wakker in het Monastery met Pringle, opnieuw naar de poort = meteen gevecht met "Back again?". Geen fouten. Gevonden en opgelost: de stripplaatjes waren onzichtbaar en op de telefoon te hoog, de HP-balk van de baas lag op de telefoon over je eigen balken, de ring was gestippeld, en na de cutscene sprong de camera omhoog (de muis wordt nu niet meer vanzelf gevangen; één klik is genoeg).
 
 ## Besluiten
 
@@ -427,6 +443,15 @@ Doel: het spel begint met een speelbaar, episch (en komisch) gevecht tegen Lucae
 | 2026-10-10 | Rose: je stukje grond is een bruin vakje (3 × 3 m) aan de zuidkant van de Garden; Herb Seeds zijn nu alleen een item | Kweken komt later (concept: groeit ook als je niet speelt) |
 | 2026-10-10 | Slimes voor Hilda op een erf binnen de stadsmuur (noordoosten), niet in de Greenwood | Keuze van Bo en Lucas (optie a): de stadspoort gaat pas open na de klassekeuze, dus de eerste dag moet binnen de stad kunnen |
 | 2026-10-10 | Questmarkeringen: gouden ruit = nieuwe quest, blauwe ruit = inleveren | Zo vind je de gevers zonder vaste route; zeg het als jullie ze niet willen |
+| 2026-10-10 | Sultan-gevecht in een ring van 15 m net binnen de stadspoort (niemand kan eruit) | Zo blijft het gevecht overzichtelijk en loopt niemand weg door de poort; het concept noemt alleen "bij de stadspoort". Plek in `monsters.json` → `boss.arena` |
+| 2026-10-10 | Waarschuwingen iets langer dan in het concept: Claw Combo 0,7 s (concept 0,4), Pounce 0,9 s, Dash Strike 1 s, Flurry 0,8 s | Plan: "je hebt ruim de tijd om weg te dashen"; het is een beginnersbaas. Aan te passen in `warningSeconds` |
+| 2026-10-10 | Na elke aanval landt Sultan 1,5 m van je af en staat 1 s stil (na Flurry 2 s): alleen dan raakbaar, anders "Ontweken!" | Concept: "je kunt hem alleen raken in de korte momenten na zijn aanvallen". Dichtbij landen, zodat je in die 1 s echt kunt slaan |
+| 2026-10-10 | Sultan kiest steeds een andere aanval dan de vorige; onder 50% is elke 3e aanval Flurry | Voorstel; zo zie je alle aanvallen en leer je ze |
+| 2026-10-10 | Tips verschijnen één keer per tip (onthouden in de save), niet bij elke herkansing | Concept: "de eerste keer"; zeg het als ze bij elke poging moeten komen |
+| 2026-10-10 | Verliezen tegen Sultan is gewoon doodgaan: ook −10% gold | Concept: "verlies je, dan word je wakker in het Monastery"; de goldstraf hoort bij doodgaan. Zeg het als dit gevecht zonder straf moet |
+| 2026-10-10 | Na het gevecht is Pringle weg en staat Sultan als NPC buiten de poort (zinnen over de vermomming en een herkansing) | Concept: "na het gevecht wordt Sultan een NPC"; Pringle wás Sultan. Wil je Pringle terug als kat, haal dan `absentWhen` bij Pringle weg |
+| 2026-10-10 | De stripcutscene heeft nog geen tekeningen: elk plaatje is een kleurvlak met een onderschrift van wat je ziet | De beeldprompts staan in het concept; plaatjes komen later in de art-pass (fase 6) |
+| 2026-10-10 | Na een cutscene wordt de muis niet vanzelf gevangen; één klik en je kijkt weer rond | Vanzelf vangen liet de camera soms een sprong maken |
 
 ## Sessielog
 
@@ -456,3 +481,4 @@ Doel: het spel begint met een speelbaar, episch (en komisch) gevecht tegen Lucae
 - Stap 2.3 gebouwd: vijanden in de Greenwood (Green Slime, Big Slime, Goblin, Goblin Archer, Goblin Chief in een goblinkamp, Treewarden) uit één pool, met AI, spawngebieden en terugkomen; pijlen en rode waarschuwingscirkels; knock-out bij 0 HP (voorlopig); debugregel en cheat "Monsters vallen aan". Op verzoek: Pringle zwerft om je heen in plaats van op vaste afstand te volgen. 270 tests, headless Chromium zonder fouten. Tijdelijke namen gebruikt (alleen in data): Treewarden, de elfenstad (`elven_city`), Big Swing, Heavy Slam, Gold, Slime Gel; nieuw: "Goblin tent" en "Campfire" (alleen labels in debug). Volgende stap: 2.4 (XP, levels, buit, doodgaan).
 - Stap 2.4 gebouwd: XP en levels, buit in de tas, tas-venster, drankjes (Q / drankknop), doodgaan met 10% goldverlies en zwart scherm, rusten bij een checkpoint, save versie 3 met migratie, nieuwe events voor de quests, cheats "Geven". 291 tests, headless Chromium (pc en telefoon, EN en NL) zonder fouten. Tijdelijke namen gebruikt (alleen in data): Gold, Health Potion, Greater Health Potion, Slime Gel. Volgende stap: 2.5 (quests van de eerste dag).
 - Stap 2.5 gebouwd: questsysteem uit `quests.json` (praten, hebben, brengen, verslaan, kopen, rusten, ergens heen lopen), de vijf quests van de eerste dag (Brother Ansel, Marco, Hilda, Rose, Old Bertha) in EN en NL, winkel van Marco, Hilda slijpt je zwaard (+3 schade), stukje grond in de Garden, questmarkeringen, quests in de tas, save versie 4. 307 tests, headless Chromium (EN en NL) zonder fouten. Tijdelijke namen gebruikt (alleen in data): Brother Ansel, Marco the Merchant, Hilda Ironhand, Old Bertha, Gold, Slime Gel; nieuw: de vijf questnamen, Honed Old Sword, Herb Seeds, "Your plot". Op verzoek (optie a): een slime-erf binnen de stadsmuur voor Hilda's Slime Gel. Volgende stap: 2.6 (Sultan).
+- Stap 2.6 gebouwd: Sultan, de beginnersbaas: quest begint vanzelf na de eerste dag, stripcutscene "Pringle" (één keer, overslaanbaar), baasgevecht in een ring bij de stadspoort (Claw Combo, Pounce, Dash Strike, Flurry onder 50%, alleen raakbaar na een aanval, tips de eerste keer, HP-balk), winnen = Sultan wordt een NPC buiten de poort en Pringle is weg, verliezen = doodgaan en meteen een herkansing. Save versie 5. Cheat "Vecht tegen Sultan". 325 tests, headless Chromium (pc EN/NL en telefoon) zonder fouten. Tijdelijke namen gebruikt (alleen in data): Gold; nieuw: geen (Sultan, Pringle en de aanvalsnamen komen uit het concept). Volgende stap: 2.7 (afronden).

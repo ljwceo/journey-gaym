@@ -173,4 +173,26 @@ describe('validateGameData catches broken data', () => {
     raw.triggers.conditions.canLeaveCity = { type: 'questCompleted', quest: 'slay_moon' };
     expect(messages(raw)).toContainEqual(expect.stringContaining('unknown quest "slay_moon"'));
   });
+
+  it('reports a boss fight with wrong references, a missing pattern or a start outside its arena', () => {
+    const raw = freshData();
+    const sultan = raw.monsters.monsters.find((m: { id: string }) => m.id === 'sultan');
+    sultan.boss.quest = 'slay_moon';
+    sultan.boss.trigger = 'nowhere';
+    sultan.boss.start = { x: sultan.boss.arena.x + 100, z: sultan.boss.arena.z };
+    delete sultan.attacks[0].pattern;
+    delete sultan.attacks[1].travelSeconds;
+    const found = messages(raw);
+    expect(found).toContainEqual(expect.stringContaining('unknown quest "slay_moon"'));
+    expect(found).toContainEqual(expect.stringContaining('unknown trigger "nowhere"'));
+    expect(found).toContainEqual(expect.stringContaining('must lie inside the arena'));
+    expect(found).toContainEqual(expect.stringContaining('a boss attack needs a pattern'));
+    expect(found).toContainEqual(expect.stringContaining('a pounce attack needs travelSeconds'));
+  });
+
+  it('reports NPCs that come and go with an unknown condition', () => {
+    const raw = freshData();
+    raw.npcs.npcs.find((n: { id: string }) => n.id === 'sultan').presentWhen = 'moonIsBlue';
+    expect(messages(raw)).toContainEqual(expect.stringContaining('unknown condition "moonIsBlue"'));
+  });
 });

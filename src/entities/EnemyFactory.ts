@@ -143,7 +143,53 @@ function treewarden(): EnemyModel {
   return { parts: [geometry], height: 5.6, style: 'upright' };
 }
 
+/** Fur color of Sultan (the same as Pringle's role color). */
+export const CAT_FUR = palette.zonsondergang;
+/** Light leather armor and pale claws (placeholder colors, not in the style guide yet). */
+const LEATHER = 0x6b4a32;
+const CLAW = 0xece4d4;
+
+/**
+ * Sultan, the cat man (concept: tall, cat ears, a tail, golden eyes, light leather armor):
+ * the parts as [geometry, color, x, y, z], shared by the boss model and the NPC after the fight.
+ * The claws sit at the hands (in front, +z).
+ */
+export function catmanParts(): [BufferGeometry, number, number, number, number][] {
+  const ear = (side: number): BufferGeometry => new ConeGeometry(0.07, 0.2, 4).rotateZ(side * 0.25);
+  const eye = (): BufferGeometry => new SphereGeometry(0.035, 6, 4);
+  const leg = (): BufferGeometry => new CylinderGeometry(0.08, 0.07, 0.9, 6);
+  const arm = (side: number): BufferGeometry =>
+    new CylinderGeometry(0.06, 0.055, 0.75, 6).rotateX(-0.5).rotateZ(side * 0.15);
+  const claw = (): BufferGeometry => new ConeGeometry(0.025, 0.16, 4).rotateX(Math.PI / 2);
+  const tail = new CylinderGeometry(0.05, 0.03, 0.9, 6).rotateX(-1.1);
+  return [
+    [leg(), LEATHER, -0.13, 0.45, 0],
+    [leg(), LEATHER, 0.13, 0.45, 0],
+    [new CapsuleGeometry(0.24, 0.5, 4, 10), LEATHER, 0, 1.22, 0],
+    [new BoxGeometry(0.62, 0.1, 0.28), palette.nachtinkt, 0, 1.52, 0],
+    [arm(1), CAT_FUR, -0.36, 1.2, 0.12],
+    [arm(-1), CAT_FUR, 0.36, 1.2, 0.12],
+    [claw(), CLAW, -0.39, 0.95, 0.45],
+    [claw(), CLAW, -0.33, 0.95, 0.47],
+    [claw(), CLAW, 0.33, 0.95, 0.47],
+    [claw(), CLAW, 0.39, 0.95, 0.45],
+    [new SphereGeometry(0.2, 12, 10), CAT_FUR, 0, 1.78, 0.02],
+    [ear(1), CAT_FUR, -0.12, 1.98, 0],
+    [ear(-1), CAT_FUR, 0.12, 1.98, 0],
+    [eye(), palette.zonlicht, -0.07, 1.8, 0.18],
+    [eye(), palette.zonlicht, 0.07, 1.8, 0.18],
+    [new SphereGeometry(0.022, 5, 4), 0xc46d6d, 0, 1.74, 0.2],
+    [tail, CAT_FUR, 0, 0.95, -0.42],
+  ];
+}
+
+/** Sultan as a boss (EnemyRenderer): leans, crouches and leaps with his attacks. */
+function sultan(): EnemyModel {
+  return { parts: [colored(catmanParts())], height: 2.1, style: 'upright' };
+}
+
 const builders: Record<string, () => EnemyModel> = {
+  'placeholder:sultan': sultan,
   'placeholder:dummy': dummy,
   'placeholder:slime': slime,
   'placeholder:goblin': goblin,

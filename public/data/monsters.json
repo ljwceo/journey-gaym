@@ -281,9 +281,29 @@
       "behavior": "melee",
       "rank": "boss",
       "transformsFrom": "pringle",
+      "model": "placeholder:sultan",
+      "radius": 0.55,
       "enrage": {
         "belowHpFraction": 0.5,
         "speedFactor": 1.25
+      },
+      "boss": {
+        "quest": "defeat_sultan",
+        "trigger": "sultan_gate",
+        "cutscene": "pringle",
+        "arena": { "x": -1551, "z": 0, "radius": 15 },
+        "start": { "x": -1538, "z": 0 },
+        "playerStart": { "x": -1560, "z": 0 },
+        "pauseSeconds": [0.8, 1.6],
+        "retreatGap": 1.5,
+        "retreatSeconds": 0.35,
+        "vulnerableSeconds": 1,
+        "retryLine": "boss.sultan.retry",
+        "enrageLine": "boss.sultan.enrage",
+        "winLine": "boss.sultan.win",
+        "strikeHint": "boss.sultan.hint.strike",
+        "guardHint": "boss.sultan.hint.guard",
+        "guardText": "boss.dodged"
       },
       "attacks": [
         {
@@ -292,33 +312,63 @@
           "damage": 12,
           "hits": 3,
           "minHits": 2,
-          "warningSeconds": 0.4,
-          "recoverySeconds": 1
+          "warningSeconds": 0.7,
+          "recoverySeconds": 1,
+          "pattern": "combo",
+          "minGap": 0,
+          "maxGap": 1.2,
+          "hitIntervalSeconds": 0.3,
+          "reach": 1.3,
+          "stepPerHit": 0.5,
+          "hint": "boss.sultan.hint.claw"
         },
         {
           "id": "pounce",
           "name": "Pounce",
           "damage": 15,
           "hits": 1,
-          "warningSeconds": 0.6,
-          "recoverySeconds": 1
+          "warningSeconds": 0.9,
+          "recoverySeconds": 1,
+          "pattern": "pounce",
+          "minGap": 3,
+          "maxGap": 8,
+          "aimLockSeconds": 0.25,
+          "travelSeconds": 0.35,
+          "reach": 0.9,
+          "hint": "boss.sultan.hint.pounce"
         },
         {
           "id": "dash_strike",
           "name": "Dash Strike",
           "damage": 15,
           "hits": 1,
-          "warningSeconds": 0.7,
-          "recoverySeconds": 1
+          "warningSeconds": 1,
+          "recoverySeconds": 1,
+          "pattern": "charge",
+          "minGap": 4,
+          "maxGap": 12,
+          "travelSeconds": 0.5,
+          "length": 16,
+          "width": 1.4,
+          "hint": "boss.sultan.hint.charge"
         },
         {
           "id": "flurry",
           "name": "Flurry",
           "damage": 12,
           "hits": 5,
-          "warningSeconds": 0.5,
+          "warningSeconds": 0.8,
           "recoverySeconds": 2,
-          "onlyWhenEnraged": true
+          "onlyWhenEnraged": true,
+          "everyNth": 3,
+          "pattern": "combo",
+          "minGap": 0,
+          "maxGap": 1.5,
+          "hitIntervalSeconds": 0.22,
+          "reach": 1.4,
+          "stepPerHit": 0.5,
+          "openingSeconds": 2,
+          "hint": "boss.sultan.hint.flurry"
         }
       ],
       "drops": []

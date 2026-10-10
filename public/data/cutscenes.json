@@ -47,6 +47,8 @@
       "panels": [
         {
           "id": "gate",
+          "caption": "cutscene.pringle.caption1",
+          "background": "zonsondergang",
           "lines": [
             {
               "speaker": "Pringle",
@@ -56,6 +58,9 @@
         },
         {
           "id": "eyes",
+          "caption": "cutscene.pringle.caption2",
+          "background": "ornamentgoud",
+          "zoom": true,
           "lines": [
             {
               "speaker": "Pringle",
@@ -65,10 +70,15 @@
         },
         {
           "id": "smoke",
+          "caption": "cutscene.pringle.caption3",
+          "background": "spreukviolet",
           "shake": true
         },
         {
           "id": "sultan",
+          "caption": "cutscene.pringle.caption4",
+          "background": "schemerviolet",
+          "zoom": true,
           "lines": [
             {
               "speaker": "Sultan",
@@ -78,6 +88,10 @@
         },
         {
           "id": "leap",
+          "caption": "cutscene.pringle.caption5",
+          "background": "zonlicht",
+          "flash": true,
+          "shake": true,
           "lines": [
             {
               "speaker": "Sultan",
