@@ -352,8 +352,32 @@ class CrossChecker {
         }
       });
       zone.instances.forEach((instance, n) => {
+        const ip = `${p}.instances[${n}]`;
         if (!pointInShape(zone.bounds, instance.entrance.x, instance.entrance.z)) {
-          this.issue(f, `${p}.instances[${n}].entrance`, 'entrance lies outside the zone');
+          this.issue(f, `${ip}.entrance`, 'entrance lies outside the zone');
+        }
+        const scene = instance.scene;
+        if (!scene) return;
+        if (!zone.scene)
+          this.issue(f, `${ip}.scene`, 'only a zone with a Blender scene can cut one out');
+        this.shape(f, `${ip}.scene.door`, scene.door);
+        this.shape(f, `${ip}.scene.exit.shape`, scene.exit.shape);
+        this.ref('cutscene', f, `${ip}.scene.cutscene`, scene.cutscene);
+        for (const box of [scene.region, scene.cut]) {
+          if (!box) continue;
+          if (box.min.x >= box.max.x || box.min.y >= box.max.y || box.min.z >= box.max.z) {
+            this.issue(f, `${ip}.scene`, 'a box needs min below max on every axis');
+          }
+        }
+        if (!inRegion(scene.region, scene.spawn.x, scene.spawn.z)) {
+          this.issue(f, `${ip}.scene.spawn`, 'spawn lies outside the region');
+        }
+        // Arriving on the door or the exit would send you straight back.
+        if (pointInShape(scene.exit.shape, scene.spawn.x, scene.spawn.z)) {
+          this.issue(f, `${ip}.scene.spawn`, 'spawn lies on the exit');
+        }
+        if (pointInShape(scene.door, scene.exit.to.x, scene.exit.to.z)) {
+          this.issue(f, `${ip}.scene.exit.to`, 'arrival outside lies on the door');
         }
       });
       zone.npcs.forEach((npcId, n) => this.ref('npc', f, `${p}.npcs[${n}]`, npcId));
@@ -491,6 +515,14 @@ class CrossChecker {
         }
         if (!zone.npcs.includes(npc.id)) {
           this.issue(f, `${p}.zone`, `zone "${zone.id}" does not list this NPC in its npcs`);
+        }
+        if (npc.instance) {
+          const region = zone.instances.find((entry) => entry.id === npc.instance)?.scene?.region;
+          if (!region) {
+            this.issue(f, `${p}.instance`, `zone "${zone.id}" has no instance "${npc.instance}"`);
+          } else if (!inRegion(region, npc.position.x, npc.position.z)) {
+            this.issue(f, `${p}.position`, `position lies outside instance "${npc.instance}"`);
+          }
         }
       }
     });
@@ -997,4 +1029,13 @@ class CrossChecker {
 
 function toEntry(id: string): { id: string } {
   return { id };
+}
+
+/** Is (x, z) inside a box's ground plan? */
+function inRegion(
+  box: { min: { x: number; z: number }; max: { x: number; z: number } },
+  x: number,
+  z: number,
+): boolean {
+  return x >= box.min.x && x <= box.max.x && z >= box.min.z && z <= box.max.z;
 }

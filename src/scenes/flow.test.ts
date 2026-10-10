@@ -83,7 +83,13 @@ describe('placeAtStart', () => {
   it('leaves an existing position alone (Continue)', () => {
     if (!data) throw new Error('data invalid');
     const save = createNewSave('en');
-    save.world = { zone: 'other', position: { x: 1, y: 2, z: 3 }, heading: 1, checkpoint: null };
+    save.world = {
+      zone: 'other',
+      instance: null,
+      position: { x: 1, y: 2, z: 3 },
+      heading: 1,
+      checkpoint: null,
+    };
     placeAtStart(save, data);
     expect(save.world.zone).toBe('other');
     expect(save.world.position).toEqual({ x: 1, y: 2, z: 3 });

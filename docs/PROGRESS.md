@@ -7,9 +7,9 @@
 | | |
 |---|---|
 | **Huidige fase** | Fase 3 – Je pad, Entrance Exam en gear (plan goedgekeurd 2026-10-10) |
-| **Status** | Stap 3.2 (ezel Biscuit) in een pull request. Fase 2 wacht nog op spelen en Meet 20 s op de pc |
-| **Volgende stap** | 3.3 (instances: Academy-hal en kelder van Sam) |
-| **Laatste sessie** | 2026-10-10: plan fase 3, stap 3.0, 3.1 en 3.2 |
+| **Status** | Stap 3.2 klaar. Op Bo's branch `greyhaven-zone-daynight`: main erin, één vijandsysteem, plekken in het Blender-Greyhaven opgemeten, stap 3.3 (instances: toren van Brink, kelder van Sam). Fase 2 wacht nog op spelen en Meet 20 s op de pc |
+| **Volgende stap** | Bo/Lucas testen PR #34 (plekken, instances, fps); daarna 3.4 (*Your Resolve*) |
+| **Laatste sessie** | 2026-10-11: Greyhaven-branch bijgewerkt, stap 3.3 |
 
 ### Open vragen
 
@@ -17,7 +17,8 @@
 |---|---|---|
 | 1 | Wat gebeurt er overdag met mobs die er 's nachts al zijn? (verdwijnen, wegvluchten, blijven?) | Ze **blijven** voorlopig staan (test in `NightSpawns.test.ts`). Eén regel in `Enemies.stepSpawning` als het anders moet |
 | 2 | Blijft Greyhaven altijd in het gouden uur, of krijgt de stad ook dag en nacht? (open vraag uit het spelconcept) | Staat op `"lighting": "cycle"` in `zones.json`; `"goldenHour"` is één woord in de data |
-| 3 | Kloppen de geschatte plekken in het Blender-Greyhaven? (NPC's, eerste-bezoek-plekken, trainingspoppen, veilige zone langs de muren, poort aan de oostkant) | Geschat vanaf een kaart van bovenaf; alleen data (`npcs.json`, `triggers.json`, `zones.json`) |
+| 3 | Kloppen de plekken in het Blender-Greyhaven? | **Opgemeten in het model** (2026-10-11): smidse (aambeeld + vuur), markt, Monastery, haven, Academy met trainingsveld, toren van Brink, kelder van Sam. Golden Kettle en Alchemy Lab zijn niet te herkennen (gewone huizen bij de markt), de Garden (binnentuin van het Monastery) is dicht, dus Rose staat aan de rivieroever ernaast. Alleen data |
+| 5 | Het model heeft geen echte landpoort: de stadsmuur is dicht behalve waar de rivier eronderdoor gaat | Bo: een poort in Blender maken? Daarna alleen data (`exits`, `city_gate`, `sultan_gate`, arena) |
 | 4 | Moet `player.glb` ook in de open wereld gebruikt worden? | Nu alleen in Greyhaven; in de open wereld nog het placeholder-poppetje |
 
 ---
@@ -457,6 +458,15 @@ Doel: na Sultan kies je in de Academy je pad (Sir Garrick, Master Brink of Wizar
   - **Getest** (Claude, in de ingebouwde browser; het venster stond verborgen, dus de game is stap voor stap aangestuurd en fps zegt hier niets): Greyhaven laadt (dev en productie-build); 2 s W = precies 8,00 m richting de camera, de hoogte volgt de trap omlaag; achteruit tegen de borstwering = na 1,5 m tegengehouden; nacht + testgebied = binnen 14 s 4 Green Slimes, allemaal buiten de veilige zone, 23–56 m van je af; schemer/dag/nacht zien er goed uit; High 's nachts 5 lantaarnlichten, overdag en op Mid 0; oost-uitgang → Greenwood (terrein laadt), terug Greyhaven in → aankomst buiten de oostmuur; 3× heen en weer zonder geheugengroei. 277 tests, lint, opmaak, typecheck en build slagen; grootste bestand 644 kB (Three.js, nu met GLTFLoader en BVH).
   - **Nog niet gemeten: fps op echte pc en iPhone** (zie testlijst in de pull request).
 
+- 3.3 Instances + Greyhaven-branch bijwerken (2026-10-11, op Bo's branch `greyhaven-zone-daynight`, PR #34):
+  - **Main erin gemerged** (fase 2 en stap 3.0–3.2) en de conflicten opgelost. **Eén vijandsysteem:** Bo's nachtmonsters hadden eigen code (eigen ronddwalen, eigen slime-model, eigen lijk-tijd). Nu zijn het gewone groepjes in de pool van `Enemies` (`night: true`), dus AI, aanvallen, splitsen, buit en tekenen zijn dezelfde als overdag. Weg: dubbele dwaal-code, `placeholder:big_slime`, `world.nightSpawning.corpseSeconds`.
+  - **Plekken opgemeten in `greyhaven.glb`** (bovenaanzicht + stralen in het model): Hilda bij de smidse (rood huis met schoorsteen, aambeeld en vuur ten zuiden van de markt; Bo had de smidse en The Golden Kettle omgedraaid), Fizzwick bij het leien huis met de ronde toren (Alchemy Lab), Bertha bij het rode huis oost van de markt (The Golden Kettle), Rose + `garden_plot` aan de rivieroever bij het Monastery (de binnentuin is dicht), Sir Garrick en de drie trainingspoppen op de drie zandcirkels van het trainingsveld in de Academy, het slime-erf op het grasveld binnen de paden ten zuiden van de rivier, Biscuit bij de markt.
+  - **Sultan-gevecht** verplaatst naar de oostmuur waar de weg langs de rivier eindigt (arena straal 14 op vlak gras, trigger `sultan_gate` op de weg ervoor); Sultan staat na het gevecht bij de muur.
+  - **Instances (stap 3.3):** **De toren van Master Brink** (paars dak, vier elementkristallen) en **de kelder van Wizard Sam** (onder de oostvleugel, met de ritueelcirkel) worden uit het Blender-model geknipt (`instances` in `zones.json`, `src/world/scene/SceneFilter.ts`). Door de torendeur of de keldertrap → laadscherm → alleen die plek is geladen, de stad is opgeruimd. De eerste keer een cutscene: Brink legt de vier elementen uit en dat geduld wordt beloond, Sam dat zijn magie van Lucael en Baelor komt en dat het een duistere weg is (EN en NL, `cutscenes.json`). Brink en Sam staan alleen in hun instance (`instance` in `npcs.json`). Uitgang: de deur uit of de trap op. De stad laat het interieur van de toren en de hele kelder weg. Save versie 7 (`world.instance`); herladen in een instance zet je weer daar. Event `instanceEntered`.
+  - Na het laden van Greyhaven worden gear, wie er is (Biscuit, Sultan) en questmarkeringen nu goed gezet (ging mis door het async laden).
+  - Getest: 385 tests, lint, opmaak, typecheck, build. Headless Chromium (software-rendering, ~1–8 fps, dus fps zegt niets): naar de torendeur lopen → toren laadt (17 meshes) → cutscene → Overslaan → Brink staat er → de deur uit → terug in de stad (161 meshes); keldertrap af → kelder (18 meshes) → cutscene; herladen in de kelder → trap op → terug in de oostvleugel; smidse met Hilda, geen Biscuit zonder quest; Greenwood met 42 vijanden. Geen fouten.
+  - Tijdelijke namen (alleen in data): Master Brink's Tower en Wizard Sam's Cellar (nieuw), Hilda Ironhand, Professor Fizzwick, Old Bertha, Sir Garrick, Marco the Merchant, Biscuit, Gold.
+
 ## Besluiten
 
 | Datum | Besluit | Waarom |
@@ -619,6 +629,11 @@ Doel: na Sultan kies je in de Academy je pad (Sir Garrick, Master Brink of Wizar
 | 2026-10-10 | Nachtmonsters verschijnen 15–70 m van de speler, elke 4 s één per gebied, dwalen 6 m rond (`world.nightSpawning`) | Voorstel: niet in je gezicht, niet ver weg waar je ze nooit ziet. Getallen in data |
 | 2026-10-10 | Het testspawngebied in Greyhaven staat buiten de oostmuur en is alleen actief in debugmodus (`testOnly`) | Opdracht: "alleen in testmodus een testspawngebied buiten de stadsmuren" |
 | 2026-10-10 | `public/zones/` staat in `.prettierignore` | Blender-exports worden niet herschreven; een nieuwe export kan er zo overheen |
+| 2026-10-11 | Toren van Brink en kelder van Sam zijn instances die uit het Blender-model van Greyhaven worden geknipt (dozen in `zones.json`), in plaats van de Academy-hal | Keuze van Bo/Lucas ("uitknippen als instance"). Bij een nieuwe export uit Blender blijft het knippen werken, zolang de plek niet verschuift |
+| 2026-10-11 | De stad houdt de buitenkant van de toren; alleen het interieur (boeken, kaarsen, kristallen, vloeren) gaat eruit. De kelder gaat er helemaal uit | Anders zit er een gat in de skyline; de kelder ligt onder de grond |
+| 2026-10-11 | Nachtmonsters zijn groepjes in de gewone vijandenpool (`night: true`) | Verzoek: geen dubbele vijandcode. Zelfde AI, buit en tekenen als overdag |
+| 2026-10-11 | Sultan-arena straal 14 (was 15) | Er is maar zoveel vlak gras binnen de muur bij de weg naar het oosten |
+| 2026-10-11 | Smidse = rood huis met schoorsteen, aambeeld en vuur ten zuiden van de markt; Golden Kettle = rood huis oost van de markt; Alchemy Lab = leien huis met ronde toren | Uit het model af te lezen (vuur + aambeeld). De andere twee zijn een keuze: zeg het als het andersom moet |
 
 ## Sessielog
 
@@ -654,3 +669,7 @@ Doel: na Sultan kies je in de Academy je pad (Sir Garrick, Master Brink of Wizar
 - Stap 3.1 gebouwd: gear in 6 slots met zeldzaamheid en stats, draaglast zoals Elden Ring (licht/middel/zwaar/overbelast), aan- en uitdoen in de tas, gear als buit en bij Marco, hoed en amulet op het poppetje, cheat "+ alle gear". 349 tests. Tijdelijke namen (nieuw, alleen in data): de 13 gear-namen. Volgende stap: 3.2 (Biscuit).
 - Stap 3.2 gebouwd: ezel Biscuit via Marco's quest na Sultan, loopt mee, pakdier-tas met 60 kg (opladen/pakken, gedragen gear blijft bij jou, alleen buiten gevecht), haak "wacht bij de ingang", save versie 6, cheat "+ pakdier". 358 tests. Tijdelijke namen gebruikt (alleen in data): Biscuit, Marco the Merchant; nieuw: de quest *A Friend for the Road*. Volgende stap: 3.3 (instances).
 - Extra taak van Bo: Greyhaven uit Blender als eerste zone, dag-en-nachtcyclus (40 min, echte klok), mobs bij schemer en nacht buiten NPC-gebieden. Vragen aan Bo: Node.js installeren (ja), losse zone + poort (ja), NPC's geschat verhuizen (ja). Gebouwd en getest (zie fase-log). Gevonden en opgelost tijdens het testen: de stad stond 1792 m verschoven (twee keer de floating origin), en "onder water" rekende met de hoogste rivier in plaats van de zee. Lokaal testen in deze sessie: de dev-server weigerde de terrein-worker door het Windows-AppData-pad van de sessiemap; met de productie-build (`npm run preview`) werkt alles. Open: fps op echte pc en iPhone, de geschatte plekken nalopen, open vragen 1–4 bovenaan. Tijdelijke namen in deze taak (alleen in data): Brother Ansel, Marco the Merchant, Hilda Ironhand, Professor Fizzwick, Old Bertha, Sir Garrick, Treewardens, de elfenstad.
+
+### 2026-10-11
+- Op verzoek (Bo/Lucas): PR #34 niet mergen, wel bijwerken op Bo's branch. Main erin gemerged, één vijandsysteem, NPC's/plekken/Sultan-gevecht opgemeten in het Blender-model, toren van Brink en kelder van Sam als instances met cutscene (stap 3.3). Save versie 7. 385 tests, headless Chromium zonder fouten. Open: fps meten op pc en iPhone, een echte landpoort in het model (open vraag 5).
+

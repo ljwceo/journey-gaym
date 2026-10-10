@@ -31,6 +31,8 @@ export type DayNightFile = GameData['daynight'];
 export type DayLook = DayNightFile['looks'][number];
 export type SceneDef = NonNullable<Zone['scene']>;
 export type NightSpawnDef = NonNullable<Zone['nightSpawns']>[number];
+export type InstanceDef = Zone['instances'][number];
+export type InstanceSceneDef = NonNullable<InstanceDef['scene']>;
 export type Shape = z.infer<typeof shapeSchema>;
 export type { Condition } from './schemas';
 export type QuestObjective = QuestDef['objectives'][number];

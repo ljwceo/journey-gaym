@@ -39,35 +39,35 @@
       "id": "forge",
       "zone": "greyhaven",
       "kind": "place",
-      "shape": { "type": "circle", "x": -1791, "z": -52.6, "radius": 9 },
+      "shape": { "type": "circle", "x": -1817.5, "z": 5, "radius": 9 },
       "firstVisitText": "place.forge"
     },
     {
       "id": "alchemy_lab",
       "zone": "greyhaven",
       "kind": "place",
-      "shape": { "type": "circle", "x": -1843.8, "z": -64.9, "radius": 9 },
+      "shape": { "type": "circle", "x": -1839, "z": -64.5, "radius": 9 },
       "firstVisitText": "place.alchemy_lab"
     },
     {
       "id": "golden_kettle",
       "zone": "greyhaven",
       "kind": "place",
-      "shape": { "type": "circle", "x": -1820.9, "z": 7.4, "radius": 9 },
+      "shape": { "type": "circle", "x": -1784.5, "z": -51.5, "radius": 8 },
       "firstVisitText": "place.golden_kettle"
     },
     {
       "id": "garden",
       "zone": "greyhaven",
       "kind": "place",
-      "shape": { "type": "circle", "x": -1641, "z": 31.2, "radius": 14 },
+      "shape": { "type": "circle", "x": -1785, "z": 45.5, "radius": 10 },
       "firstVisitText": "place.garden"
     },
     {
       "id": "garden_plot",
       "zone": "greyhaven",
       "kind": "place",
-      "shape": { "type": "circle", "x": -1780, "z": 215, "radius": 2.5 }
+      "shape": { "type": "circle", "x": -1781, "z": 45, "radius": 2.5 }
     },
     {
       "id": "academy",
@@ -80,7 +80,7 @@
       "id": "training_field",
       "zone": "greyhaven",
       "kind": "place",
-      "shape": { "type": "rect", "minX": -1713, "minZ": -87, "maxX": -1683, "maxZ": -57 },
+      "shape": { "type": "rect", "minX": -1712, "minZ": -90.8, "maxX": -1692.3, "maxZ": -46.5 },
       "firstVisitText": "place.training_field"
     },
     {
@@ -108,7 +108,7 @@
       "id": "sultan_gate",
       "zone": "greyhaven",
       "kind": "place",
-      "shape": { "type": "rect", "minX": -1546, "minZ": -11, "maxX": -1524, "maxZ": 11 }
+      "shape": { "type": "rect", "minX": -1551, "minZ": -46, "maxX": -1537, "maxZ": -34 }
     },
     {
       "id": "city_gate",

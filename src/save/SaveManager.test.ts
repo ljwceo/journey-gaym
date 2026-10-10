@@ -41,6 +41,7 @@ function sampleSave() {
   };
   save.world = {
     zone: 'greyhaven',
+    instance: null,
     position: { x: 1, y: 2, z: 3 },
     heading: 0.5,
     checkpoint: null,
@@ -173,6 +174,21 @@ describe('migrate', () => {
     // Everything else stays as it was.
     expect(result.save.settings.volume).toBe(0.3);
     expect(result.save.character?.name).toBe('Zoë42');
+  });
+
+  it('upgrades a version 6 save: outside every instance; position stays', () => {
+    const current = sampleSave();
+    const world: Record<string, unknown> = { ...current.world };
+    delete world.instance;
+    const v6 = { ...current, version: 6, world };
+    const storage = new MemoryStorage();
+    storage.setItem(SAVE_KEY, JSON.stringify(v6));
+    const result = new SaveManager(storage).load();
+    expect(result.status).toBe('ok');
+    if (result.status !== 'ok') return;
+    expect(result.save.version).toBe(SAVE_VERSION);
+    expect(result.save.world.instance).toBeNull();
+    expect(result.save.world.position).toEqual({ x: 1, y: 2, z: 3 });
   });
 
   it('upgrades a version 2 save: level 1, no XP, full HP and mana; gold and bag stay', () => {

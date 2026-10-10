@@ -1,7 +1,8 @@
 /**
  * Interiors and dungeons (e.g. De Wortelgrotten) are separate "instances" with a short loading
- * screen, unlike the seamless open world. Only the interface exists in phase 1; the world
- * scene implements it and refuses every instance until they are built.
+ * screen, unlike the seamless open world. The world scene implements it: an instance with a
+ * `scene` block is cut out of its zone's Blender scene (Master Brink's tower, Wizard Sam's
+ * cellar); the others (De Wortelgrotten) stay closed until they are built.
  */
 export interface InstanceHost {
   /** The instance the player is in, or null in the open world. */

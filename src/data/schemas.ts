@@ -148,6 +148,40 @@ const sceneSchema = z.strictObject({
   ),
 });
 
+/** A box in world coordinates (m); a triangle counts as inside when all its corners are. */
+const sceneBoxSchema = z.strictObject({
+  min: z.strictObject({ x: coord, y: coord, z: coord }),
+  max: z.strictObject({ x: coord, y: coord, z: coord }),
+});
+
+/** Where you stand when you arrive (in an instance or back outside), facing `headingDegrees`. */
+const arrivalSchema = z.strictObject({
+  x: coord,
+  y: coord,
+  z: coord,
+  headingDegrees: range(-360, 360),
+});
+
+/**
+ * An instance cut out of the zone's Blender scene (Master Brink's tower, Wizard Sam's cellar):
+ * walking into `door` loads only the triangles inside `region` as a separate map (loading
+ * screen); walking into `exit` there brings you back to `exit.to`. In the zone itself the
+ * triangles inside `cut` (only `cut.materials`, when given) are left out.
+ */
+const instanceSceneSchema = z.strictObject({
+  door: shapeSchema,
+  region: z.strictObject({
+    ...sceneBoxSchema.shape,
+    /** Materials left out of the instance (e.g. the terrain above a cellar). */
+    exclude: z.array(name),
+  }),
+  cut: optional(z.strictObject({ ...sceneBoxSchema.shape, materials: optional(z.array(name)) })),
+  spawn: arrivalSchema,
+  exit: z.strictObject({ shape: shapeSchema, to: arrivalSchema }),
+  /** Plays the first time you come in (cutscenes.json, `playOnce`). */
+  cutscene: optional(id),
+});
+
 /** Monsters that appear at dusk and at night (daynight.json `spawnPhases`). */
 const nightSpawnSchema = z.strictObject({
   id,
@@ -232,7 +266,16 @@ const zoneSchema = z.strictObject({
   safeZones: optional(z.array(z.strictObject({ id, shape: shapeSchema }))),
   /** Areas where monsters appear at dusk and at night. */
   nightSpawns: optional(z.array(nightSpawnSchema)),
-  instances: z.array(z.strictObject({ id, name, entrance: pointSchema, enabled: z.boolean() })),
+  instances: z.array(
+    z.strictObject({
+      id,
+      name,
+      entrance: pointSchema,
+      enabled: z.boolean(),
+      /** Built from this zone's Blender scene (zones with `scene` only). */
+      scene: optional(instanceSceneSchema),
+    }),
+  ),
   /** Props (trees, rocks) scattered over the zone; `perHectare` before the quality density. */
   scatter: optional(
     z.array(
@@ -316,6 +359,8 @@ const npcSchema = z.strictObject({
   name,
   role: id,
   zone: id,
+  /** Lives inside this instance of its zone (zones.json `instances`), not in the zone itself. */
+  instance: optional(id),
   position: pointSchema,
   /** talk (dialogue), pet (Pringle), pack (opens the pack animal's bag: Biscuit), none. */
   interaction: z.enum(['talk', 'pet', 'pack', 'none']),

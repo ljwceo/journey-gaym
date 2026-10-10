@@ -91,10 +91,7 @@
       "name": "Brother Ansel",
       "role": "priest",
       "zone": "greyhaven",
-      "position": {
-        "x": -1795.5,
-        "z": 48.5
-      },
+      "position": { "x": -1795.5, "z": 48.5 },
       "interaction": "talk",
       "behavior": "static",
       "dialogue": ["npc.brother_ansel.1", "npc.brother_ansel.2", "npc.brother_ansel.3"]
@@ -104,10 +101,7 @@
       "name": "Marco the Merchant",
       "role": "merchant",
       "zone": "greyhaven",
-      "position": {
-        "x": -1826,
-        "z": -37
-      },
+      "position": { "x": -1826, "z": -37 },
       "interaction": "talk",
       "behavior": "static",
       "dialogue": ["npc.marco.1", "npc.marco.2"],
@@ -145,62 +139,52 @@
       "name": "Hilda Ironhand",
       "role": "smith",
       "zone": "greyhaven",
-      "position": {
-        "x": -1791,
-        "z": -50
-      },
+      "position": { "x": -1814, "z": 0.8 },
       "interaction": "talk",
       "behavior": "static",
-      "dialogue": ["npc.hilda.1", "npc.hilda.2"]
+      "dialogue": ["npc.hilda.1", "npc.hilda.2"],
+      "heading": 180
     },
     {
       "id": "fizzwick",
       "name": "Professor Fizzwick",
       "role": "alchemist",
       "zone": "greyhaven",
-      "position": {
-        "x": -1843,
-        "z": -62
-      },
+      "position": { "x": -1843, "z": -59.5 },
       "interaction": "talk",
       "behavior": "static",
-      "dialogue": ["npc.fizzwick.1", "npc.fizzwick.2"]
+      "dialogue": ["npc.fizzwick.1", "npc.fizzwick.2"],
+      "heading": 0
     },
     {
       "id": "rose",
       "name": "Rose the Herbalist",
       "role": "herbalist",
       "zone": "greyhaven",
-      "position": {
-        "x": -1641,
-        "z": 34
-      },
+      "position": { "x": -1788, "z": 45.5 },
       "interaction": "talk",
       "behavior": "static",
-      "dialogue": ["npc.rose.1", "npc.rose.2"]
+      "dialogue": ["npc.rose.1", "npc.rose.2"],
+      "heading": 0
     },
     {
       "id": "bertha",
       "name": "Old Bertha",
       "role": "innkeeper",
       "zone": "greyhaven",
-      "position": {
-        "x": -1821,
-        "z": 10
-      },
+      "position": { "x": -1784.5, "z": -44.5 },
       "interaction": "talk",
       "behavior": "static",
-      "dialogue": ["npc.bertha.1", "npc.bertha.2", "npc.bertha.3"]
+      "dialogue": ["npc.bertha.1", "npc.bertha.2", "npc.bertha.3"],
+      "heading": 0
     },
     {
       "id": "master_brink",
       "name": "Master Brink",
       "role": "teacher",
       "zone": "greyhaven",
-      "position": {
-        "x": -1660,
-        "z": -95
-      },
+      "instance": "brink_tower",
+      "position": { "x": -1697.5, "z": -112.3 },
       "interaction": "talk",
       "behavior": "static",
       "dialogue": ["npc.master_brink.1", "npc.master_brink.2"],
@@ -209,43 +193,38 @@
           "condition": "readyToChoosePath",
           "lines": ["npc.master_brink.ready"]
         }
-      ]
+      ],
+      "heading": 45
     },
     {
       "id": "wizard_sam",
       "name": "Wizard Sam",
       "role": "dark_teacher",
       "zone": "greyhaven",
-      "position": {
-        "x": -1672,
-        "z": -80
-      },
+      "instance": "sam_cellar",
+      "position": { "x": -1638.5, "z": -63 },
       "interaction": "talk",
       "behavior": "static",
-      "dialogue": ["npc.wizard_sam.1", "npc.wizard_sam.2"]
+      "dialogue": ["npc.wizard_sam.1", "npc.wizard_sam.2"],
+      "heading": 210
     },
     {
       "id": "sir_garrick",
       "name": "Sir Garrick",
       "role": "swordmaster",
       "zone": "greyhaven",
-      "position": {
-        "x": -1698,
-        "z": -66
-      },
+      "position": { "x": -1699, "z": -62 },
       "interaction": "talk",
       "behavior": "static",
-      "dialogue": ["npc.sir_garrick.1", "npc.sir_garrick.2"]
+      "dialogue": ["npc.sir_garrick.1", "npc.sir_garrick.2"],
+      "heading": 270
     },
     {
       "id": "pringle",
       "name": "Pringle",
       "role": "companion",
       "zone": "greyhaven",
-      "position": {
-        "x": -1799,
-        "z": 55
-      },
+      "position": { "x": -1799, "z": 55 },
       "interaction": "pet",
       "behavior": "follow",
       "follow": {
@@ -264,13 +243,10 @@
       "name": "Sultan",
       "role": "catfolk",
       "zone": "greyhaven",
-      "position": {
-        "x": -1507,
-        "z": 7
-      },
+      "position": { "x": -1539, "z": -46.5 },
       "interaction": "talk",
       "behavior": "static",
-      "heading": -110,
+      "heading": 270,
       "presentWhen": "sultanDefeated",
       "dialogue": ["npc.sultan.1", "npc.sultan.2", "npc.sultan.3"]
     },
@@ -279,7 +255,7 @@
       "name": "Biscuit",
       "role": "pack_animal",
       "zone": "greyhaven",
-      "position": { "x": -1812, "z": 126 },
+      "position": { "x": -1822, "z": -30 },
       "interaction": "pack",
       "behavior": "follow",
       "follow": {

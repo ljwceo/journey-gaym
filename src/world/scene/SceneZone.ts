@@ -26,6 +26,7 @@ import type { Ground } from '../Ground';
 import type { CameraOccluder } from '../StructureLayer';
 import { createToonMaterial, type SharedLightUniforms } from '../../render/toon/ToonMaterial';
 import type { BlenderMaterial, SceneAssets } from './SceneAssets';
+import { filterGeometry, keepsPoint, keepsTriangle, type SceneFilter } from './SceneFilter';
 
 /** Longest horizontal move (m) before walls and the ground are checked again (no tunneling). */
 const SUBSTEP = 0.2;
@@ -65,6 +66,9 @@ export interface ScenePoint extends PointXZ {
  * Walking: a capsule that only pushes sideways (walls), plus a ray down from step height for the
  * ground, so stairs simply work; falling with gravity off ledges. Everything here takes and
  * returns world coordinates; inside, positions are relative to the Blender origin (`offset`).
+ *
+ * With a `filter` only part of the scene is built: an instance (Master Brink's tower) keeps only
+ * its region, and the zone leaves out what was cut out for its instances.
  */
 export class SceneZone implements Ground, Mover, CameraOccluder {
   readonly group = new Group();
@@ -108,6 +112,7 @@ export class SceneZone implements Ground, Mover, CameraOccluder {
     assets: SceneAssets,
     private readonly shared: SharedLightUniforms,
     color: (token: string) => number,
+    filter: SceneFilter | null = null,
   ) {
     this.offset = new Vector3(def.offset.x, def.offset.y, def.offset.z);
     this.group.name = 'scene-zone';
@@ -118,15 +123,30 @@ export class SceneZone implements Ground, Mover, CameraOccluder {
     this.maxX = tb[1];
     this.minZ = -tb[3];
     this.maxZ = -tb[2];
+    const keepBox = filter?.keep?.box;
+    if (keepBox) {
+      // An instance: its region is the whole map.
+      this.minX = keepBox.minX;
+      this.maxX = keepBox.maxX;
+      this.minZ = keepBox.minZ;
+      this.maxZ = keepBox.maxZ;
+    }
 
     const root = assets.world.scene;
     root.updateMatrixWorld(true);
+    const position = new Vector3();
     const statics: Mesh[] = [];
     const treeParts = new Map<string, { mesh: Mesh; matrices: Matrix4[] }>();
     root.traverse((object) => {
       if (!(object instanceof Mesh)) return;
       if (isTree(object, def.treePrefix)) {
         const key = materialName(object);
+        if (
+          filter &&
+          !keepsPoint(filter, key, position.setFromMatrixPosition(object.matrixWorld))
+        ) {
+          return;
+        }
         const part = treeParts.get(key) ?? { mesh: object, matrices: [] as Matrix4[] };
         part.matrices.push(object.matrixWorld.clone());
         treeParts.set(key, part);
@@ -141,13 +161,21 @@ export class SceneZone implements Ground, Mover, CameraOccluder {
     for (const source of statics) {
       const name = materialName(source);
       const blender = info.materials[name];
+      const geometry = filter
+        ? filterGeometry(source.geometry as BufferGeometry, source.matrixWorld, (a, b, c) =>
+            keepsTriangle(filter, name, a, b, c),
+          )
+        : (source.geometry as BufferGeometry);
+      if (!geometry) continue;
       const mesh = new Mesh(
-        source.geometry,
+        geometry,
         this.materialFor(name, source.material, blender, assets, color),
       );
       mesh.matrixAutoUpdate = false;
       mesh.matrix.copy(source.matrixWorld);
+      mesh.matrixWorld.copy(source.matrixWorld);
       this.geometries.add(source.geometry as BufferGeometry);
+      this.geometries.add(geometry);
       if (name === def.waterMaterial) {
         mesh.renderOrder = 2;
         // The water mesh also holds the river running down from the hills; its lowest point is
@@ -155,15 +183,14 @@ export class SceneZone implements Ground, Mover, CameraOccluder {
         seaLevel = Math.min(seaLevel, new Box3().setFromObject(source).min.y);
       }
       this.group.add(mesh);
-      if (name === def.lanternMaterial) this.collectLanterns(source);
+      if (name === def.lanternMaterial) this.collectLanterns(source, name, filter);
       const glowing = blender?.kind === 'emit';
-      if (name !== def.waterMaterial && !noCollision.has(name) && !glowing) solid.push(source);
+      if (name !== def.waterMaterial && !noCollision.has(name) && !glowing) solid.push(mesh);
     }
     this.waterY = (Number.isFinite(seaLevel) ? seaLevel : 0) + this.offset.y;
 
     // Trees: one InstancedMesh per material per cell, so cells outside the view are skipped.
     const cell = def.treeCellSize;
-    const position = new Vector3();
     for (const [name, part] of treeParts) {
       const material = this.materialFor(
         name,
@@ -417,7 +444,7 @@ export class SceneZone implements Ground, Mover, CameraOccluder {
   }
 
   /** Lantern glow pieces → one point per lantern (merged when close together). */
-  private collectLanterns(mesh: Mesh): void {
+  private collectLanterns(mesh: Mesh, name: string, filter: SceneFilter | null): void {
     const positions = mesh.geometry.getAttribute('position');
     if (!positions) return;
     const sums = new Map<string, Vector4>();
@@ -433,7 +460,8 @@ export class SceneZone implements Ground, Mover, CameraOccluder {
       sums.set(key, sum);
     }
     for (const sum of sums.values()) {
-      this.lanterns.push(new Vector3(sum.x / sum.w, sum.y / sum.w, sum.z / sum.w));
+      const lantern = new Vector3(sum.x / sum.w, sum.y / sum.w, sum.z / sum.w);
+      if (!filter || keepsPoint(filter, name, lantern)) this.lanterns.push(lantern);
     }
   }
 

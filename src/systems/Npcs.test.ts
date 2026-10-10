@@ -335,18 +335,20 @@ describe('Npcs presence (Pringle becomes Sultan)', () => {
 
   it('has Pringle and no Sultan before the fight, and the other way round after it', () => {
     const list = npcs();
+    const spot = list.byId('sultan')?.def.position;
+    if (!spot) throw new Error('missing Sultan');
     const before = { level: 3, completedQuests: new Set<string>() };
     list.refreshPresence(conditions, before);
-    list.update(DT, at(-1510, 5, 0), flatWorld, null);
+    list.update(DT, at(spot.x - 2, spot.z - 1, 0), flatWorld, null);
     expect(shownIds(list)).toContain('pringle');
     expect(shownIds(list)).not.toContain('sultan');
 
     const after = { level: 3, completedQuests: new Set(['defeat_sultan']) };
     list.refreshPresence(conditions, after);
-    list.update(DT, at(-1510, 5, 0), flatWorld, null);
+    list.update(DT, at(spot.x - 2, spot.z - 1, 0), flatWorld, null);
     expect(shownIds(list)).toContain('sultan');
     expect(shownIds(list)).not.toContain('pringle');
-    expect(list.nearestInteractable(-1508, 6)?.id).toBe('sultan');
+    expect(list.nearestInteractable(spot.x, spot.z + 1)?.id).toBe('sultan');
   });
 
   it('hides NPCs for a moment (Pringle during the fight) and brings them back', () => {

@@ -27,7 +27,9 @@ import type { DayPhase } from '../services/DayNightService';
 import type { Mover } from '../systems/Movement';
 import { disposeSceneAssets, loadSceneAssets, type SceneAssets } from '../world/scene/SceneAssets';
 import { buildPlayerModel, type ScenePlayerModel } from '../world/scene/ScenePlayerModel';
+import { instanceFilter, zoneFilter } from '../world/scene/SceneFilter';
 import { SceneZone } from '../world/scene/SceneZone';
+import { ComicCutscene } from '../ui/ComicCutscene';
 import { pointInShape } from '../world/Shapes';
 import { Random } from '../core/Random';
 import { Input, type LookDelta } from '../core/Input';
@@ -130,7 +132,7 @@ import { Triggers } from '../world/Triggers';
 import { type StreamerStats, WorldStreamer } from '../world/WorldStreamer';
 import { ZoneLocator } from '../world/ZoneLocator';
 import { normalizeAppearance } from './creator';
-import type { SceneDef, Zone } from '../data/types';
+import type { InstanceDef, SceneDef, Zone } from '../data/types';
 import { placeAtStart } from './flow';
 
 const DEG = Math.PI / 180;
@@ -216,7 +218,14 @@ const NOT_DYING = -1;
  * chunk info, building labels and a cheat menu (F6) for faster testing.
  */
 export class WorldState implements GameState, InstanceHost {
-  readonly currentInstance: string | null = null;
+  /** The instance being played (Master Brink's tower), null in a zone or the open world. */
+  private instanceDef: InstanceDef | null = null;
+  /** The first-visit cutscene of an instance, while it plays. */
+  private comic: ComicCutscene | null = null;
+
+  get currentInstance(): string | null {
+    return this.instanceDef?.id ?? null;
+  }
 
   private scene: Scene | null = null;
   private worldRoot: Group | null = null;
@@ -429,6 +438,12 @@ export class WorldState implements GameState, InstanceHost {
 
     this.travelling = false;
     const zone = data.zones.zones.find((entry) => entry.id === session.world.zone);
+    // Inside an instance of a Blender-built zone (a reload keeps you there)?
+    const instance = zone?.scene
+      ? zone.instances.find((entry) => entry.id === session.world.instance && entry.scene)
+      : undefined;
+    this.instanceDef = instance ?? null;
+    session.world.instance = this.instanceDef?.id ?? null;
     // A Blender-built zone loads first (loading screen); the open world builds right away.
     if (zone?.scene) this.loadSceneZone(data, zone);
     else this.buildScene(data, null);
@@ -464,7 +479,8 @@ export class WorldState implements GameState, InstanceHost {
     this.talkingTo = null;
     this.targetNpc = null;
     this.iconLabelFor = null;
-    this.showZoneName(session.world.zone);
+    if (this.instanceDef) this.hud.showZone(this.instanceDef.name);
+    else this.showZoneName(session.world.zone);
 
     this.cheatPanel = new CheatPanel(
       ctx,
@@ -565,6 +581,8 @@ export class WorldState implements GameState, InstanceHost {
 
   exit(): void {
     this.ctx.quality.setMeasuring(false);
+    this.comic?.dispose();
+    this.comic = null;
     // A zone still loading is thrown away when it arrives.
     this.loadToken++;
     this.hideLoading();
@@ -706,7 +724,7 @@ export class WorldState implements GameState, InstanceHost {
     // Position first: entering a zone autosaves, and that save must have the new position.
     this.syncSave();
     if (sceneZone) {
-      if (this.checkSceneExits()) return;
+      if (this.checkSceneExits() || this.checkInstanceDoors()) return;
     } else if (this.checkZone()) {
       return;
     }
@@ -1104,17 +1122,78 @@ export class WorldState implements GameState, InstanceHost {
     this.gateBlocked = true;
   }
 
-  /** Instances (interiors, dungeons) come in a later phase; every entrance is still closed. */
+  /**
+   * Goes into an instance of the Blender-built zone you are in (through its door): the save
+   * remembers it, then the world is built again with only the instance's part of the scene
+   * (loading screen). False when there is no such instance.
+   */
   enterInstance(id: string): boolean {
-    const exists = this.ctx.data?.zones.zones.some((zone) =>
-      zone.instances.some((instance) => instance.id === id && instance.enabled),
-    );
-    if (exists) this.ctx.reportProblem(`Instance "${id}" is enabled but not built yet`);
+    const session = this.ctx.session;
+    const instance = this.sceneZoneDef?.instances.find((entry) => entry.id === id);
+    const scene = instance?.scene;
+    if (!session || !instance?.enabled || !scene || this.travelling) return false;
+    this.travelling = true;
+    session.world.instance = id;
+    session.world.position = { x: scene.spawn.x, y: scene.spawn.y, z: scene.spawn.z };
+    session.world.heading = scene.spawn.headingDegrees * DEG;
+    this.dialog?.close();
+    this.ctx.events.emit('instanceEntered', { instanceId: id });
+    this.ctx.persist();
+    this.ctx.goto('world');
+    return true;
+  }
+
+  /** Back to the zone, just outside the instance's door (loading screen). */
+  exitInstance(): void {
+    const session = this.ctx.session;
+    const scene = this.instanceDef?.scene;
+    if (!session || !scene || this.travelling) return;
+    this.travelling = true;
+    const to = scene.exit.to;
+    session.world.instance = null;
+    session.world.position = { x: to.x, y: to.y, z: to.z };
+    session.world.heading = to.headingDegrees * DEG;
+    this.dialog?.close();
+    this.ctx.persist();
+    this.ctx.goto('world');
+  }
+
+  /** In a zone: walking into an instance's door goes in. In an instance: its exit goes out. */
+  private checkInstanceDoors(): boolean {
+    const player = this.player;
+    if (!player || this.cheats.fly) return false;
+    const s = player.state;
+    const inside = this.instanceDef?.scene;
+    if (inside) {
+      if (!pointInShape(inside.exit.shape, s.x, s.z)) return false;
+      this.exitInstance();
+      return true;
+    }
+    for (const instance of this.sceneZoneDef?.instances ?? []) {
+      const door = instance.scene?.door;
+      if (door && pointInShape(door, s.x, s.z) && this.enterInstance(instance.id)) return true;
+    }
     return false;
   }
 
-  exitInstance(): void {
-    // Nothing to leave yet: the player is always in the open world.
+  /** The first time in an instance: its cutscene (Master Brink explains his magic). */
+  private playInstanceCutscene(): void {
+    const session = this.ctx.session;
+    const id = this.instanceDef?.scene?.cutscene;
+    const cutscene = this.ctx.data?.cutscenes.cutscenes.find((entry) => entry.id === id);
+    if (!session || !id || !cutscene || session.seenCutscenes.includes(id) || this.comic) return;
+    this.setCutscenePlaying(true);
+    this.comic = new ComicCutscene(
+      cutscene,
+      (key) => this.ctx.i18n.t(key),
+      () => {
+        this.comic = null;
+        if (!session.seenCutscenes.includes(id)) session.seenCutscenes.push(id);
+        this.ctx.persist();
+        this.setCutscenePlaying(false);
+      },
+    );
+    this.ctx.ui.append(this.comic.root);
   }
 
   /** NPCs move, the conversation ends when you are far away, the interaction target updates. */
@@ -1392,6 +1471,19 @@ export class WorldState implements GameState, InstanceHost {
   }
 
   /** What the boss fight may use from this scene. */
+  /** A cutscene starts or ends: the world waits, the mouse is freed, talking stops. */
+  private setCutscenePlaying(playing: boolean): void {
+    this.cutscenePlaying = playing;
+    this.input?.releaseAll();
+    // The mouse stays free afterwards: one click captures it again ("click to look
+    // around"). Capturing it by itself can turn the camera with a jump.
+    if (playing) {
+      this.input?.releasePointerLock();
+      this.dialog?.close();
+      this.hud?.setInteraction(null, 0, 0, false);
+    }
+  }
+
   private encounterHost(): ConstructorParameters<typeof BossEncounter>[0] {
     return {
       ctx: this.ctx,
@@ -1403,17 +1495,7 @@ export class WorldState implements GameState, InstanceHost {
         this.refreshNpcPresence();
       },
       placePlayer: (x, z, heading) => this.placePlayer(x, z, heading),
-      setCutscenePlaying: (playing) => {
-        this.cutscenePlaying = playing;
-        this.input?.releaseAll();
-        // The mouse stays free afterwards: one click captures it again ("click to look
-        // around"). Capturing it by itself can turn the camera with a jump.
-        if (playing) {
-          this.input?.releasePointerLock();
-          this.dialog?.close();
-          this.hud?.setInteraction(null, 0, 0, false);
-        }
-      },
+      setCutscenePlaying: (playing) => this.setCutscenePlaying(playing),
       canStart: () =>
         !this.paused && this.deathTimer === NOT_DYING && !this.dialog?.isOpen && !this.cheats.fly,
       floatText: (x, y, z, text) => this.damageNumbers?.spawnText(x, y, z, text, 'dodged'),
@@ -1877,6 +1959,7 @@ export class WorldState implements GameState, InstanceHost {
     if (!session || this.travelling) return;
     this.travelling = true;
     session.world.zone = zoneId;
+    session.world.instance = null;
     // A Blender-built zone finds its ground from above; the open world from its terrain.
     session.world.position = { x, y: ARRIVE_FROM_ABOVE, z };
     session.world.heading = heading;
@@ -1893,7 +1976,7 @@ export class WorldState implements GameState, InstanceHost {
     const def = zone.scene;
     if (!def) return;
     const token = ++this.loadToken;
-    this.showLoading(zone.name);
+    this.showLoading(this.instanceDef?.name ?? zone.name);
     loadSceneAssets(def, publicUrl(''), __BUILD_ID__, (fraction) => this.setLoading(fraction))
       .then((assets) => {
         if (token !== this.loadToken) {
@@ -1902,10 +1985,17 @@ export class WorldState implements GameState, InstanceHost {
         }
         this.sceneAssets = assets;
         this.buildScene(data, zone);
+        // enter() ran before the player and NPCs existed (this zone loads async): gear,
+        // who is present (Biscuit, Sultan) and quest markers are set now.
+        this.applyGear(false);
+        this.updatePlayerGear();
+        this.refreshNpcPresence();
+        this.refreshQuestMarkers();
         if (this.labels) this.ctx.ui.append(this.labels.root);
         this.hideLoading();
         // Building took a while; measuring frames for the auto preset starts now.
         this.ctx.quality.setMeasuring(!this.paused);
+        this.playInstanceCutscene();
       })
       .catch((error: unknown) => {
         if (token !== this.loadToken) return;
@@ -2133,7 +2223,7 @@ export class WorldState implements GameState, InstanceHost {
     this.encounter?.abort();
     const heading = (spawn.headingDegrees ?? 0) * DEG;
     if (zone.scene || this.sceneZone) {
-      if (zone.id !== this.sceneZoneDef?.id) {
+      if (zone.id !== this.sceneZoneDef?.id || this.instanceDef) {
         this.travel(zone.id, spawn.x, spawn.z, heading);
         return;
       }
@@ -2293,9 +2383,11 @@ export class WorldState implements GameState, InstanceHost {
     // A Blender-built zone is drawn around its own origin (never shifted while inside).
     this.origin.reset(def ? def.offset.x : spawn.x, def ? def.offset.z : spawn.z);
     // Places, checkpoints, NPCs and monsters of the world being played only.
-    const playedZones = data.zones.zones.filter((entry) =>
-      sceneZone ? entry.id === sceneZone.id : !entry.scene,
-    );
+    // An instance has none of these (only its own NPCs).
+    const instance = sceneZone ? this.instanceDef : null;
+    const playedZones = instance
+      ? []
+      : data.zones.zones.filter((entry) => (sceneZone ? entry.id === sceneZone.id : !entry.scene));
     const playedIds = new Set(playedZones.map((entry) => entry.id));
     this.triggers = new Triggers(
       data.triggers.triggers.filter((trigger) => playedIds.has(trigger.zone)),
@@ -2386,8 +2478,11 @@ export class WorldState implements GameState, InstanceHost {
       heightAt: this.groundHeight,
       resolve: (p, radius) => this.resolveCircle(p, radius),
     };
-    this.npcs = new Npcs(data.npcs, this.ctx.seasons?.currentId() ?? '', resolveColorToken, (npc) =>
-      playedIds.has(npc.zone),
+    this.npcs = new Npcs(
+      data.npcs,
+      this.ctx.seasons?.currentId() ?? '',
+      resolveColorToken,
+      (npc) => (instance ? npc.instance === instance.id : playedIds.has(npc.zone) && !npc.instance),
     );
     this.npcRenderer = new NpcRenderer(this.npcs.list, worldRoot, {
       offer: resolveColorToken('zonlicht'),
@@ -2517,7 +2612,12 @@ export class WorldState implements GameState, InstanceHost {
     const lighting = this.lighting;
     const origin = this.origin;
     if (!assets || !lighting || !origin) return;
-    const zone = new SceneZone(def, assets, lighting.uniforms, resolveColorToken);
+    // An instance is only its region of the scene; the zone leaves its instances' parts out.
+    const instance = this.instanceDef?.scene;
+    const filter = instance
+      ? instanceFilter(instance, def.offset)
+      : zoneFilter(this.sceneZoneDef?.instances ?? [], def.offset);
+    const zone = new SceneZone(def, assets, lighting.uniforms, resolveColorToken, filter);
     zone.setRenderOrigin(origin.x, origin.z);
     worldRoot.add(zone.group);
     lighting.uniforms.fogNear.value = def.fogNear;
@@ -2534,12 +2634,13 @@ export class WorldState implements GameState, InstanceHost {
 
   /** Puts the player at the zone's first spawn point (on the ground), e.g. after falling off. */
   private placeAtSceneSpawn(player: Player): void {
-    const zone = this.sceneZoneDef;
-    const spawn = zone?.spawnPoints[0];
+    const inside = this.instanceDef?.scene?.spawn;
+    const spawn = inside ?? this.sceneZoneDef?.spawnPoints[0];
     if (!spawn || !this.sceneZone) return;
     player.state.x = spawn.x;
     player.state.z = spawn.z;
-    player.state.y = ARRIVE_FROM_ABOVE;
+    // An instance has floors above each other (a tower): arrive at the spawn's own height.
+    player.state.y = inside ? inside.y : ARRIVE_FROM_ABOVE;
     player.state.heading = (spawn.headingDegrees ?? 0) * DEG;
     this.sceneZone.placeOnGround(player.state);
   }

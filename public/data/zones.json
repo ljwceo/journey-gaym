@@ -239,17 +239,82 @@
       "areas": [
         {
           "id": "greyhaven_city",
-          "shape": {
-            "type": "rect",
-            "minX": -1940,
-            "minZ": -380,
-            "maxX": -1520,
-            "maxZ": 340
-          },
+          "shape": { "type": "rect", "minX": -1940, "minZ": -380, "maxX": -1520, "maxZ": 340 },
           "noScatter": true
         }
       ],
-      "instances": [],
+      "instances": [
+        {
+          "id": "brink_tower",
+          "name": "Master Brink's Tower",
+          "entrance": { "x": -1694.25, "z": -106.75 },
+          "enabled": true,
+          "scene": {
+            "door": { "type": "circle", "x": -1694.25, "z": -106.75, "radius": 1.3 },
+            "region": {
+              "min": { "x": -1707, "y": 17, "z": -119.5 },
+              "max": { "x": -1688, "y": 70, "z": -100.5 },
+              "exclude": []
+            },
+            "cut": {
+              "min": { "x": -1707, "y": 17, "z": -119.5 },
+              "max": { "x": -1688, "y": 70, "z": -100.5 },
+              "materials": [
+                "AC_Books",
+                "AC_Candle",
+                "AC_Crystal_Fire",
+                "AC_Crystal_Nature",
+                "AC_Crystal_Water",
+                "AC_Crystal_Wind",
+                "AC_Vault",
+                "AC_WoodFloor"
+              ]
+            },
+            "spawn": { "x": -1695.52, "y": 22.5, "z": -108.02, "headingDegrees": 225 },
+            "exit": {
+              "shape": { "type": "circle", "x": -1693.12, "z": -105.62, "radius": 1.2 },
+              "to": { "x": -1692.13, "y": 22.5, "z": -104.63, "headingDegrees": 45 }
+            },
+            "cutscene": "brink_tower"
+          }
+        },
+        {
+          "id": "sam_cellar",
+          "name": "Wizard Sam's Cellar",
+          "entrance": { "x": -1647.7, "z": -54 },
+          "enabled": true,
+          "scene": {
+            "door": {
+              "type": "rect",
+              "minX": -1650.3,
+              "minZ": -60.2,
+              "maxX": -1645.1,
+              "maxZ": -48.5
+            },
+            "region": {
+              "min": { "x": -1660, "y": 10.5, "z": -80 },
+              "max": { "x": -1628, "y": 21.95, "z": -44 },
+              "exclude": ["GH_Terrain_Mat"]
+            },
+            "cut": {
+              "min": { "x": -1660, "y": 10.5, "z": -80 },
+              "max": { "x": -1628, "y": 21.0, "z": -44 }
+            },
+            "spawn": { "x": -1647.7, "y": 12.5, "z": -47.3, "headingDegrees": 60 },
+            "exit": {
+              "shape": {
+                "type": "rect",
+                "minX": -1650.3,
+                "minZ": -61.5,
+                "maxX": -1645.1,
+                "maxZ": -58.8
+              },
+              "to": { "x": -1647.7, "y": 23, "z": -62.8, "headingDegrees": 180 }
+            },
+            "cutscene": "sam_cellar"
+          }
+        }
+      ],
       "structures": [
         {
           "id": "wall_north",
@@ -858,29 +923,29 @@
         {
           "id": "training_dummy_1",
           "monster": "training_dummy",
-          "x": -1702,
-          "z": -74
+          "x": -1702.5,
+          "z": -82
         },
         {
           "id": "training_dummy_2",
           "monster": "training_dummy",
-          "x": -1698,
-          "z": -70
+          "x": -1702.5,
+          "z": -68.5
         },
         {
           "id": "training_dummy_3",
           "monster": "training_dummy",
-          "x": -1694,
-          "z": -74
+          "x": -1702.5,
+          "z": -55
         }
       ],
       "spawnAreas": [
         {
           "id": "greyhaven_slime_yard",
           "monster": "green_slime",
-          "x": -1580,
-          "z": -175,
-          "radius": 12,
+          "x": -1615,
+          "z": 26,
+          "radius": 9,
           "count": 3,
           "respawnSeconds": 30
         }
@@ -915,8 +980,14 @@
           "id": "greenwood_slimes",
           "shape": { "type": "rect", "minX": -1490, "minZ": -1240, "maxX": -710, "maxZ": -10 },
           "monsters": [
-            { "monster": "green_slime", "weight": 3 },
-            { "monster": "big_slime", "weight": 1 }
+            {
+              "monster": "green_slime",
+              "weight": 3
+            },
+            {
+              "monster": "big_slime",
+              "weight": 1
+            }
           ],
           "maxAlive": 8,
           "levelRange": [1, 4],
@@ -946,21 +1017,11 @@
       "areas": [
         {
           "id": "elven_city",
-          "shape": {
-            "type": "circle",
-            "x": -1100,
-            "z": -650,
-            "radius": 160
-          }
+          "shape": { "type": "circle", "x": -1100, "z": -650, "radius": 160 }
         },
         {
           "id": "goblin_camp",
-          "shape": {
-            "type": "circle",
-            "x": -1300,
-            "z": -1030,
-            "radius": 32
-          },
+          "shape": { "type": "circle", "x": -1300, "z": -1030, "radius": 32 },
           "noScatter": true
         }
       ],
@@ -968,10 +1029,7 @@
         {
           "id": "wortelgrotten",
           "name": "De Wortelgrotten",
-          "entrance": {
-            "x": -900,
-            "z": -1000
-          },
+          "entrance": { "x": -900, "z": -1000 },
           "enabled": false
         }
       ],
