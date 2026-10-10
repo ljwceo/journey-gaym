@@ -3,7 +3,7 @@ import { qualityLevelSchema } from '../data/schemas';
 import { LANGUAGES, type Language } from '../i18n/I18n';
 
 /** Current save format. Bump it and add `migrations[old]` whenever the shape changes. */
-export const SAVE_VERSION = 5;
+export const SAVE_VERSION = 6;
 
 /** Camera sensitivity for new saves (1 = 100%); the allowed range is in player.json. */
 export const DEFAULT_CAMERA_SENSITIVITY = 0.7;
@@ -42,6 +42,8 @@ export const saveDataSchema = z.object({
       gold: z.int().check(z.nonnegative()),
       inventory: z.array(z.object({ item: id, count: z.int().check(z.positive()) })),
       equipment: z.record(z.string(), id),
+      /** What your pack animal (Biscuit) carries; not usable until you take it out. */
+      pack: z.array(z.object({ item: id, count: z.int().check(z.positive()) })),
     }),
   ),
   /** Level, XP and how much HP / mana is left (null = full, e.g. a fresh game). */
@@ -140,6 +142,11 @@ export const migrations: Readonly<Record<number, Migration>> = {
   3: (save) => ({ ...save, version: 4, quests: { active: [], completed: [] }, unlocks: [] }),
   // v5 (step 2.6): cutscenes and fight tips seen once; nobody had met Sultan yet.
   4: (save) => ({ ...save, version: 5, seenCutscenes: [], seenHints: [] }),
+  // v6 (step 3.2): the pack animal's bag; nobody had Biscuit yet.
+  5: (save) => {
+    const character = save.character as Record<string, unknown> | null | undefined;
+    return { ...save, version: 6, character: character ? { ...character, pack: [] } : null };
+  },
 };
 
 export type MigrateResult =

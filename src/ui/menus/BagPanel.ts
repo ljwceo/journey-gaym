@@ -59,18 +59,8 @@ export function bagPanel(
       const equipment = character?.equipment ?? {};
       const kg = (value: number): string =>
         value.toLocaleString(ctx.i18n.language, { maximumFractionDigits: 1 });
-      const rarityColor = (def: ItemDef | undefined): string | null => {
-        if (!def || def.rarity === 'common') return null;
-        const token = data?.items.rarities.find((r) => r.id === def.rarity)?.color;
-        // Mixed with the text colour: the pure blue / violet are too dark on the panel.
-        return token ? `color-mix(in srgb, var(--gh-${token}) 65%, var(--gh-tekst))` : null;
-      };
-      const nameEl = (def: ItemDef | undefined, fallback: string): HTMLElement => {
-        const span = el('span', { className: 'ui-bag-name', text: def?.name ?? fallback });
-        const color = rarityColor(def);
-        if (color) span.style.color = color;
-        return span;
-      };
+      const nameEl = (def: ItemDef | undefined, fallback: string): HTMLElement =>
+        itemNameEl(ctx, def, fallback);
       const gearLine = (def: ItemDef): string => {
         const parts = [t('bag.weight', { kg: kg(def.weight ?? 0) })];
         if (def.rarity !== 'common') parts.unshift(t(`bag.rarity.${def.rarity}`));
@@ -182,6 +172,21 @@ export function bagPanel(
     },
     onClose,
   };
+}
+
+/** An item name (English, data) in its rarity colour; common items keep the text colour. */
+export function itemNameEl(
+  ctx: GameContext,
+  def: ItemDef | undefined,
+  fallback: string,
+): HTMLElement {
+  const span = el('span', { className: 'ui-bag-name', text: def?.name ?? fallback });
+  if (def && def.rarity !== 'common') {
+    const token = ctx.data?.items.rarities.find((r) => r.id === def.rarity)?.color;
+    // Mixed with the text colour: the pure blue / violet are too dark on the panel.
+    if (token) span.style.color = `color-mix(in srgb, var(--gh-${token}) 65%, var(--gh-tekst))`;
+  }
+  return span;
 }
 
 /** The running quests: name (English) and each objective with ✓ / ✗. */

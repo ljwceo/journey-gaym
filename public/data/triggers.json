@@ -13,6 +13,11 @@
       "type": "questCompleted",
       "quest": "defeat_sultan",
       "note": "Pringle turned out to be Sultan: the cat is gone and Sultan stands outside the gate."
+    },
+    "hasBiscuit": {
+      "type": "questCompleted",
+      "quest": "a_friend_for_the_road",
+      "note": "Marco gives you his donkey Biscuit right after Sultan (phase 3 plan)."
     }
   },
   "triggers": [

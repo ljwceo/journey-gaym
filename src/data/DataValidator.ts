@@ -360,6 +360,12 @@ class CrossChecker {
       if (npc.interaction === 'pet' && !npc.petText) {
         this.issue(f, `${p}.petText`, 'an NPC you can pet needs petText');
       }
+      if (npc.interaction === 'pack' && !npc.pack) {
+        this.issue(f, `${p}.pack`, 'an NPC with interaction "pack" needs pack settings');
+      }
+      if (npc.pack && npc.interaction !== 'pack') {
+        this.issue(f, `${p}.pack`, 'a pack animal needs interaction "pack"');
+      }
       if (npc.behavior === 'follow' && !npc.follow) {
         this.issue(f, `${p}.follow`, 'behavior "follow" needs follow settings');
       }
@@ -367,6 +373,10 @@ class CrossChecker {
         const follow = npc.follow;
         if (npc.interaction === 'pet' && follow.minDistance <= settings.petRange) {
           this.issue(f, `${p}.follow.minDistance`, 'must be larger than settings.petRange');
+        }
+        // Otherwise the animal beside you takes the E key from everyone else all the time.
+        if (npc.interaction === 'pack' && follow.minDistance <= settings.interactRange) {
+          this.issue(f, `${p}.follow.minDistance`, 'must be larger than settings.interactRange');
         }
         this.range(f, `${p}.follow`, follow.minDistance, follow.maxDistance);
         this.range(f, `${p}.follow.idlePauseSeconds`, ...follow.idlePauseSeconds);

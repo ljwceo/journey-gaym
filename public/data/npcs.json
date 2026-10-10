@@ -77,6 +77,12 @@
       "color": "zonsondergang",
       "model": "placeholder:catman",
       "radius": 0.45
+    },
+    {
+      "id": "pack_animal",
+      "color": "steengrijs",
+      "model": "placeholder:donkey",
+      "radius": 0
     }
   ],
   "npcs": [
@@ -267,6 +273,25 @@
       "heading": -110,
       "presentWhen": "sultanDefeated",
       "dialogue": ["npc.sultan.1", "npc.sultan.2", "npc.sultan.3"]
+    },
+    {
+      "id": "biscuit",
+      "name": "Biscuit",
+      "role": "pack_animal",
+      "zone": "greyhaven",
+      "position": { "x": -1812, "z": 126 },
+      "interaction": "pack",
+      "behavior": "follow",
+      "follow": {
+        "minDistance": 3.2,
+        "maxDistance": 6,
+        "speed": 4.6,
+        "strollSpeed": 0.8,
+        "idlePauseSeconds": [3, 9]
+      },
+      "pack": { "maxKg": 60 },
+      "dialogue": [],
+      "presentWhen": "hasBiscuit"
     }
   ]
 }

@@ -63,6 +63,7 @@ import {
   removeItem,
   rollDrops,
 } from '../systems/Inventory';
+import { moveFromPack, moveToPack } from '../systems/PackAnimal';
 import { QuestBook, type QuestEventKind } from '../systems/Quests';
 import { addXp, deathGoldLoss, xpFraction, xpToNext } from '../systems/Progression';
 import type { EnemyTarget } from '../systems/EnemyAI';
@@ -88,6 +89,7 @@ import { HUD } from '../ui/HUD';
 import { StructureLabels } from '../ui/StructureLabels';
 import { el } from '../ui/dom';
 import { bagPanel } from '../ui/menus/BagPanel';
+import { packPanel } from '../ui/menus/PackPanel';
 import { type BuyResult, shopPanel } from '../ui/menus/ShopPanel';
 import { QuestTexts } from '../ui/questText';
 import type { ChecklistRow } from '../ui/Dialog';
@@ -140,6 +142,14 @@ const SUN_DISTANCE = 150;
 const NO_SWORD_INPUT: SwordInput = { fast: false, heavy: false };
 /** Seconds over which fog and sky change color after entering another zone. */
 const FOG_SHARPNESS = 1.5;
+/** The text on the interaction icon per kind of NPC ("Talk to Marco", "Pet Pringle"). */
+const INTERACTION_LABELS: Readonly<Record<NpcDef['interaction'], string>> = {
+  talk: 'hud.talkTo',
+  pet: 'hud.pet',
+  pack: 'hud.pack',
+  none: 'hud.talkTo',
+};
+
 /** The interaction icon stays this far (CSS px) from the screen edges. */
 const ICON_MARGIN = 60;
 /** The sea plane is this many times the view distance wide (it follows the player). */
@@ -1083,6 +1093,10 @@ export class WorldState implements GameState, InstanceHost {
       if (npc.def.petText) this.hud?.showMessage(ctx.i18n.t(npc.def.petText));
       return;
     }
+    if (npc.def.interaction === 'pack') {
+      this.openPack(npc);
+      return;
+    }
     // Talking counts for quests that send you to this NPC.
     this.recordQuest('talk', npc.id, 1);
     const talk = this.questConversation(npc.def);
@@ -1397,6 +1411,60 @@ export class WorldState implements GameState, InstanceHost {
     );
   }
 
+  /**
+   * The pack animal's bag (Biscuit): only out of a fight (you reach it by walking up to it).
+   * Moving things changes your load at once; the game waits while the panel is open.
+   */
+  private openPack(npc: Npc): void {
+    const pack = npc.def.pack;
+    const c = this.player?.combat;
+    if (!pack || !c) return;
+    if (c.inCombat) {
+      this.hud?.showMessage(this.ctx.i18n.t('hud.packInCombat'));
+      return;
+    }
+    const moved = (): void => {
+      this.applyGear(true);
+      this.updatePlayerGear();
+      this.refreshQuestMarkers();
+      this.ctx.persist();
+    };
+    this.openMenu((resume) =>
+      packPanel(
+        this.ctx,
+        npc.def.name,
+        pack.maxKg,
+        {
+          toPack: (itemId, count) => {
+            const character = this.ctx.session?.character;
+            if (!character) return 'notInBag';
+            const result = moveToPack(
+              character.inventory,
+              character.pack,
+              character.equipment,
+              this.items,
+              itemId,
+              count,
+              pack.maxKg,
+            );
+            if (result === 'moved') moved();
+            return result;
+          },
+          fromPack: (itemId, count) => {
+            const character = this.ctx.session?.character;
+            if (!character) return 'notInPack';
+            const result = moveFromPack(character.inventory, character.pack, itemId, count);
+            if (result === 'moved') moved();
+            return result;
+          },
+          playerLoad: () => this.loadSummary(),
+          packKg: () => carriedWeight(this.ctx.session?.character?.pack ?? [], this.items),
+        },
+        resume,
+      ),
+    );
+  }
+
   /** Buys one item for `price` gold. */
   private buy(itemId: string, price: number, npcId: string): BuyResult {
     const character = this.ctx.session?.character;
@@ -1552,7 +1620,7 @@ export class WorldState implements GameState, InstanceHost {
     const t = this.ctx.i18n;
     this.iconLabelFor = target;
     this.iconLabel = npc
-      ? t.t(npc.def.interaction === 'pet' ? 'hud.pet' : 'hud.talkTo', { name: npc.def.name })
+      ? t.t(INTERACTION_LABELS[npc.def.interaction], { name: npc.def.name })
       : t.t('hud.rest');
     return this.iconLabel;
   }
@@ -1631,18 +1699,22 @@ export class WorldState implements GameState, InstanceHost {
         {
           equip: (itemId) => this.changeGear(() => this.equipItem(itemId)),
           unequip: (slot) => this.changeGear(() => this.unequipSlot(slot)),
-          load: () => ({
-            kg: this.carriedKg,
-            maxKg: this.maxLoadKg,
-            tierId: this.loadTierId,
-            tierLabel:
-              this.ctx.data?.player.load.tiers.find((tier) => tier.id === this.loadTierId)?.label ??
-              '',
-          }),
+          load: () => this.loadSummary(),
         },
         resume,
       ),
     );
+  }
+
+  /** Carried and maximum kg and the load tier, for the bag and the pack animal. */
+  private loadSummary(): { kg: number; maxKg: number; tierId: string; tierLabel: string } {
+    return {
+      kg: this.carriedKg,
+      maxKg: this.maxLoadKg,
+      tierId: this.loadTierId,
+      tierLabel:
+        this.ctx.data?.player.load.tiers.find((tier) => tier.id === this.loadTierId)?.label ?? '',
+    };
   }
 
   /**
@@ -1798,7 +1870,11 @@ export class WorldState implements GameState, InstanceHost {
   }
 
   /** Debug: XP, gold or potions for testing levels, dying and drinking. */
-  private grant(kind: 'xp' | 'gold' | 'potions' | 'slimeGel' | 'gear'): void {
+  private grant(kind: 'xp' | 'gold' | 'potions' | 'slimeGel' | 'gear' | 'packAnimal'): void {
+    if (kind === 'packAnimal') {
+      this.grantPackAnimal();
+      return;
+    }
     if (kind === 'gear') {
       // One of every weapon and armor you do not have yet (tests the load tiers and the bag).
       const bag = this.ctx.session?.character?.inventory ?? [];
@@ -1811,6 +1887,25 @@ export class WorldState implements GameState, InstanceHost {
     else if (kind === 'gold') this.gainItem(GOLD_ITEM, CHEAT_GOLD);
     else if (kind === 'slimeGel') this.gainItem('slime_gel', CHEAT_SLIME_GEL);
     else this.gainItem(this.ctx.data?.player.potions.quickOrder[0] ?? '', CHEAT_POTIONS);
+  }
+
+  /**
+   * Debug: the pack animal right away. Finishes the quest its `presentWhen` condition waits for
+   * (with its rewards), skipping that quest's requirements. Data-driven: no names in code.
+   */
+  private grantPackAnimal(): void {
+    const data = this.ctx.data;
+    const book = this.quests;
+    const animal = data?.npcs.npcs.find((npc) => npc.pack);
+    const condition = animal?.presentWhen ? data?.triggers.conditions[animal.presentWhen] : null;
+    if (!book || condition?.type !== 'questCompleted') return;
+    const quest = book.get(condition.quest);
+    if (!quest || book.completed.has(quest.id)) return;
+    book.accept(quest.id);
+    for (const objective of quest.objectives) {
+      if (objective.type === 'talk') this.recordQuest('talk', objective.npc, 1, undefined, true);
+    }
+    this.completeQuest(quest);
   }
 
   /** Debug: back to "Auto" without a chosen preset, so the benchmark runs again right away. */
