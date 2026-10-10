@@ -71,6 +71,12 @@
       "color": "zonsondergang",
       "model": "placeholder:cat",
       "radius": 0
+    },
+    {
+      "id": "catfolk",
+      "color": "zonsondergang",
+      "model": "placeholder:catman",
+      "radius": 0.45
     }
   ],
   "npcs": [
@@ -228,7 +234,23 @@
         "idlePauseSeconds": [1.5, 5]
       },
       "petText": "npc.pringle.pet",
-      "dialogue": []
+      "dialogue": [],
+      "absentWhen": "sultanDefeated"
+    },
+    {
+      "id": "sultan",
+      "name": "Sultan",
+      "role": "catfolk",
+      "zone": "greyhaven",
+      "position": {
+        "x": -1507,
+        "z": 7
+      },
+      "interaction": "talk",
+      "behavior": "static",
+      "heading": -110,
+      "presentWhen": "sultanDefeated",
+      "dialogue": ["npc.sultan.1", "npc.sultan.2", "npc.sultan.3"]
     }
   ]
 }

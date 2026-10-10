@@ -163,8 +163,14 @@
       "1": "Meow.",
       "2": "Did you really think you could just leave?",
       "4": "I am Sultan. Show me you're ready for the world out there.",
-      "5": "Try to keep up!"
-    }
+      "5": "Try to keep up!",
+      "caption1": "The city gate at sunset. Pringle sits in the middle of the path.",
+      "caption2": "Close-up: Pringle's eyes glow gold.",
+      "caption3": "Purple smoke and wind. Pringle grows…",
+      "caption4": "A tall cat man stands in the smoke: cat ears, a tail, golden eyes.",
+      "caption5": "Sultan leaps forward. A flash!"
+    },
+    "tapToContinue": "Tap or press Space"
   },
   "hud": {
     "checkpointSet": "Checkpoint set",
@@ -246,6 +252,11 @@
     },
     "pringle": {
       "pet": "Pringle purrs happily."
+    },
+    "sultan": {
+      "1": "You fought well, little one. Pringle was only a disguise. Cats have their secrets.",
+      "2": "Go on, the world is waiting. But when you are stronger, come back. I want a rematch.",
+      "3": "Nine lives, remember? I still have eight."
     }
   },
   "item": {
@@ -285,7 +296,7 @@
   },
   "quest": {
     "defeat_sultan": {
-      "desc": "Defeat Sultan at the city gate."
+      "desc": "Leave the city: defeat Sultan at the city gate."
     },
     "your_resolve": {
       "offer": {
@@ -456,7 +467,9 @@
     "grantXp": "+100 XP",
     "grantGold": "+50 Gold",
     "grantPotions": "+5 Health Potion",
-    "grantSlimeGel": "+3 Slime Gel"
+    "grantSlimeGel": "+3 Slime Gel",
+    "boss": "Boss fight",
+    "bossSultan": "Fight Sultan"
   },
   "bag": {
     "title": "Bag",
@@ -480,5 +493,23 @@
     "notEnough": "Not enough {gold}.",
     "bought": "Bought: {item}",
     "owned": "In your bag: {count}"
+  },
+  "boss": {
+    "dodged": "Dodged!",
+    "sultan": {
+      "retry": "Back again? Try to keep up!",
+      "enrage": "Not bad… Now I'm getting serious!",
+      "win": "Heh… you've got claws after all. You're ready for the world out there.",
+      "hint": {
+        "claw": "His claws light up: step back or dash away!",
+        "pounce": "He crouches, eyes glowing: dash sideways!",
+        "charge": "A red line: get off it before he runs!",
+        "flurry": "Flurry! Get away, then strike while he catches his breath.",
+        "strike": "He stands still: now strike!",
+        "strikeTouch": "He stands still: tap Attack now!",
+        "guard": "He dodges everything. Wait until he stands still after an attack."
+      }
+    },
+    "defeated": "{name} is defeated!"
   }
 }

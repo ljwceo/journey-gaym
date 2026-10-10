@@ -57,6 +57,7 @@ class Arena {
       shoot: (e, tx, tz, speed, damage) =>
         projectiles.fire(e.x, 1.1, e.z, tx, tz, speed, damage, e.def.ai?.attack.range ?? 12),
       alert: (e) => this.enemies.alert(e),
+      bossEvent: () => {},
     };
   }
 

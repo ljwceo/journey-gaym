@@ -3,7 +3,7 @@ import { qualityLevelSchema } from '../data/schemas';
 import { LANGUAGES, type Language } from '../i18n/I18n';
 
 /** Current save format. Bump it and add `migrations[old]` whenever the shape changes. */
-export const SAVE_VERSION = 4;
+export const SAVE_VERSION = 5;
 
 /** Camera sensitivity for new saves (1 = 100%); the allowed range is in player.json. */
 export const DEFAULT_CAMERA_SENSITIVITY = 0.7;
@@ -69,6 +69,10 @@ export const saveDataSchema = z.object({
   }),
   /** Things that became yours through quests (e.g. "garden_plot"). */
   unlocks: z.array(id),
+  /** Cutscenes that play only once (the "Pringle" cutscene; a rematch skips it). */
+  seenCutscenes: z.array(id),
+  /** Fight tips already shown once (boss hints such as "Dash sideways!"). */
+  seenHints: z.array(z.string().check(z.minLength(1))),
   playTimeSeconds: z.number().check(z.nonnegative()),
 });
 
@@ -107,6 +111,8 @@ export function createNewSave(language: Language, now: Date = new Date()): SaveD
     metNpcs: [],
     quests: { active: [], completed: [] },
     unlocks: [],
+    seenCutscenes: [],
+    seenHints: [],
     playTimeSeconds: 0,
   };
 }
@@ -132,6 +138,8 @@ export const migrations: Readonly<Record<number, Migration>> = {
   2: (save) => ({ ...save, version: 3, progress: freshProgress() }),
   // v4 (step 2.5): quests and unlocks; nobody had started a quest yet.
   3: (save) => ({ ...save, version: 4, quests: { active: [], completed: [] }, unlocks: [] }),
+  // v5 (step 2.6): cutscenes and fight tips seen once; nobody had met Sultan yet.
+  4: (save) => ({ ...save, version: 5, seenCutscenes: [], seenHints: [] }),
 };
 
 export type MigrateResult =

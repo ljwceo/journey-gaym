@@ -2,6 +2,7 @@ import { Random } from '../core/Random';
 import type { MonsterDef } from '../data/types';
 import { angleDelta } from '../systems/Movement';
 import type { SwordTarget } from '../systems/Combat';
+import type { BossState } from '../systems/BossAI';
 
 /** Default body radius (m) when monsters.json gives none. */
 export const DEFAULT_ENEMY_RADIUS = 0.5;
@@ -38,6 +39,10 @@ export class Enemy implements SwordTarget {
   shown = false;
   /** Inside one of its safe areas (Treewardens in the elven city): cannot be hit. */
   safe = false;
+  /** A boss between its openings: it dodges every hit (see BossAI). */
+  guarded = false;
+  /** Boss fight state (monsters with `boss` in monsters.json), null for other monsters. */
+  boss: BossState | null = null;
   hp: number;
   readonly maxHp: number;
   readonly radius: number;
@@ -105,7 +110,7 @@ export class Enemy implements SwordTarget {
   }
 
   get hittable(): boolean {
-    return this.alive && !this.safe;
+    return this.alive && !this.safe && !this.guarded;
   }
 
   /** Busy attacking (windup, strike or recovery). */
@@ -137,6 +142,7 @@ export class Enemy implements SwordTarget {
     this.hopTime = 0;
     this.struck = false;
     this.safe = false;
+    this.guarded = false;
   }
 
   beginStep(): void {

@@ -62,6 +62,17 @@ export class HUD {
   private readonly blackoutTitle: HTMLElement;
   private readonly blackoutText: HTMLElement;
   private blackoutValue = 0;
+  /** Boss fights: the boss's name and HP bar (top center), spoken lines and short tips. */
+  private readonly boss: HTMLElement;
+  private readonly bossName: HTMLElement;
+  private readonly bossFill: HTMLElement;
+  private bossValue = 1;
+  private readonly subtitle: HTMLElement;
+  private readonly subtitleName: HTMLElement;
+  private readonly subtitleText: HTMLElement;
+  private subtitleLeft = 0;
+  private readonly hint: HTMLElement;
+  private hintLeft = 0;
   /** XP left over after a level up, shown once the full bar has been seen (-1 = none). */
   private xpPending = -1;
   private xpFullTime = 0;
@@ -109,6 +120,24 @@ export class HUD {
     this.goldValue = el('span', { className: 'ui-hud-gold-value', text: '0' });
     this.gold = part('ui-hud-gold', el('span', { className: 'ui-hud-gold-coin' }), this.goldValue);
 
+    this.bossName = el('div', { className: 'ui-hud-boss-name' });
+    this.bossFill = el('div', { className: 'ui-hud-boss-fill' });
+    this.boss = el(
+      'div',
+      { className: 'ui-hud-boss' },
+      this.bossName,
+      el('div', { className: 'ui-hud-boss-bar' }, this.bossFill),
+    );
+    this.subtitleName = el('div', { className: 'ui-dialog-name' });
+    this.subtitleText = el('p', { className: 'ui-dialog-text' });
+    this.subtitle = el(
+      'div',
+      { className: 'ui-fight-subtitle' },
+      this.subtitleName,
+      this.subtitleText,
+    );
+    this.hint = el('div', { className: 'ui-fight-hint ui-hud-hint' });
+
     this.hurtGlow = el('div', { className: 'ui-hud-hurt' });
     this.blackoutTitle = el('p', { className: 'ui-hud-blackout-title' });
     this.blackoutText = el('p', { className: 'ui-hud-blackout-text' });
@@ -127,6 +156,9 @@ export class HUD {
       barStack,
       this.gold.element,
       this.interact.element,
+      this.boss,
+      this.hint,
+      this.subtitle,
       this.blackout,
     );
     this.root.style.setProperty('--hud-fade', `${cfg.fadeSeconds}s`);
@@ -219,6 +251,39 @@ export class HUD {
     this.interact.element.style.transform = `translate(${px}px, ${py}px) translate(-50%, -100%)`;
   }
 
+  /** Shows the boss bar with a name (fight starts), or hides it (null). */
+  setBoss(name: string | null): void {
+    this.boss.classList.toggle('ui-hud-boss-on', name !== null);
+    if (name !== null) {
+      this.bossName.textContent = name;
+      this.bossValue = -1;
+      this.setBossHp(1);
+    }
+  }
+
+  /** The boss's HP, 0–1 (touches the DOM only when it changed). */
+  setBossHp(fraction: number): void {
+    const value = Math.min(1, Math.max(0, fraction));
+    if (Math.abs(value - this.bossValue) < 0.002) return;
+    this.bossValue = value;
+    this.bossFill.style.transform = `scaleX(${value})`;
+  }
+
+  /** A spoken line at the bottom (name + text) for `seconds`. */
+  say(name: string, text: string, seconds: number): void {
+    this.subtitleName.textContent = name;
+    this.subtitleText.textContent = text;
+    this.subtitle.classList.add('ui-fight-show');
+    this.subtitleLeft = seconds;
+  }
+
+  /** A short fight tip near the top ("Dash sideways!") for `seconds`. */
+  showHint(text: string, seconds: number): void {
+    this.hint.textContent = text;
+    this.hint.classList.add('ui-fight-show');
+    this.hintLeft = seconds;
+  }
+
   /** A short red glow at the screen edges: the player was hit. */
   hurt(): void {
     this.hurtTime = HURT_SECONDS;
@@ -227,6 +292,14 @@ export class HUD {
   /** Call every rendered frame with real seconds (fades and timers are fps-independent). */
   update(seconds: number): void {
     this.updateMessages(seconds);
+    if (this.subtitleLeft > 0) {
+      this.subtitleLeft -= seconds;
+      if (this.subtitleLeft <= 0) this.subtitle.classList.remove('ui-fight-show');
+    }
+    if (this.hintLeft > 0) {
+      this.hintLeft -= seconds;
+      if (this.hintLeft <= 0) this.hint.classList.remove('ui-fight-show');
+    }
     this.updateXp(seconds);
     this.hurtTime = Math.max(0, this.hurtTime - seconds);
     const hurt = this.hurtTime > 0;

@@ -322,6 +322,39 @@ describe('Npcs', () => {
   });
 });
 
+describe('Npcs presence (Pringle becomes Sultan)', () => {
+  const conditions = triggersFileSchema.parse(readPublicJson('data/triggers.json')).conditions;
+  const npcs = () => new Npcs(npcsFile(), 'summer', () => 0xffffff);
+  const shownIds = (list: Npcs) => list.list.filter((n) => n.shown).map((n) => n.id);
+
+  it('has Pringle and no Sultan before the fight, and the other way round after it', () => {
+    const list = npcs();
+    const before = { level: 3, completedQuests: new Set<string>() };
+    list.refreshPresence(conditions, before);
+    list.update(DT, at(-1510, 5, 0), flatWorld, null);
+    expect(shownIds(list)).toContain('pringle');
+    expect(shownIds(list)).not.toContain('sultan');
+
+    const after = { level: 3, completedQuests: new Set(['defeat_sultan']) };
+    list.refreshPresence(conditions, after);
+    list.update(DT, at(-1510, 5, 0), flatWorld, null);
+    expect(shownIds(list)).toContain('sultan');
+    expect(shownIds(list)).not.toContain('pringle');
+    expect(list.nearestInteractable(-1508, 6)?.id).toBe('sultan');
+  });
+
+  it('hides NPCs for a moment (Pringle during the fight) and brings them back', () => {
+    const list = npcs();
+    const ctx = { level: 3, completedQuests: new Set<string>() };
+    list.refreshPresence(conditions, ctx, new Set(['pringle']));
+    list.update(DT, at(-1550, 0, 0), flatWorld, null);
+    expect(shownIds(list)).not.toContain('pringle');
+    list.refreshPresence(conditions, ctx);
+    list.update(DT, at(-1550, 0, 0), flatWorld, null);
+    expect(shownIds(list)).toContain('pringle');
+  });
+});
+
 describe('NPC data', () => {
   it('uses only placeholder models the factory can build', () => {
     for (const role of npcsFile().roles) expect(hasNpcModel(role.model), role.model).toBe(true);

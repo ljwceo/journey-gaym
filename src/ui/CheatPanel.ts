@@ -15,6 +15,8 @@ export interface CheatPanelHandlers {
   rerunBenchmark(): void;
   /** Gives XP, gold, potions or Slime Gel (testing levels, dying, drinking and quests). */
   grant(kind: 'xp' | 'gold' | 'potions' | 'slimeGel'): void;
+  /** Starts the Sultan fight right away (no quests needed). */
+  bossFight(): void;
 }
 
 type SaveTool = 'none' | 'export' | 'import';
@@ -203,6 +205,14 @@ export class CheatPanel {
           chip(t('cheats.grantGold'), false, () => this.handlers.grant('gold')),
           chip(t('cheats.grantPotions'), false, () => this.handlers.grant('potions')),
           chip(t('cheats.grantSlimeGel'), false, () => this.handlers.grant('slimeGel')),
+        ),
+      ),
+      section(
+        t('cheats.boss'),
+        el(
+          'div',
+          { className: 'ui-chips' },
+          chip(t('cheats.bossSultan'), false, () => this.handlers.bossFight()),
         ),
       ),
       section(

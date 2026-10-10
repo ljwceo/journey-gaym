@@ -3,6 +3,7 @@ import { Enemy, WOBBLE_SECONDS } from '../entities/Enemy';
 import type { MonsterDef, MonstersFile, Shape, Zone } from '../data/types';
 import type { PointXZ } from '../world/Colliders';
 import { pointInShape } from '../world/Shapes';
+import { type BossWorld, BossState, startBoss, stepBoss } from './BossAI';
 import {
   defeat,
   type EnemyAiConfig,
@@ -55,8 +56,8 @@ interface Pack {
   wanderRadius: number;
 }
 
-/** The world as monsters see it: walking (EnemyWorld) plus the ground height. */
-export interface EnemiesWorld extends EnemyWorld {
+/** The world as monsters see it: walking (EnemyWorld), boss events and the ground height. */
+export interface EnemiesWorld extends EnemyWorld, Pick<BossWorld, 'bossEvent'> {
   heightAt(x: number, z: number): number;
 }
 
@@ -74,6 +75,8 @@ export class Enemies {
   /** The enemies shown this step (a reused array). */
   readonly shown: Enemy[] = [];
   readonly ai: EnemyAiConfig;
+  /** Bosses (monsters with `boss`): one slot each, only in the world during their fight. */
+  readonly bosses: Enemy[] = [];
   private readonly packs: Pack[] = [];
   private readonly packOf = new Map<Enemy, Pack>();
   private readonly speeds: Readonly<Record<string, number>>;
@@ -127,6 +130,39 @@ export class Enemies {
       }
     }
     for (const pack of this.packs) this.spawnPack(pack);
+    for (const def of monsters.monsters) {
+      if (!def.boss) continue;
+      const boss = new Enemy(`boss_${def.id}`, def, def.boss.start.x, def.boss.start.z, 0xb055);
+      boss.speed = this.speeds[def.speed] ?? DEFAULT_SPEED;
+      boss.boss = new BossState(def.boss, def.boss.arena);
+      boss.active = false;
+      this.list.push(boss);
+      this.bosses.push(boss);
+    }
+  }
+
+  /** The boss slot of a monster (null when it is no boss). */
+  bossOf(monsterId: string): Enemy | null {
+    for (let i = 0; i < this.bosses.length; i++) {
+      const e = this.bosses[i] as Enemy;
+      if (e.def.id === monsterId) return e;
+    }
+    return null;
+  }
+
+  /** Starts a boss fight: the boss appears at its start, facing `heading`. */
+  startBoss(e: Enemy, heading: number): void {
+    startBoss(e, heading);
+    if (!this.world) return;
+    e.y = this.world.heightAt(e.x, e.z);
+    e.settleY();
+  }
+
+  /** Ends a boss fight early (the player lost): the boss leaves the world. */
+  endBoss(e: Enemy): void {
+    e.active = false;
+    e.shown = false;
+    e.guarded = false;
   }
 
   /** Number of monsters fighting the player right now (debug). */
@@ -198,6 +234,9 @@ export class Enemies {
       e.safe = this.inSafeArea(e);
       if (e.def.behavior === 'static') {
         this.stepDummy(e, dt);
+      } else if (e.boss) {
+        stepBoss(e, target, world, dt);
+        if (e.alive) this.moving.push(e);
       } else if (d2 <= sim2) {
         stepEnemyAi(e, e.speed, this.ai, target, world, dt);
         if (e.alive) this.moving.push(e);
@@ -224,6 +263,12 @@ export class Enemies {
     if (e.def.behavior === 'static') {
       if (e.hp > 0) return false;
       e.downTime = e.def.resetSeconds ?? DEFAULT_RESET_SECONDS;
+      return true;
+    }
+    if (e.boss) {
+      if (e.hp > 0) return false;
+      e.guarded = false;
+      defeat(e, this.ai);
       return true;
     }
     if (e.hp > 0) {
@@ -280,6 +325,7 @@ export class Enemies {
    */
   resetAll(): void {
     for (const pack of this.packs) this.spawnPack(pack);
+    for (const boss of this.bosses) this.endBoss(boss);
   }
 
   private addPack(

@@ -52,6 +52,8 @@ import {
 import { QuestBook, type QuestEventKind } from '../systems/Quests';
 import { addXp, deathGoldLoss, xpFraction, xpToNext } from '../systems/Progression';
 import type { EnemyTarget } from '../systems/EnemyAI';
+import { keepInArena } from '../systems/BossAI';
+import { BossEncounter } from './BossEncounter';
 import { ARROW_HEIGHT, Projectiles, type ProjectileWorld } from '../systems/Projectiles';
 import { EnemyRenderer } from '../render/EnemyRenderer';
 import { ProjectileRenderer, WarningRenderer } from '../render/CombatEffects';
@@ -187,6 +189,12 @@ export class WorldState implements GameState, InstanceHost {
   private warningRenderer: WarningRenderer | null = null;
   private enemiesWorld: EnemiesWorld | null = null;
   private projectileWorld: ProjectileWorld | null = null;
+  /** Boss fights (Sultan at the city gate): trigger, cutscene, arena, tips, win or lose. */
+  private encounter: BossEncounter | null = null;
+  /** A comic cutscene plays over the world: the simulation waits. */
+  private cutscenePlaying = false;
+  /** NPCs out of the world for now (Pringle while he is Sultan). */
+  private hiddenNpcs: ReadonlySet<string> = new Set();
   /** HP reached 0 during this step; handled once the monsters finished their step. */
   private knockedOut = false;
   /** Seconds since dying started (fade to black, wake up, fade in); NOT_DYING otherwise. */
@@ -342,6 +350,11 @@ export class WorldState implements GameState, InstanceHost {
     this.questTexts = new QuestTexts(data, t);
     this.conditionContext.completedQuests = this.quests.completed;
     this.applyWeapon();
+    this.cutscenePlaying = false;
+    this.hiddenNpcs = new Set();
+    this.encounter = new BossEncounter(this.encounterHost());
+    this.startGiverlessQuests();
+    this.refreshNpcPresence();
     this.refreshQuestMarkers();
     this.hud.setGold(session.character?.gold ?? 0);
     this.hud.setXp(xpFraction(data.player, session.progress), false);
@@ -364,6 +377,10 @@ export class WorldState implements GameState, InstanceHost {
         importSave: (code) => this.importSave(code),
         rerunBenchmark: () => this.rerunBenchmark(),
         grant: (kind) => this.grant(kind),
+        bossFight: () => {
+          this.cheatPanel?.toggle();
+          this.encounter?.forceStart('sultan');
+        },
       },
     );
     // Next to the UI layer (not inside it), so it can sit above the debug overlay.
@@ -422,12 +439,18 @@ export class WorldState implements GameState, InstanceHost {
       ctx.events.on('playerRested', ({ checkpointId }) =>
         this.recordQuest('rest', checkpointId, 1),
       ),
-      ctx.events.on('triggerEntered', ({ triggerId }) => this.recordQuest('visit', triggerId, 1)),
+      ctx.events.on('triggerEntered', ({ triggerId }) => {
+        this.recordQuest('visit', triggerId, 1);
+        this.encounter?.onTrigger(triggerId);
+      }),
       ctx.events.on('itemBought', ({ itemId, count, npcId }) =>
         this.recordQuest('buy', itemId, count, npcId),
       ),
       ctx.events.on('itemsGained', ({ itemId, count }) => this.itemQuestProgress(itemId, count)),
-      ctx.events.on('levelUp', () => this.refreshQuestMarkers()),
+      ctx.events.on('levelUp', () => {
+        this.startGiverlessQuests();
+        this.refreshQuestMarkers();
+      }),
     );
     this.debugTimer = window.setInterval(this.updateDebug, DEBUG_REFRESH_MS);
     // From now on frames count for the benchmark / auto-downgrade.
@@ -471,6 +494,9 @@ export class WorldState implements GameState, InstanceHost {
     this.damageNumbers = null;
     this.talkingTo = null;
     this.targetNpc = null;
+    this.encounter?.dispose();
+    this.encounter = null;
+    this.cutscenePlaying = false;
     this.quests = null;
     this.questTexts = null;
     this.labels?.dispose();
@@ -481,7 +507,8 @@ export class WorldState implements GameState, InstanceHost {
 
   update(dt: number): void {
     const { player, input, mover, movement, rig, streamer } = this;
-    if (this.paused || !player || !input || !mover || !movement || !rig || !streamer) return;
+    if (this.paused || this.cutscenePlaying) return;
+    if (!player || !input || !mover || !movement || !rig || !streamer) return;
     const session = this.ctx.session;
     if (session) session.playTimeSeconds += dt;
 
@@ -552,6 +579,9 @@ export class WorldState implements GameState, InstanceHost {
       // You cannot walk through people (or Treewardens, or monsters).
       if (this.npcs?.pushOut(s, movement.radius)) this.collision?.resolve(s, movement.radius);
       if (this.enemies?.pushOut(s, movement.radius)) this.collision?.resolve(s, movement.radius);
+      // A boss fight: nobody leaves the ring.
+      const arena = this.encounter?.arena;
+      if (arena) keepInArena(s, arena, movement.radius);
       this.checkGate(fromX, fromZ);
       s.y = streamer.heightAt(s.x, s.z);
     }
@@ -564,6 +594,7 @@ export class WorldState implements GameState, InstanceHost {
     }
     this.updateNpcs(dt);
     this.updateEnemies(dt);
+    this.encounter?.step(dt);
     this.updateCombatHud();
     this.hud?.rules.setEnergyFraction(s.energy / movement.maxEnergy);
     this.hud?.setBar('energy', s.energy / movement.maxEnergy);
@@ -621,7 +652,8 @@ export class WorldState implements GameState, InstanceHost {
         continue;
       }
       if (!e.hittable) {
-        this.showProtected(e);
+        if (e.guarded) this.encounter?.onGuardedHit(e, e.y + (enemyRenderer?.heightOf(e) ?? 1.5));
+        else this.showProtected(e);
         continue;
       }
       const defeated = enemies.hit(e, result.damage);
@@ -687,6 +719,7 @@ export class WorldState implements GameState, InstanceHost {
     if (!session || !data || !player || this.deathTimer !== NOT_DYING) return;
     const t = this.ctx.i18n;
     this.deathTimer = 0;
+    this.encounter?.abort();
     this.deathGoldLost = deathGoldLoss(
       session.character?.gold ?? 0,
       data.player.death.goldLossFraction,
@@ -1115,6 +1148,11 @@ export class WorldState implements GameState, InstanceHost {
     const bag = this.ctx.session?.character?.inventory;
     if (!book || !texts || !bag) return;
     const t = this.ctx.i18n;
+    if (book.isReady(def, bag) && !def.giver) {
+      // Nobody to hand it in to (Defeat Sultan): done right away.
+      this.completeQuest(def);
+      return;
+    }
     if (book.isReady(def, bag)) {
       this.hud?.showMessage(
         t.t('quest.ui.ready', { name: def.name, giver: texts.npcName(def.giver) }),
@@ -1172,9 +1210,77 @@ export class WorldState implements GameState, InstanceHost {
     }
     this.applyWeapon();
     this.ctx.events.emit('questCompleted', { questId: def.id });
+    this.refreshNpcPresence();
+    this.startGiverlessQuests();
     this.refreshQuestMarkers();
     this.syncSave();
     this.ctx.persist();
+  }
+
+  /**
+   * Quests without a giver (Defeat Sultan) start by themselves once their requirements are
+   * met: a message says what to do next.
+   */
+  private startGiverlessQuests(): void {
+    const book = this.quests;
+    const session = this.ctx.session;
+    const bag = session?.character?.inventory;
+    if (!book || !session || !bag) return;
+    for (const def of book.defs) {
+      if (def.giver || book.status(def.id, session.progress.level, bag) !== 'available') continue;
+      book.accept(def.id);
+      this.questStarted(def.id);
+    }
+  }
+
+  /** "New quest: Defeat Sultan" and what to do; saved at once. */
+  private questStarted(questId: string): void {
+    const def = this.quests?.get(questId);
+    if (!def) return;
+    const t = this.ctx.i18n;
+    this.ctx.events.emit('questStarted', { questId });
+    this.hud?.showMessage(t.t('quest.ui.started', { name: def.name }));
+    if (!def.giver) this.hud?.showMessage(t.t(def.description));
+    this.refreshQuestMarkers();
+    this.ctx.persist();
+  }
+
+  /** NPCs that come and go with conditions (Sultan after his fight) or are hidden for now. */
+  private refreshNpcPresence(): void {
+    const data = this.ctx.data;
+    if (!data) return;
+    this.npcs?.refreshPresence(data.triggers.conditions, this.conditionContext, this.hiddenNpcs);
+  }
+
+  /** What the boss fight may use from this scene. */
+  private encounterHost(): ConstructorParameters<typeof BossEncounter>[0] {
+    return {
+      ctx: this.ctx,
+      enemies: () => this.enemies,
+      quests: () => this.quests,
+      hud: () => this.hud,
+      setHiddenNpcs: (ids) => {
+        this.hiddenNpcs = ids;
+        this.refreshNpcPresence();
+      },
+      placePlayer: (x, z, heading) => this.placePlayer(x, z, heading),
+      setCutscenePlaying: (playing) => {
+        this.cutscenePlaying = playing;
+        this.input?.releaseAll();
+        // The mouse stays free afterwards: one click captures it again ("click to look
+        // around"). Capturing it by itself can turn the camera with a jump.
+        if (playing) {
+          this.input?.releasePointerLock();
+          this.dialog?.close();
+          this.hud?.setInteraction(null, 0, 0, false);
+        }
+      },
+      canStart: () =>
+        !this.paused && this.deathTimer === NOT_DYING && !this.dialog?.isOpen && !this.cheats.fly,
+      floatText: (x, y, z, text) => this.damageNumbers?.spawnText(x, y, z, text, 'dodged'),
+      usesTouch: () => (this.input?.usedTouch ?? false) || this.coarsePointer,
+      questStarted: (questId) => this.questStarted(questId),
+    };
   }
 
   /** The equipped weapon's damage bonus goes into every hit (Hilda's honed sword). */
@@ -1243,7 +1349,8 @@ export class WorldState implements GameState, InstanceHost {
     const { scene, rig, player, input, streamer, origin, worldRoot } = this;
     if (!scene || !rig || !player || !input || !streamer || !origin || !worldRoot) return;
     // While paused the simulation stands still, so draw the last state without interpolating.
-    const a = this.paused ? 1 : alpha;
+    const waiting = this.paused || this.cutscenePlaying;
+    const a = waiting ? 1 : alpha;
     const s = player.state;
 
     // Streaming: plan, request and build chunks within the frame budget.
@@ -1259,16 +1366,17 @@ export class WorldState implements GameState, InstanceHost {
     if (this.sword) player.showSword(this.sword);
     this.npcRenderer?.update(a, this.ctx.data?.npcs.settings.petHopSeconds ?? 1);
     this.npcRenderer?.updateMarkers(a, this.time);
-    if (!this.paused) this.time += frameSeconds;
+    if (!waiting) this.time += frameSeconds;
     this.enemyRenderer?.update(a, this.time);
     if (this.enemies) this.warningRenderer?.update(this.enemies.shown, a);
+    this.warningRenderer?.setArena(this.encounter?.arena ?? null);
     this.projectileRenderer?.update(a);
     input.consumeLook(this.look);
     const look = this.look;
     const turning = input.turningCamera || look.yaw !== 0 || look.pitch !== 0;
     const root = player.model.root;
     rig.orbit.update(
-      this.paused ? 0 : frameSeconds,
+      waiting ? 0 : frameSeconds,
       root.position.x,
       root.position.y,
       root.position.z,
@@ -1299,7 +1407,7 @@ export class WorldState implements GameState, InstanceHost {
     this.updateBlackout();
     this.hud?.update(frameSeconds);
     this.damageNumbers?.update(
-      this.paused ? 0 : frameSeconds,
+      waiting ? 0 : frameSeconds,
       rig.camera,
       origin.x,
       origin.z,
@@ -1425,6 +1533,8 @@ export class WorldState implements GameState, InstanceHost {
   }
 
   private pause(): void {
+    // A cutscene already waits (and has its own Skip); the pause menu comes after it.
+    if (this.cutscenePlaying) return;
     this.openMenu((resume) => pausePanel(this.ctx, resume));
   }
 
@@ -1493,20 +1603,24 @@ export class WorldState implements GameState, InstanceHost {
     const zone = data?.zones.zones.find((entry) => entry.id === zoneId);
     const spawn = zone?.spawnPoints[0];
     if (!spawn) return;
+    this.encounter?.abort();
     this.placePlayer(spawn.x, spawn.z);
   }
 
-  /** Puts the player at (x, z) on the ground (teleport, waking up at the checkpoint). */
-  private placePlayer(x: number, z: number): void {
+  /**
+   * Puts the player at (x, z) on the ground (teleport, waking up at the checkpoint, a boss
+   * fight). With a `heading` the player faces that way and the camera turns behind them.
+   */
+  private placePlayer(x: number, z: number, heading?: number): void {
     const data = this.ctx.data;
     const { player, streamer, collision, rig, origin } = this;
     if (!player || !streamer || !collision || !rig || !origin || !data) return;
-    player.place(x, streamer.heightAt(x, z), z, player.state.heading);
+    player.place(x, streamer.heightAt(x, z), z, heading ?? player.state.heading);
     collision.resolve(player.state, data.player.movement.radius);
     player.state.y = streamer.heightAt(player.state.x, player.state.z);
     player.place(player.state.x, player.state.y, player.state.z, player.state.heading);
     origin.reset(player.state.x, player.state.z);
-    rig.orbit.snap(player.state.x, player.state.y, player.state.z, rig.orbit.yaw);
+    rig.orbit.snap(player.state.x, player.state.y, player.state.z, heading ?? rig.orbit.yaw);
     this.dialog?.close();
     this.damageNumbers?.clear();
     if (this.npcWorld) {
@@ -1732,6 +1846,7 @@ export class WorldState implements GameState, InstanceHost {
           e.def.ai?.attack.range ?? 12,
         ),
       alert: (e) => enemies.alert(e),
+      bossEvent: (e, kind, attack) => this.encounter?.onBossEvent(e, kind, attack),
     };
     const probe = this.arrowProbe;
     this.projectileWorld = {
@@ -1974,6 +2089,8 @@ export class WorldState implements GameState, InstanceHost {
   }
 
   private readonly onKeyDown = (event: KeyboardEvent): void => {
+    // A cutscene handles its own keys (Escape skips it).
+    if (this.cutscenePlaying) return;
     // Overlays close themselves on Escape first; only an Escape with nothing open pauses.
     if (event.code === 'Escape' && !this.ctx.overlays.isOpen) {
       event.preventDefault();

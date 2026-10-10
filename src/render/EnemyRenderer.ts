@@ -17,6 +17,13 @@ const WHITE = new Color(0xffffff);
 const FLASH = new Color(0xff7a6a);
 /** Winding up an attack: the model glows towards this (pulsing, stronger near the hit). */
 const WARN = new Color(0xffb04a);
+/** Sultan's Pounce: his eyes (here: the whole model) glow gold instead. */
+const WARN_GOLD = new Color(0xffe27a);
+/** Boss leaps: height (m) of a Pounce and of the leap away after an attack. */
+const POUNCE_HEIGHT = 1.2;
+const RETREAT_HEIGHT = 0.8;
+/** A claw swipe turns the boss this far (radians) to one side and back. */
+const SWIPE_TWIST = 0.6;
 /** How far a hit target leans (radians) and how far a defeated one falls over. */
 const WOBBLE_ANGLE = 0.25;
 const FALLEN_ANGLE = 1.35;
@@ -125,10 +132,51 @@ export class EnemyRenderer {
     let lift = 0;
     let squash = 0;
     let warn = 0;
+    let warnColor = WARN;
+    let twist = 0;
     if (!e.alive) {
       lean = blob ? 0 : -FALLEN_ANGLE;
       lift = blob ? 0 : -FALLEN_SINK;
       squash = blob ? 0.8 : 0;
+    } else if (e.boss) {
+      lean = Math.sin(e.wobble * 30) * WOBBLE_ANGLE * (e.wobble / WOBBLE_SECONDS);
+      const b = e.boss;
+      const pattern = b.attack?.pattern;
+      const progress = b.duration > 0 ? Math.min(1, b.elapsed / b.duration) : 1;
+      if (b.phase === 'telegraph') {
+        warn = (0.45 + 0.35 * Math.sin(time * (8 + progress * 18))) * (0.4 + 0.6 * progress);
+        if (pattern === 'pounce') {
+          // Crouching, eyes glowing gold.
+          warnColor = WARN_GOLD;
+          squash = 0.25 * progress;
+          lean += 0.3 * progress;
+        } else if (pattern === 'charge') {
+          lean += 0.5 * progress;
+          squash = 0.1 * progress;
+        } else {
+          // Claws raised: leaning back.
+          lean += WINDUP_LEAN * progress;
+        }
+      } else if (b.phase === 'attack') {
+        if (pattern === 'pounce') {
+          lift = Math.sin(Math.PI * progress) * POUNCE_HEIGHT;
+          lean += 0.6;
+        } else if (pattern === 'charge') {
+          lean += 0.75;
+        } else {
+          const interval = b.attack?.hitIntervalSeconds ?? 0.3;
+          const swing = Math.max(0, b.hitTimer) / interval;
+          twist = (b.swipes % 2 === 0 ? 1 : -1) * SWIPE_TWIST * swing;
+          lean += STRIKE_LEAN * 0.6;
+        }
+      } else if (b.phase === 'retreat') {
+        lift = Math.sin(Math.PI * progress) * RETREAT_HEIGHT;
+        lean -= 0.3;
+      } else if (b.phase === 'opening') {
+        // Catching his breath: panting, leaning back a little.
+        squash = 0.05 + 0.04 * Math.sin(time * 9);
+        lean -= 0.12;
+      }
     } else {
       lean = Math.sin(e.wobble * 30) * WOBBLE_ANGLE * (e.wobble / WOBBLE_SECONDS);
       if (e.mode === 'windup') {
@@ -151,7 +199,7 @@ export class EnemyRenderer {
         lift = Math.sin((e.hopTime / hop.seconds) * Math.PI) * HOP_HEIGHT;
       }
     }
-    this.rotation.setFromAxisAngle(this.yAxis, e.drawHeading(alpha));
+    this.rotation.setFromAxisAngle(this.yAxis, e.drawHeading(alpha) + twist);
     this.tilt.setFromAxisAngle(this.xAxis, lean);
     this.rotation.multiply(this.tilt);
     this.position.set(e.drawX(alpha), e.drawY(alpha) + lift * size, e.drawZ(alpha));
@@ -159,7 +207,7 @@ export class EnemyRenderer {
     this.scale.set(size * wide, size * (1 - squash), size * wide);
     this.matrix.compose(this.position, this.rotation, this.scale);
     this.color.copy(WHITE);
-    if (warn > 0) this.color.lerp(WARN, warn);
+    if (warn > 0) this.color.lerp(warnColor, warn);
     if (e.flash > 0) this.color.copy(FLASH);
   }
 
