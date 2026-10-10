@@ -1482,6 +1482,65 @@
   color: var(--gh-tekst-zacht);
 }
 
+/* Gear: weight and stats under the name; equip load and the 6 worn slots above the items. */
+.ui-bag-gear {
+  flex-basis: 100%;
+  font: 13px var(--gh-font-stats);
+  color: var(--gh-ornamentgoud);
+}
+
+.ui-bag-load {
+  margin: 0;
+  font: 600 14px var(--gh-font-stats);
+  color: var(--gh-tekst);
+}
+
+.ui-bag-load-medium {
+  color: var(--gh-zonlicht);
+}
+
+.ui-bag-load-heavy {
+  color: var(--gh-zonsondergang);
+}
+
+.ui-bag-load-overloaded {
+  color: var(--gh-lantaarnamber);
+  text-decoration: underline;
+}
+
+.ui-bag-slots {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ui-bag-slot {
+  display: grid;
+  grid-template-columns: 5.5em 1fr auto;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  padding: 2px 10px;
+  border: 1px solid var(--gh-rand);
+  border-radius: 6px;
+}
+
+.ui-bag-slot-label {
+  font: 13px var(--gh-font-tekst);
+  color: var(--gh-tekst-zacht);
+}
+
+.ui-bag-slot .ui-bag-name {
+  font-size: 15px;
+}
+
+.ui-bag-slot-empty {
+  color: var(--gh-tekst-zacht);
+}
+
 /* Quests in the bag: name, then each objective with ✓ / ✗. */
 .ui-bag-subheading {
   margin: 4px 0 0;

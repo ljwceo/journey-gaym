@@ -114,6 +114,22 @@
           {
             "item": "greater_health_potion",
             "price": 40
+          },
+          {
+            "item": "straw_hat",
+            "price": 15
+          },
+          {
+            "item": "brass_ring",
+            "price": 25
+          },
+          {
+            "item": "copper_amulet",
+            "price": 30
+          },
+          {
+            "item": "padded_mantle",
+            "price": 60
           }
         ]
       }

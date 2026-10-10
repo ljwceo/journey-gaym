@@ -185,7 +185,9 @@
     "protected": "{name} wordt hier beschermd.",
     "levelUp": "Level omhoog! Je bent nu level {level}.",
     "noPotion": "Je hebt geen drankjes.",
-    "alreadyFull": "Je HP is al vol."
+    "alreadyFull": "Je HP is al vol.",
+    "loadChanged": "Draaglast: {tier}",
+    "gearInCombat": "Je kunt geen spullen wisselen tijdens een gevecht."
   },
   "dialog": {
     "next": "Verder",
@@ -289,6 +291,45 @@
     },
     "honed_old_sword": {
       "desc": "Je oude zwaard, geslepen door Hilda. Elke slag doet 3 schade meer."
+    },
+    "goblin_cleaver": {
+      "desc": "Een ruw, zwaar goblinzwaard. Slaat hard, maar je voelt elke kilo."
+    },
+    "chiefs_greatblade": {
+      "desc": "De trots van de Goblin Chief. Enorme schade, enorm gewicht."
+    },
+    "straw_hat": {
+      "desc": "Houdt de zon uit je ogen. Licht als een veertje."
+    },
+    "leather_cap": {
+      "desc": "Simpel gekookt leer. Beter dan niets."
+    },
+    "iron_helm": {
+      "desc": "Massief ijzer. Sterke bescherming, maar zwaar op je hoofd."
+    },
+    "padded_mantle": {
+      "desc": "Een dikke, gewatteerde mantel die klappen dempt."
+    },
+    "ironweave_mantle": {
+      "desc": "Geweven met ijzerdraad. Heel sterk, heel zwaar."
+    },
+    "copper_amulet": {
+      "desc": "Een simpele hanger die zachtjes zoemt van magie."
+    },
+    "goblin_tooth_necklace": {
+      "desc": "Goblintanden aan een touwtje. Op de een of andere manier maakt het je feller."
+    },
+    "brass_ring": {
+      "desc": "Een eenvoudige koperen ring."
+    },
+    "swift_ring": {
+      "desc": "Je stappen voelen een beetje lichter."
+    },
+    "chiefs_signet": {
+      "desc": "De ring van de Goblin Chief. Zwaar van gestolen goud."
+    },
+    "heartwood_ring": {
+      "desc": "Gesneden uit een gevallen tak van Old Tjikko. Het voelt levend."
     },
     "herb_seeds": {
       "desc": "Zaadjes van Rose. Later kun je ze planten op je stukje grond."
@@ -476,7 +517,8 @@
     "grantPotions": "+5 Health Potion",
     "grantSlimeGel": "+3 Slime Gel",
     "boss": "Baasgevecht",
-    "bossSultan": "Vecht tegen Sultan"
+    "bossSultan": "Vecht tegen Sultan",
+    "grantGear": "+ alle gear"
   },
   "bag": {
     "title": "Tas",
@@ -486,7 +528,45 @@
     "level": "Level {level} · {xp} / {need} XP",
     "levelMax": "Level {level} (hoogste level)",
     "quests": "Quests",
-    "noQuests": "Je hebt nu geen quests. Praat met de mensen van Greyhaven."
+    "noQuests": "Je hebt nu geen quests. Praat met de mensen van Greyhaven.",
+    "equip": "Aandoen",
+    "unequip": "Uitdoen",
+    "equipment": "Gedragen",
+    "items": "Spullen",
+    "load": "Draaglast {kg} / {max} kg · {tier}",
+    "weight": "{kg} kg",
+    "rarity": {
+      "rare": "Zeldzaam",
+      "epic": "Episch",
+      "legendary": "Legendarisch"
+    },
+    "slot": {
+      "weapon": "Wapen",
+      "hat": "Hoed",
+      "mantle": "Mantel",
+      "amulet": "Amulet",
+      "ring1": "Ring",
+      "ring2": "Ring"
+    },
+    "stat": {
+      "weaponDamage": "+{n} schade per slag",
+      "hp": "+{n} HP",
+      "mana": "+{n} mana",
+      "damagePercent": "+{n}% schade",
+      "damageReductionPercent": "−{n}% schade ontvangen",
+      "moveSpeedPercent": "+{n}% snelheid"
+    }
+  },
+  "load": {
+    "light": "Licht",
+    "medium": "Middel",
+    "heavy": "Zwaar",
+    "overloaded": "Overbelast",
+    "mediumMessage": "Middelzware last: je dash is wat korter.",
+    "heavyMessage": "Zwaar beladen: je loopt trager, dasht kort en staat daarna even stil.",
+    "overloadedMessage": "Overbelast: je loopt heel langzaam en kunt niet dashen. Leg iets weg.",
+    "lightMessage": "Lichte last: je beweegt weer vrij.",
+    "cannotDash": "Te zwaar om te dashen."
   },
   "death": {
     "title": "Je bent verslagen",

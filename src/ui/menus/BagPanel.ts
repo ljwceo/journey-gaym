@@ -1,5 +1,6 @@
 import type { GameContext } from '../../core/GameContext';
 import type { ItemDef } from '../../data/types';
+import { EQUIPMENT_SLOTS, type EquipmentSlot, isGear, wornCount } from '../../systems/Gear';
 import { button, el } from '../dom';
 import type { QuestSummary } from '../questText';
 import type { Panel } from '../Overlays';
@@ -17,9 +18,28 @@ const TYPE_ORDER: readonly ItemDef['type'][] = [
   'currency',
 ];
 
+/** What the bag needs to show and change your gear (the world does the rules). */
+export interface BagGear {
+  /** Puts an item on; closing / rebuilding the panel is up to the bag. */
+  equip(itemId: string): void;
+  unequip(slot: EquipmentSlot): void;
+  /** Carried and maximum kg, and the load tier (id for the colour, label key for the text). */
+  load(): { kg: number; maxKg: number; tierId: string; tierLabel: string };
+}
+
+/** Item stats in the order they are listed under a gear row. */
+const STAT_KEYS = [
+  'hp',
+  'mana',
+  'damagePercent',
+  'damageReductionPercent',
+  'moveSpeedPercent',
+] as const;
+
 /**
- * The simple bag (I / B or the bag button): gold, level and XP, every item with its count
- * and description, and the running quests with what is still missing. Potions have a Drink button. Item names stay English in both languages
+ * The simple bag (I / B or the bag button): gold, level and XP, equip load, what you wear (6
+ * slots), every item with its count and description, and the running quests with what is still
+ * missing. Potions have a Drink button, gear a Wear button (and worn gear Take off). Item names stay English in both languages
  * (CLAUDE.md §2.6). The game is paused while the bag is open.
  */
 export function bagPanel(
@@ -27,6 +47,7 @@ export function bagPanel(
   drink: (itemId: string) => void,
   xpLine: () => string,
   quests: () => readonly QuestSummary[],
+  gear: BagGear,
   onClose: () => void,
 ): Panel {
   return {
@@ -35,7 +56,33 @@ export function bagPanel(
       const character = ctx.session?.character;
       const data = ctx.data;
       const items = new Map(data?.items.items.map((item) => [item.id, item]) ?? []);
-      const equipped = new Set(Object.values(character?.equipment ?? {}));
+      const equipment = character?.equipment ?? {};
+      const kg = (value: number): string =>
+        value.toLocaleString(ctx.i18n.language, { maximumFractionDigits: 1 });
+      const rarityColor = (def: ItemDef | undefined): string | null => {
+        if (!def || def.rarity === 'common') return null;
+        const token = data?.items.rarities.find((r) => r.id === def.rarity)?.color;
+        // Mixed with the text colour: the pure blue / violet are too dark on the panel.
+        return token ? `color-mix(in srgb, var(--gh-${token}) 65%, var(--gh-tekst))` : null;
+      };
+      const nameEl = (def: ItemDef | undefined, fallback: string): HTMLElement => {
+        const span = el('span', { className: 'ui-bag-name', text: def?.name ?? fallback });
+        const color = rarityColor(def);
+        if (color) span.style.color = color;
+        return span;
+      };
+      const gearLine = (def: ItemDef): string => {
+        const parts = [t('bag.weight', { kg: kg(def.weight ?? 0) })];
+        if (def.rarity !== 'common') parts.unshift(t(`bag.rarity.${def.rarity}`));
+        if (def.weapon && def.weapon.damageBonus > 0) {
+          parts.push(t('bag.stat.weaponDamage', { n: def.weapon.damageBonus }));
+        }
+        for (const key of STAT_KEYS) {
+          const n = def.stats?.[key];
+          if (n) parts.push(t(`bag.stat.${key}`, { n }));
+        }
+        return parts.join(' · ');
+      };
       const stacks = [...(character?.inventory ?? [])].sort(
         (a, b) =>
           TYPE_ORDER.indexOf(items.get(a.item)?.type ?? 'resource') -
@@ -44,32 +91,62 @@ export function bagPanel(
       const rows = stacks.map((stack) => {
         const def = items.get(stack.item);
         const name = def?.name ?? stack.item;
+        const worn = wornCount(equipment, stack.item);
+        // A ring you have twice can be worn twice; anything else once.
+        const canWearMore =
+          isGear(def) && worn < Math.min(stack.count, def?.slot === 'ring' ? 2 : 1);
+        const chip = (text: string, label: string, onClick: () => void): HTMLElement =>
+          el('button', {
+            className: 'ui-chip',
+            text,
+            attrs: { type: 'button', 'aria-label': `${label}: ${name}` },
+            onClick,
+          });
         const action =
           def?.type === 'potion'
-            ? el('button', {
-                className: 'ui-chip',
-                text: t('bag.drink'),
-                attrs: { type: 'button', 'aria-label': `${t('bag.drink')}: ${name}` },
-                onClick: () => drink(stack.item),
-              })
-            : equipped.has(stack.item)
-              ? el('span', { className: 'ui-bag-equipped', text: t('bag.equipped') })
-              : null;
+            ? chip(t('bag.drink'), t('bag.drink'), () => drink(stack.item))
+            : canWearMore
+              ? chip(t('bag.equip'), t('bag.equip'), () => gear.equip(stack.item))
+              : worn > 0
+                ? el('span', { className: 'ui-bag-equipped', text: t('bag.equipped') })
+                : null;
         return el(
           'li',
           { className: 'ui-bag-row' },
           el(
             'div',
             { className: 'ui-bag-item' },
-            el('span', { className: 'ui-bag-name', text: name }),
+            nameEl(def, stack.item),
             stack.count > 1
               ? el('span', { className: 'ui-bag-count', text: `×${stack.count}` })
+              : null,
+            def && isGear(def)
+              ? el('span', { className: 'ui-bag-gear', text: gearLine(def) })
               : null,
             def?.description
               ? el('span', { className: 'ui-bag-desc', text: t(def.description) })
               : null,
           ),
           action,
+        );
+      });
+      const load = gear.load();
+      const slots = EQUIPMENT_SLOTS.map((slot) => {
+        const id = equipment[slot];
+        const def = id ? items.get(id) : undefined;
+        return el(
+          'li',
+          { className: 'ui-bag-slot' },
+          el('span', { className: 'ui-bag-slot-label', text: t(`bag.slot.${slot}`) }),
+          id ? nameEl(def, id) : el('span', { className: 'ui-bag-slot-empty', text: '—' }),
+          id && slot !== 'weapon'
+            ? el('button', {
+                className: 'ui-chip',
+                text: t('bag.unequip'),
+                attrs: { type: 'button', 'aria-label': `${t('bag.unequip')}: ${def?.name ?? id}` },
+                onClick: () => gear.unequip(slot),
+              })
+            : null,
         );
       });
       return el(
@@ -88,6 +165,14 @@ export function bagPanel(
           ),
           el('span', { className: 'ui-bag-level', text: xpLine() }),
         ),
+        el(
+          'p',
+          { className: `ui-bag-load ui-bag-load-${load.tierId}` },
+          t('bag.load', { kg: kg(load.kg), max: kg(load.maxKg), tier: t(load.tierLabel) }),
+        ),
+        el('h3', { className: 'ui-bag-subheading', text: t('bag.equipment') }),
+        el('ul', { className: 'ui-bag-slots' }, ...slots),
+        el('h3', { className: 'ui-bag-subheading', text: t('bag.items') }),
         rows.length > 0
           ? el('ul', { className: 'ui-bag-list' }, ...rows)
           : el('p', { className: 'ui-note', text: t('bag.empty') }),

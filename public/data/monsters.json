@@ -103,6 +103,12 @@
           "chance": 0.15,
           "min": 1,
           "max": 1
+        },
+        {
+          "item": "copper_amulet",
+          "chance": 0.04,
+          "min": 1,
+          "max": 1
         }
       ],
       "model": "placeholder:slime",
@@ -154,6 +160,24 @@
           "chance": 0.1,
           "min": 1,
           "max": 1
+        },
+        {
+          "item": "straw_hat",
+          "chance": 0.04,
+          "min": 1,
+          "max": 1
+        },
+        {
+          "item": "brass_ring",
+          "chance": 0.04,
+          "min": 1,
+          "max": 1
+        },
+        {
+          "item": "leather_cap",
+          "chance": 0.03,
+          "min": 1,
+          "max": 1
         }
       ],
       "model": "placeholder:goblin",
@@ -193,6 +217,24 @@
         {
           "item": "health_potion",
           "chance": 0.1,
+          "min": 1,
+          "max": 1
+        },
+        {
+          "item": "swift_ring",
+          "chance": 0.04,
+          "min": 1,
+          "max": 1
+        },
+        {
+          "item": "copper_amulet",
+          "chance": 0.04,
+          "min": 1,
+          "max": 1
+        },
+        {
+          "item": "goblin_tooth_necklace",
+          "chance": 0.03,
           "min": 1,
           "max": 1
         }
@@ -250,6 +292,42 @@
           "chance": 1,
           "min": 1,
           "max": 2
+        },
+        {
+          "item": "goblin_cleaver",
+          "chance": 0.3,
+          "min": 1,
+          "max": 1
+        },
+        {
+          "item": "iron_helm",
+          "chance": 0.25,
+          "min": 1,
+          "max": 1
+        },
+        {
+          "item": "chiefs_signet",
+          "chance": 0.12,
+          "min": 1,
+          "max": 1
+        },
+        {
+          "item": "ironweave_mantle",
+          "chance": 0.08,
+          "min": 1,
+          "max": 1
+        },
+        {
+          "item": "chiefs_greatblade",
+          "chance": 0.06,
+          "min": 1,
+          "max": 1
+        },
+        {
+          "item": "heartwood_ring",
+          "chance": 0.02,
+          "min": 1,
+          "max": 1
         }
       ],
       "model": "placeholder:goblin_chief",

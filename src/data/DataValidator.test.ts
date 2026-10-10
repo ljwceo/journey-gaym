@@ -195,4 +195,15 @@ describe('validateGameData catches broken data', () => {
     raw.npcs.npcs.find((n: { id: string }) => n.id === 'sultan').presentWhen = 'moonIsBlue';
     expect(messages(raw)).toContainEqual(expect.stringContaining('unknown condition "moonIsBlue"'));
   });
+
+  it('checks gear weight, stats and the load tiers', () => {
+    const raw = freshData();
+    delete raw.items.items.find((i: { id: string }) => i.id === 'iron_helm').weight;
+    raw.items.items.find((i: { id: string }) => i.id === 'health_potion').stats = { hp: 5 };
+    raw.player.load.tiers[1].maxRatio = 0.1;
+    const found = messages(raw);
+    expect(found).toContainEqual(expect.stringContaining('need a weight'));
+    expect(found).toContainEqual(expect.stringContaining('only weapons and armor have stats'));
+    expect(found).toContainEqual(expect.stringContaining('from light to heavy'));
+  });
 });
