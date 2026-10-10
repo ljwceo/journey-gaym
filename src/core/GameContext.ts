@@ -7,6 +7,7 @@ import type { Renderer } from '../render/Renderer';
 import type { SaveData } from '../save/SaveData';
 import type { SaveManager } from '../save/SaveManager';
 import type { StateId } from '../scenes/flow';
+import type { DayNightService } from '../services/DayNightService';
 import type { SeasonService } from '../services/SeasonService';
 import type { Overlays } from '../ui/Overlays';
 import type { GameEventBus } from './events';
@@ -36,6 +37,8 @@ export interface GameContext {
 
   data: GameData | null;
   seasons: SeasonService | null;
+  /** Time of day from the real clock (40 min days); the test mode can jump or speed it up. */
+  dayNight: DayNightService | null;
   /** The current save; null before the language choice and after deleting the save. */
   session: SaveData | null;
   /** Intro panel to show next (the playable fight panel hands back to the panel after it). */

@@ -73,7 +73,10 @@ describe('placeAtStart', () => {
     const zone = data.zones.zones.find((entry) => entry.id === data.player.start.zone);
     const spawn = zone?.spawnPoints.find((point) => point.id === data.player.start.spawnPoint);
     expect(save.world.zone).toBe(data.player.start.zone);
-    expect(save.world.position).toEqual({ x: spawn?.x, y: 0, z: spawn?.z });
+    // A Blender-built zone (Greyhaven) finds the ground from far above when the world is built.
+    expect(save.world.position).toEqual({ x: spawn?.x, y: zone?.scene ? 10_000 : 0, z: spawn?.z });
+    // Facing the spawn point's direction (the Monastery looks towards the city).
+    expect(save.world.heading).toBeCloseTo(((spawn?.headingDegrees ?? 0) * Math.PI) / 180);
     expect(save.world.checkpoint).toBe(zone?.checkpoint?.id);
   });
 

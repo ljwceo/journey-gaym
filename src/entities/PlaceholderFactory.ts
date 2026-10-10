@@ -1,6 +1,7 @@
 import {
   BufferGeometry,
   CapsuleGeometry,
+  type Color,
   CylinderGeometry,
   DoubleSide,
   Group,
@@ -262,6 +263,10 @@ export class CharacterModel {
   private body: Object3D | null = null;
   private hair: Object3D | null = null;
   private readonly sword: Object3D;
+  /** Fixed placeholder parts (head, mantle); hidden when a real model is used. */
+  private readonly fixedParts: Object3D[];
+  /** A real (glTF) model replacing the placeholder body, or null. */
+  private custom: Object3D | null = null;
 
   constructor(private readonly data: AppearanceFile) {
     const material = (color: number) => new MeshLambertMaterial({ color });
@@ -278,8 +283,34 @@ export class CharacterModel {
     this.materials.mantle.side = DoubleSide;
     this.materials.hair.side = DoubleSide;
     this.sword = sword(this.materials);
-    this.root.add(head(this.materials), mantle(this.materials), this.sword);
+    this.fixedParts = [head(this.materials), mantle(this.materials)];
+    this.root.add(...this.fixedParts, this.sword);
     this.root.name = 'character';
+  }
+
+  /** The current appearance's colors (hair, skin, mantle, embroidery), for a real model. */
+  get colors(): { hair: Color; skin: Color; mantle: Color; embroidery: Color } {
+    const m = this.materials;
+    return {
+      hair: m.hair.color,
+      skin: m.skin.color,
+      mantle: m.mantle.color,
+      embroidery: m.embroidery.color,
+    };
+  }
+
+  /**
+   * Uses a real model (e.g. player.glb) instead of the placeholder body, head, hair and mantle.
+   * The sword stays, so swings look the same. The model's feet stand at y = 0, facing +z; the
+   * caller owns (and disposes) its geometry and materials.
+   */
+  useModel(model: Object3D): void {
+    this.custom?.removeFromParent();
+    this.custom = model;
+    this.root.add(model);
+    for (const part of this.fixedParts) part.visible = false;
+    if (this.body) this.body.visible = false;
+    if (this.hair) this.hair.visible = false;
   }
 
   setAppearance(appearance: Appearance): void {
@@ -308,6 +339,9 @@ export class CharacterModel {
 
   /** Frees every geometry and material (call when the model leaves the scene). */
   dispose(): void {
+    // A real model belongs to whoever loaded it.
+    this.custom?.removeFromParent();
+    this.custom = null;
     const geometries = new Set<BufferGeometry>();
     const collect = (object: Object3D) =>
       object.traverse((child) => {
@@ -339,6 +373,7 @@ export class CharacterModel {
       current?.removeFromParent();
       this.root.add(next);
     }
+    next.visible = this.custom === null;
     return next;
   }
 }

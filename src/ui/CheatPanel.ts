@@ -13,6 +13,8 @@ export interface CheatPanelHandlers {
   importSave(code: string): boolean;
   /** Forgets the automatic preset, so the benchmark runs again (Settings back to "Auto"). */
   rerunBenchmark(): void;
+  /** Night monsters alive now (test mode text). */
+  nightMonsters(): number;
 }
 
 type SaveTool = 'none' | 'export' | 'import';
@@ -35,6 +37,8 @@ export class CheatPanel {
   private saveTool: SaveTool = 'none';
   private saveCode = '';
   private importFailed = false;
+  /** Live text of the day-night section (phase and time left), updated by `sync`. */
+  private dayNightText: HTMLElement | null = null;
 
   constructor(
     private readonly ctx: GameContext,
@@ -124,6 +128,7 @@ export class CheatPanel {
   sync(): void {
     this.openButton.hidden = !this.debugVisible;
     this.flyButtons.hidden = !(this.debugVisible && this.cheats.fly && this.isTouch());
+    this.updateDayNightText();
   }
 
   private build(): HTMLElement {
@@ -193,6 +198,7 @@ export class CheatPanel {
         }),
       ),
       this.seasonSection(chip, section),
+      this.dayNightSection(chip, section),
       section(
         t('cheats.quality'),
         el('p', { className: 'ui-note', text: this.ctx.quality.debugLine() }),
@@ -268,6 +274,65 @@ export class CheatPanel {
         }),
       ),
     );
+  }
+
+  /**
+   * Test mode for day and night: the phase and how long it still lasts, jump to a phase, run the
+   * clock faster, or follow the real clock again. Never saved.
+   */
+  private dayNightSection(
+    chip: (label: string, active: boolean, onClick: () => void) => HTMLButtonElement,
+    section: (label: string, ...content: (HTMLElement | null)[]) => HTMLElement,
+  ): HTMLElement | null {
+    const clock = this.ctx.dayNight;
+    const data = this.ctx.data;
+    if (!clock || !data) return null;
+    const t = this.ctx.i18n.t.bind(this.ctx.i18n);
+    const act = (change: () => void): void => {
+      change();
+      this.rebuild();
+    };
+    const text = el('p', { className: 'ui-note' });
+    this.dayNightText = text;
+    const result = section(
+      t('cheats.dayNight'),
+      text,
+      el(
+        'div',
+        { className: 'ui-chips' },
+        chip(t('cheats.dayNightClock'), !clock.overridden, () => act(() => clock.followClock())),
+        ...data.daynight.phases.map((phase) =>
+          chip(t(phase.label), false, () => act(() => clock.jumpTo(phase.id))),
+        ),
+      ),
+      el('p', { className: 'ui-label', text: t('cheats.dayNightSpeed') }),
+      el(
+        'div',
+        { className: 'ui-chips' },
+        ...data.daynight.testSpeeds.map((speed) =>
+          chip(`${speed}×`, clock.speed === speed, () => act(() => clock.setSpeed(speed))),
+        ),
+      ),
+    );
+    this.writeDayNightText(text);
+    return result;
+  }
+
+  /** Refreshes "Night · 12:31 left" while the panel is open (called on the debug timer). */
+  private updateDayNightText(): void {
+    if (this.panel && this.dayNightText) this.writeDayNightText(this.dayNightText);
+  }
+
+  private writeDayNightText(target: HTMLElement): void {
+    const clock = this.ctx.dayNight;
+    if (!clock) return;
+    const t = this.ctx.i18n.t.bind(this.ctx.i18n);
+    const phase = clock.phase();
+    const seconds = Math.ceil(phase.remainingMs / 1000);
+    const time = `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
+    target.textContent =
+      `${t('cheats.dayNightNow', { phase: t(phase.label), time })} · ` +
+      t('cheats.dayNightMonsters', { count: this.handlers.nightMonsters() });
   }
 
   /** Save as a text code: export (to copy) and import (paste a code), for testing. */

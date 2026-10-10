@@ -323,6 +323,21 @@
     "saveInvalid": "This is not a valid save code.",
     "measure": "Measure fps",
     "measureNote": "Walk around normally for {seconds} s. The result appears in the debug overlay (line \"measure\").",
-    "measureStart": "Measure {seconds} s"
+    "measureStart": "Measure {seconds} s",
+    "dayNight": "Day and night",
+    "dayNightNow": "{phase} · {time} left",
+    "dayNightClock": "Real clock",
+    "dayNightSpeed": "Speed",
+    "dayNightMonsters": "Night monsters: {count} · test area only in debug mode"
+  },
+  "daynight": {
+    "day": "Day",
+    "dusk": "Dusk",
+    "night": "Night",
+    "dawn": "Dawn"
+  },
+  "world": {
+    "loading": "Loading…",
+    "loadFailed": "This place could not be loaded. Check your connection and try again."
   }
 }

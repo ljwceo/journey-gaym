@@ -86,8 +86,8 @@
       "role": "priest",
       "zone": "greyhaven",
       "position": {
-        "x": -1865,
-        "z": -131
+        "x": -1795.5,
+        "z": 48.5
       },
       "interaction": "talk",
       "behavior": "static",
@@ -99,8 +99,8 @@
       "role": "merchant",
       "zone": "greyhaven",
       "position": {
-        "x": -1815,
-        "z": 124
+        "x": -1826,
+        "z": -37
       },
       "interaction": "talk",
       "behavior": "static",
@@ -112,8 +112,8 @@
       "role": "smith",
       "zone": "greyhaven",
       "position": {
-        "x": -1843,
-        "z": 147
+        "x": -1791,
+        "z": -50
       },
       "interaction": "talk",
       "behavior": "static",
@@ -125,8 +125,8 @@
       "role": "alchemist",
       "zone": "greyhaven",
       "position": {
-        "x": -1797,
-        "z": 106
+        "x": -1843,
+        "z": -62
       },
       "interaction": "talk",
       "behavior": "static",
@@ -138,8 +138,8 @@
       "role": "herbalist",
       "zone": "greyhaven",
       "position": {
-        "x": -1780,
-        "z": 197
+        "x": -1641,
+        "z": 34
       },
       "interaction": "talk",
       "behavior": "static",
@@ -151,8 +151,8 @@
       "role": "innkeeper",
       "zone": "greyhaven",
       "position": {
-        "x": -1832,
-        "z": 98
+        "x": -1821,
+        "z": 10
       },
       "interaction": "talk",
       "behavior": "static",
@@ -164,8 +164,8 @@
       "role": "teacher",
       "zone": "greyhaven",
       "position": {
-        "x": -1712,
-        "z": 12
+        "x": -1660,
+        "z": -95
       },
       "interaction": "talk",
       "behavior": "static",
@@ -183,8 +183,8 @@
       "role": "dark_teacher",
       "zone": "greyhaven",
       "position": {
-        "x": -1735,
-        "z": 28
+        "x": -1672,
+        "z": -80
       },
       "interaction": "talk",
       "behavior": "static",
@@ -196,8 +196,8 @@
       "role": "swordmaster",
       "zone": "greyhaven",
       "position": {
-        "x": -1688,
-        "z": 62
+        "x": -1698,
+        "z": -66
       },
       "interaction": "talk",
       "behavior": "static",
@@ -209,8 +209,8 @@
       "role": "companion",
       "zone": "greyhaven",
       "position": {
-        "x": -1864,
-        "z": -118
+        "x": -1799,
+        "z": 55
       },
       "interaction": "pet",
       "behavior": "follow",

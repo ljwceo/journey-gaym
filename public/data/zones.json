@@ -106,7 +106,14 @@
           [-1030, -680]
         ]
       }
-    ]
+    ],
+    "nightSpawning": {
+      "minPlayerDistance": 15,
+      "maxPlayerDistance": 70,
+      "checkSeconds": 4,
+      "corpseSeconds": 4,
+      "wanderRadius": 6
+    }
   },
   "startZone": "greyhaven",
   "zones": [
@@ -123,6 +130,73 @@
       },
       "terrainColor": "steengrijs",
       "fogColor": "mistpaars",
+      "lighting": "cycle",
+      "scene": {
+        "model": "zones/greyhaven/greyhaven.glb",
+        "player": "zones/greyhaven/player.glb",
+        "materials": "zones/greyhaven/materials.json",
+        "textures": "zones/greyhaven/tex/",
+        "offset": { "x": -1765, "y": 0, "z": 0 },
+        "fogNear": 90,
+        "fogFar": 750,
+        "viewDistance": 1400,
+        "treePrefix": "Tree",
+        "treeCellSize": 60,
+        "trunkRadius": 0.45,
+        "stepHeight": 0.55,
+        "respawnBelowWater": 1.5,
+        "waterMaterial": "GH_Water",
+        "noCollision": ["AC_Ivy"],
+        "doubleSided": ["AC_Ivy"],
+        "colorOverrides": { "AC_Ivy": "bosgroen" },
+        "windowMaterials": ["AC_Glass"],
+        "windowColor": "lantaarnamber",
+        "lanternMaterial": "GH_LanternGlow",
+        "exits": [
+          {
+            "id": "land_gate",
+            "shape": { "type": "rect", "minX": -1515, "minZ": -242, "maxX": -1500, "maxZ": 225 },
+            "to": { "x": -1480, "z": 0, "headingDegrees": 90 }
+          }
+        ]
+      },
+      "safeZones": [
+        {
+          "id": "greyhaven_city_walls",
+          "shape": {
+            "type": "polygon",
+            "points": [
+              [-1901.1, -145.2],
+              [-1808.5, -171.6],
+              [-1711.5, -180.4],
+              [-1610.2, -158.4],
+              [-1544, -109.9],
+              [-1507, -43.8],
+              [-1515.8, 22.4],
+              [-1559.9, 69.1],
+              [-1621.6, 99.1],
+              [-1693.9, 116.7],
+              [-1782.1, 116.7],
+              [-1833.2, 116.7],
+              [-1843.8, 79.7],
+              [-1914.3, 70.9],
+              [-1949.6, 9.1],
+              [-1945.2, -83.4]
+            ]
+          }
+        }
+      ],
+      "nightSpawns": [
+        {
+          "id": "greyhaven_test_fields",
+          "shape": { "type": "rect", "minX": -1600, "minZ": 120, "maxX": -1525, "maxZ": 190 },
+          "monsters": [{ "monster": "green_slime", "weight": 1 }],
+          "maxAlive": 4,
+          "levelRange": [1, 2],
+          "respawnSeconds": 20,
+          "testOnly": true
+        }
+      ],
       "terrain": {
         "baseHeight": 4,
         "amplitude": 10
@@ -131,20 +205,22 @@
       "spawnPoints": [
         {
           "id": "monastery_bed",
-          "x": -1868,
-          "z": -122
+          "x": -1797.21,
+          "z": 52.95,
+          "headingDegrees": 180
         },
         {
           "id": "city_gate",
-          "x": -1530,
-          "z": 0
+          "x": -1526.4,
+          "z": 44.4,
+          "headingDegrees": 270
         }
       ],
       "checkpoint": {
         "id": "greyhaven_monastery",
         "kind": "monastery",
-        "x": -1871,
-        "z": -125,
+        "x": -1797.21,
+        "z": 52.95,
         "radius": 8
       },
       "npcs": [
@@ -771,20 +847,20 @@
         {
           "id": "training_dummy_1",
           "monster": "training_dummy",
-          "x": -1680,
-          "z": 58
+          "x": -1702,
+          "z": -74
         },
         {
           "id": "training_dummy_2",
           "monster": "training_dummy",
-          "x": -1676,
-          "z": 71
+          "x": -1698,
+          "z": -70
         },
         {
           "id": "training_dummy_3",
           "monster": "training_dummy",
-          "x": -1690,
-          "z": 64
+          "x": -1694,
+          "z": -74
         }
       ]
     },
@@ -801,6 +877,30 @@
       },
       "terrainColor": "mosgroen",
       "fogColor": "bosgroen",
+      "lighting": "cycle",
+      "safeZones": [
+        {
+          "id": "elven_city_safe",
+          "shape": { "type": "circle", "x": -1100, "z": -650, "radius": 160 }
+        },
+        {
+          "id": "greenwood_shrine_safe",
+          "shape": { "type": "circle", "x": -1250, "z": -394, "radius": 25 }
+        }
+      ],
+      "nightSpawns": [
+        {
+          "id": "greenwood_slimes",
+          "shape": { "type": "rect", "minX": -1490, "minZ": -1240, "maxX": -710, "maxZ": -10 },
+          "monsters": [
+            { "monster": "green_slime", "weight": 3 },
+            { "monster": "big_slime", "weight": 1 }
+          ],
+          "maxAlive": 8,
+          "levelRange": [1, 4],
+          "respawnSeconds": 60
+        }
+      ],
       "terrain": {
         "baseHeight": 6,
         "amplitude": 14
@@ -1041,6 +1141,12 @@
     },
     {
       "id": "mournfen",
+      "safeZones": [
+        {
+          "id": "mournfen_monastery_safe",
+          "shape": { "type": "circle", "x": -1100, "z": 612, "radius": 30 }
+        }
+      ],
       "name": "The Mournfen",
       "levelRange": [8, 15],
       "bounds": {
@@ -1052,6 +1158,7 @@
       },
       "terrainColor": "moerasgroen",
       "fogColor": "mistpaars",
+      "lighting": "cycle",
       "terrain": {
         "baseHeight": -0.4,
         "amplitude": 2.6
@@ -1140,6 +1247,7 @@
       },
       "terrainColor": "sneeuw",
       "fogColor": "sneeuw",
+      "lighting": "cycle",
       "terrain": {
         "baseHeight": 20,
         "amplitude": 30
@@ -1183,6 +1291,7 @@
       },
       "terrainColor": "mistpaars",
       "fogColor": "mistpaars",
+      "lighting": "cycle",
       "terrain": {
         "baseHeight": 3,
         "amplitude": 25
@@ -1233,6 +1342,7 @@
       },
       "terrainColor": "zandsteen",
       "fogColor": "mistpaars",
+      "lighting": "cycle",
       "terrain": {
         "baseHeight": 2,
         "amplitude": 6
@@ -1276,6 +1386,7 @@
       },
       "terrainColor": "lavasteen",
       "fogColor": "schemerviolet",
+      "lighting": "cycle",
       "terrain": {
         "baseHeight": 30,
         "amplitude": 60
@@ -1313,6 +1424,7 @@
       },
       "terrainColor": "steppe",
       "fogColor": "zonsondergang",
+      "lighting": "cycle",
       "terrain": {
         "baseHeight": 12,
         "amplitude": 8
@@ -1356,6 +1468,7 @@
       },
       "terrainColor": "verdorven",
       "fogColor": "schemerviolet",
+      "lighting": "cycle",
       "terrain": {
         "baseHeight": 5,
         "amplitude": 20
@@ -1400,6 +1513,7 @@
       },
       "terrainColor": "nachtinkt",
       "fogColor": "verdorven",
+      "lighting": "cycle",
       "terrain": {
         "baseHeight": 10,
         "amplitude": 4

@@ -99,6 +99,7 @@ const ctx: GameContext = {
   params,
   data: null,
   seasons: null,
+  dayNight: null,
   session: null,
   introPanel: 0,
   goto: (state) => states.change(state),

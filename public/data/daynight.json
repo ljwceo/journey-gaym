@@ -1,0 +1,126 @@
+{
+  "phases": [
+    {
+      "id": "day",
+      "minutes": 20,
+      "label": "daynight.day"
+    },
+    {
+      "id": "dusk",
+      "minutes": 3,
+      "label": "daynight.dusk"
+    },
+    {
+      "id": "night",
+      "minutes": 14,
+      "label": "daynight.night"
+    },
+    {
+      "id": "dawn",
+      "minutes": 3,
+      "label": "daynight.dawn"
+    }
+  ],
+  "blendMinutes": 1.5,
+  "spawnPhases": ["dusk", "night", "dawn"],
+  "testSpeeds": [1, 10, 60],
+  "looks": [
+    {
+      "id": "day",
+      "skyTop": "daglucht",
+      "skyHorizon": "daghorizon",
+      "sun": "daglicht",
+      "sunStrength": 1,
+      "shadow": "dagschaduw",
+      "shadowStrength": 2.1,
+      "fog": "daghorizon",
+      "worldFogMix": 0.45,
+      "lightElevationDegrees": 50,
+      "lightAzimuthDegrees": 300,
+      "sunDisk": 1,
+      "moonDisk": 0,
+      "stars": 0,
+      "glow": 0.55,
+      "windowGlow": 0
+    },
+    {
+      "id": "dusk",
+      "skyTop": "schemerviolet",
+      "skyHorizon": "schemerroze",
+      "sun": "zonsondergang",
+      "sunStrength": 1.25,
+      "shadow": "mistpaars",
+      "shadowStrength": 3.1,
+      "fog": "zonsondergang",
+      "worldFogMix": 0.4,
+      "lightElevationDegrees": 8,
+      "lightAzimuthDegrees": 268,
+      "sunDisk": 1,
+      "moonDisk": 0,
+      "stars": 0.25,
+      "glow": 1,
+      "windowGlow": 0.6
+    },
+    {
+      "id": "night",
+      "skyTop": "nachtinkt",
+      "skyHorizon": "nachtblauw",
+      "sun": "maanlicht",
+      "sunStrength": 0.55,
+      "shadow": "nachtschaduw",
+      "shadowStrength": 4,
+      "fog": "nachtblauw",
+      "worldFogMix": 0.75,
+      "lightElevationDegrees": 38,
+      "lightAzimuthDegrees": 150,
+      "sunDisk": 0,
+      "moonDisk": 1,
+      "stars": 1,
+      "glow": 1.5,
+      "windowGlow": 1
+    },
+    {
+      "id": "dawn",
+      "skyTop": "schemerviolet",
+      "skyHorizon": "zonsondergang",
+      "sun": "zonlicht",
+      "sunStrength": 1,
+      "shadow": "mistpaars",
+      "shadowStrength": 3,
+      "fog": "schemerroze",
+      "worldFogMix": 0.4,
+      "lightElevationDegrees": 8,
+      "lightAzimuthDegrees": 92,
+      "sunDisk": 1,
+      "moonDisk": 0,
+      "stars": 0.3,
+      "glow": 1,
+      "windowGlow": 0.5
+    },
+    {
+      "id": "golden_hour",
+      "skyTop": "schemerviolet",
+      "skyHorizon": "zonsondergang",
+      "sun": "daglicht",
+      "sunStrength": 1,
+      "shadow": "mistpaars",
+      "shadowStrength": 3.9,
+      "fog": "daghorizon",
+      "worldFogMix": 0,
+      "lightElevationDegrees": 20,
+      "lightAzimuthDegrees": 300,
+      "sunDisk": 1,
+      "moonDisk": 0,
+      "stars": 0,
+      "glow": 1,
+      "windowGlow": 0.4
+    }
+  ],
+  "lanternLights": {
+    "max": 5,
+    "rangeMeters": 14,
+    "strength": 1.6,
+    "color": "lantaarnamber",
+    "minGlow": 0.9
+  }
+}

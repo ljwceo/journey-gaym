@@ -6,3 +6,6 @@ docs/
 package-lock.json
 CLAUDE.md
 README.md
+
+# Exported from Blender as-is (re-exports overwrite them)
+public/zones/

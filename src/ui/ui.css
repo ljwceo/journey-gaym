@@ -237,6 +237,21 @@
   transition: width 0.2s;
 }
 
+/* Loading a Blender-built zone (e.g. Greyhaven): covers the world, the HUD and the buttons. */
+.ui-zone-loading {
+  position: absolute;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 16px;
+  text-align: center;
+  background: radial-gradient(ellipse at 50% 60%, var(--gh-schemerviolet) 0%, var(--gh-bg) 70%);
+}
+
 /* ------------------------------------------------------------ intro */
 
 .ui-intro {

@@ -34,13 +34,21 @@ export const terrainColors = Object.fromEntries(
   Object.entries(tokens.terrein).map(([key, value]) => [key, hexToNumber(value.hex)]),
 ) as Record<TerrainKey, number>;
 
+type LightKey = keyof typeof tokens.licht;
+
+/** Sky and light colors for the day-night cycle, as numbers. */
+export const lightColors = Object.fromEntries(
+  Object.entries(tokens.licht).map(([key, value]) => [key, hexToNumber(value.hex)]),
+) as Record<LightKey, number>;
+
 /**
  * Every color name data files may use (`"terrainColor": "mosgroen"`), mapped to its number.
- * Palette and terrain tokens share one namespace; names must stay unique across both groups.
+ * Palette, terrain and light tokens share one namespace; names must stay unique across groups.
  */
 export const colorTokens: ReadonlyMap<string, number> = new Map([
   ...Object.entries(palette),
   ...Object.entries(terrainColors),
+  ...Object.entries(lightColors),
 ]);
 
 /** Resolves a color token name from data to a number, or throws for unknown names. */

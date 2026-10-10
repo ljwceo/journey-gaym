@@ -148,3 +148,33 @@ Alleen data in `public/data/zones.json`:
 - **Schadegetallen** (`src/ui/DamageNumbers.ts`): vaste pool DOM-elementen boven de 3D-wereld.
 - **Een nieuwe vijand toevoegen:** zet hem in `monsters.json` (met `model`) en een `spawn` in de zone; een nieuw placeholder-model komt in `EnemyFactory.ts`. De validator controleert de verwijzingen, een test controleert dat elk model bestaat.
 - **Gescripte gevechten** (intro): `fights` in `cutscenes.json` (arena, tegenstanders, beats met acties). `src/systems/FightScript.ts` speelt de beats af op de vaste tijdstap (wachten op slagen of seconden), `src/scenes/IntroFightState.ts` maakt er effecten van. Een paneel met `"fight": "<id>"` in een cutscene wordt zo'n gevecht; daarna gaat de intro verder (`ctx.introPanel`). Een nieuwe grap = een nieuwe beat of actie in de data.
+
+
+## Blender-zones: Greyhaven (2026-10-10)
+
+Een zone met een blok `scene` in `zones.json` komt uit Blender in plaats van uit het gestreamde terrein.
+
+| Bestand | Wat |
+|---|---|
+| `public/zones/greyhaven/` | De export uit Blender: `greyhaven.glb` (Y-up, KHR_mesh_quantization, één mesh per materiaal, bomen als losse `Tree*`-nodes), `player.glb`, `materials.json` (hoe elk materiaal eruitziet, terreinkaart, spawn), `tex/`. Niet met de hand aanpassen: een nieuwe export overschrijft ze |
+| `src/world/scene/SceneAssets.ts` | Laadt alles async met voortgang (laadscherm in `WorldState`) |
+| `src/world/scene/SceneZone.ts` | Maakt de meshes (toon-materiaal per Blender-materiaal), bomen als InstancedMesh per materiaal per 60 m-cel, één MeshBVH voor de botsing (zonder water, klimop en gloeiende materialen), stamcirkels, lantaarnposities. Is `Ground`, `Mover` en `CameraOccluder`, dus de bestaande spelercontroller, NPC's en camera werken er gewoon mee |
+| `src/world/scene/ScenePlayerModel.ts` | `player.glb` met de toon-shader en de kleuren uit de character creator (`CharacterModel.useModel`) |
+| `src/render/toon/ToonMaterial.ts`, `SkyDome.ts` | De toon-shader (triplanar, terreinkaart, twee tinten, gloed, water, mist, lantaarnlichten) en de lucht. Licht- en luchtkleuren zijn **gedeelde uniforms** |
+
+- **Coördinaten:** de Blender-oorsprong ligt op `scene.offset` in de wereld. Blender (x, y, z-up) = wereld (x + offset.x, z + offset.y, −y + offset.z). Alle data (spawnpunten, NPC's, triggers, veilige zones) blijft in wereldcoördinaten. De debugregel `chunks` toont in een Blender-zone je positie in Blender-coördinaten.
+- **Lopen:** een capsule duwt je alleen zijwaarts uit muren; een straal naar beneden vanaf `stepHeight` (0,55 m) zet je op de grond, dus trappen werken. Van een rand val je met zwaartekracht. Onder de zee (`respawnBelowWater`) of buiten de kaart: terug naar het eerste spawnpunt.
+- **Overgang:** een `exit` in `scene` laadt de open wereld (`travel` in `WorldState`: bestemming in de save, dan wordt de wereld opnieuw opgebouwd). Loop je in de open wereld een zone met `scene` binnen, dan laadt die (aankomst bij het dichtstbijzijnde spawnpunt). In een Blender-zone horen alleen de NPC's, triggers, checkpoints en monsters van die zone erbij; in de open wereld juist die van de andere zones.
+- **Nieuwe Blender-zone:** export in `public/zones/<id>/`, een blok `scene` + spawnpunten in `zones.json`. De validator controleert kleuren, mist en uitgangen.
+
+## Dag en nacht (2026-10-10)
+
+- **Klok** (`src/services/DayNightService.ts`): tijd van de dag = (`Date.now()`) modulo de lengte van een dag uit `public/data/daynight.json` (nu 40 min: dag 20, schemer 3, nacht 14, ochtendschemer 3). Iedereen ziet dezelfde tijd zonder server. Testmodus (cheatmenu): naar een fase springen, sneller laten lopen, terug naar de echte klok. Getest in `DayNightService.test.ts`.
+- **Licht** (`src/render/DayNightLighting.ts`): per fase een *look* (kleuren zijn stijlgids-tokens, groep `licht`). Rond elke wissel mengen twee looks vloeiend (`blendMinutes`). Elke frame worden de gedeelde uniforms bijgewerkt (toon-materialen, lucht) en de Three.js-lichten en mist van de open wereld. Een zone met `"lighting": "goldenHour"` krijgt altijd de look `golden_hour`.
+- **Lantaarns:** de gloed van lantaarns/kristallen en ramen volgt de look; op High krijgen de dichtstbijzijnde lantaarns echte lichten (`lanternLights`).
+
+## Mobs bij nacht (2026-10-10)
+
+- **Data:** per zone `safeZones` (NPC-gebieden, daar verschijnt nooit iets) en `nightSpawns` (gebied, monsters met gewicht, `maxAlive`, levels, `respawnSeconds`, eventueel `testOnly`); regels in `world.nightSpawning`; welke fases in `daynight.json` (`spawnPhases`).
+- **Systeem:** `Enemies.stepSpawning` op de vaste stap. Per gebied een vaste pool van `maxAlive` vijanden (geen nieuwe objecten tijdens het spelen); een vrije plek wordt gevuld op een willekeurige plek in het gebied, buiten elke veilige zone, tussen min- en max-afstand van de speler, op droge grond. Verslagen monsters verdwijnen na `corpseSeconds`; hun plek komt na `respawnSeconds` weer vrij. Overdag blijven bestaande monsters staan (open vraag). Getest in `NightSpawns.test.ts`.
+- **Tekenen:** `EnemyRenderer` geeft een poolplek een instance in elk model dat hij kan krijgen en tekent hem in het model van zijn huidige monster (slimes huppelen als ze bewegen).

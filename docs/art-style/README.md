@@ -69,6 +69,23 @@ Gedempte kleuren voor de grond van de zones (eerst als placeholder, later als ba
 | `--gh-terrein-sneeuw` | `#D6D3DE` | Sneeuw en ijs (koel, nooit puur wit) |
 | `--gh-terrein-zeewater` | `#3D4766` | Zee en diep water |
 
+### Lichtkleuren (dag en nacht)
+
+Voor de dag-en-nachtcyclus (`public/data/daynight.json`). Overdag warm en zacht (geen fel middaglicht), bij schemer oranje-roze, 's nachts donkerblauw met maanlicht (nooit pikzwart, zie L1). Tokens staan in `tokens.json` onder `licht`.
+
+| Token | Hex | Gebruik |
+|---|---|---|
+| `--gh-licht-daglucht` | `#8DA6CF` | Lucht overdag (boven) |
+| `--gh-licht-daghorizon` | `#EFD8B4` | Horizon en mist overdag |
+| `--gh-licht-daglicht` | `#FFEFD2` | Zonlicht overdag |
+| `--gh-licht-dagschaduw` | `#8E92B8` | Schaduwkant overdag |
+| `--gh-licht-schemerroze` | `#E39A8C` | Horizon bij schemer |
+| `--gh-licht-nachtblauw` | `#27305A` | Nachtlucht bij de horizon, mist 's nachts |
+| `--gh-licht-maanlicht` | `#A9B7DE` | Maan en maanlicht |
+| `--gh-licht-nachtschaduw` | `#2B2D4C` | Schaduwkant 's nachts |
+
+> **L1 en de dag-en-nachtcyclus:** L1 zegt "altijd gouden uur of schemering". Met de cyclus (besloten 2026-10-10) is er ook dag en nacht, maar dan zacht: geen fel middaglicht en geen pikzwarte nacht. Een zone kan in zijn data op `goldenHour` staan, dan blijft hij altijd in het gouden uur.
+
 ### Kleuren buiten het palet
 
 Haar- en huidskleuren van de character creator (19 haarkleuren, 6 huidtinten) passen niet in dit palet. Die staan als hex-code in `public/data/appearance.json` (data, geen code). Alle andere kleuren in de data verwijzen naar een token uit deze gids. **Navy** (mantels) = Nachtinkt.

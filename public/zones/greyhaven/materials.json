@@ -1,0 +1,655 @@
+{
+ "materials": {
+  "AC_Banner": {
+   "kind": "flat",
+   "color": [
+    0.223,
+    0.2654,
+    0.5739
+   ]
+  },
+  "AC_Banner_Purple": {
+   "kind": "flat",
+   "color": [
+    0.3615,
+    0.1737,
+    0.5018
+   ]
+  },
+  "AC_Books": {
+   "kind": "flat",
+   "color": [
+    0.3462,
+    0.3035,
+    0.2192
+   ]
+  },
+  "AC_Bush": {
+   "kind": "flat",
+   "color": [
+    0.2822,
+    0.4954,
+    0.1679
+   ]
+  },
+  "AC_Candle": {
+   "kind": "emit",
+   "color": [
+    1.0,
+    0.78,
+    0.42
+   ],
+   "strength": 5.0
+  },
+  "AC_Carpet": {
+   "kind": "flat",
+   "color": [
+    0.2611,
+    0.3518,
+    0.6525
+   ]
+  },
+  "AC_CellarFloor": {
+   "kind": "tri",
+   "tex": "T_cellar_floor.jpg",
+   "scale": 0.2,
+   "gamma": 1.375,
+   "tint": [
+    1,
+    1,
+    1
+   ]
+  },
+  "AC_CellarStone": {
+   "kind": "tri",
+   "tex": "T_cellar_stone.jpg",
+   "scale": 0.25,
+   "gamma": 1.375,
+   "tint": [
+    1,
+    1,
+    1
+   ]
+  },
+  "AC_CellarTrim": {
+   "kind": "tri",
+   "tex": "T_cellar_stone.jpg",
+   "scale": 0.3,
+   "gamma": 1.375,
+   "tint": [
+    1.45,
+    1.4,
+    1.5
+   ]
+  },
+  "AC_Chalk": {
+   "kind": "flat",
+   "color": [
+    0.155,
+    0.2099,
+    0.1882
+   ]
+  },
+  "AC_CircleGlow": {
+   "kind": "emit",
+   "color": [
+    0.35,
+    0.45,
+    1.0
+   ],
+   "strength": 1.6
+  },
+  "AC_Crystal": {
+   "kind": "emit",
+   "color": [
+    0.55,
+    0.85,
+    1.0
+   ],
+   "strength": 4.0
+  },
+  "AC_Crystal_Fire": {
+   "kind": "emit",
+   "color": [
+    1.0,
+    0.35,
+    0.1
+   ],
+   "strength": 3.0
+  },
+  "AC_Crystal_Nature": {
+   "kind": "emit",
+   "color": [
+    0.35,
+    0.9,
+    0.3
+   ],
+   "strength": 3.0
+  },
+  "AC_Crystal_Water": {
+   "kind": "emit",
+   "color": [
+    0.3,
+    0.6,
+    1.0
+   ],
+   "strength": 3.0
+  },
+  "AC_Crystal_Wind": {
+   "kind": "emit",
+   "color": [
+    0.75,
+    0.95,
+    0.9
+   ],
+   "strength": 3.0
+  },
+  "AC_Cypress": {
+   "kind": "flat",
+   "color": [
+    0.1606,
+    0.3447,
+    0.1501
+   ]
+  },
+  "AC_Flag": {
+   "kind": "tri",
+   "tex": "T_paving.jpg",
+   "scale": 0.1667,
+   "gamma": 1.375,
+   "tint": [
+    1,
+    1,
+    1
+   ]
+  },
+  "AC_Glass": {
+   "kind": "flat",
+   "color": [
+    0.3445,
+    0.416,
+    0.5595
+   ]
+  },
+  "AC_Ivy": {
+   "kind": "flat",
+   "color": [
+    0.0,
+    0.0,
+    0.0
+   ]
+  },
+  "AC_Leather": {
+   "kind": "flat",
+   "color": [
+    0.7921,
+    0.7094,
+    0.5207
+   ]
+  },
+  "AC_Paint": {
+   "kind": "flat",
+   "color": [
+    0.9083,
+    0.8596,
+    0.7457
+   ]
+  },
+  "AC_PurpleGlow": {
+   "kind": "emit",
+   "color": [
+    0.7,
+    0.35,
+    1.0
+   ],
+   "strength": 4.0
+  },
+  "AC_Roof_Purple": {
+   "kind": "tri",
+   "tex": "T_roof_purple.jpg",
+   "scale": 0.25,
+   "gamma": 1.375,
+   "tint": [
+    1,
+    1,
+    1
+   ]
+  },
+  "AC_Roof_Teal": {
+   "kind": "tri",
+   "tex": "T_roof_teal.jpg",
+   "scale": 0.25,
+   "gamma": 1.375,
+   "tint": [
+    1,
+    1,
+    1
+   ]
+  },
+  "AC_Sand": {
+   "kind": "flat",
+   "color": [
+    0.7726,
+    0.6169,
+    0.3902
+   ]
+  },
+  "AC_Soil": {
+   "kind": "flat",
+   "color": [
+    0.3968,
+    0.2908,
+    0.1866
+   ]
+  },
+  "AC_Stone": {
+   "kind": "tri",
+   "tex": "T_stone_wall.jpg",
+   "scale": 0.25,
+   "gamma": 1.375,
+   "tint": [
+    1.0,
+    1.0,
+    1.0
+   ]
+  },
+  "AC_Stone_Ext": {
+   "kind": "tri",
+   "tex": "T_stone_wall.jpg",
+   "scale": 0.25,
+   "gamma": 1.375,
+   "tint": [
+    1.0,
+    1.0,
+    1.0
+   ]
+  },
+  "AC_Stone_Hall": {
+   "kind": "tri",
+   "tex": "T_stone_ashlar.jpg",
+   "scale": 0.2,
+   "gamma": 1.375,
+   "tint": [
+    1.0,
+    1.0,
+    1.0
+   ]
+  },
+  "AC_Stone_Tower": {
+   "kind": "tri",
+   "tex": "T_stone_tower.jpg",
+   "scale": 0.3125,
+   "gamma": 1.375,
+   "tint": [
+    1.0,
+    1.0,
+    1.0
+   ]
+  },
+  "AC_Timber": {
+   "kind": "tri",
+   "tex": "T_wood_planks.jpg",
+   "scale": 0.3333,
+   "gamma": 1.375,
+   "tint": [
+    0.72,
+    0.66,
+    0.62
+   ]
+  },
+  "AC_Trim": {
+   "kind": "tri",
+   "tex": "T_stone_trim.jpg",
+   "scale": 0.4,
+   "gamma": 1.375,
+   "tint": [
+    1.0,
+    1.0,
+    1.0
+   ]
+  },
+  "AC_Vault": {
+   "kind": "flat",
+   "color": [
+    0.3486,
+    0.4878,
+    0.6531
+   ]
+  },
+  "AC_WoodFloor": {
+   "kind": "tri",
+   "tex": "T_wood_planks.jpg",
+   "scale": 0.3333,
+   "gamma": 1.375,
+   "tint": [
+    1,
+    1,
+    1
+   ]
+  },
+  "Boots": {
+   "kind": "flat",
+   "color": [
+    0.15,
+    0.1,
+    0.07
+   ]
+  },
+  "Cloak_Navy": {
+   "kind": "flat",
+   "color": [
+    0.08,
+    0.12,
+    0.3
+   ]
+  },
+  "GH_Awning_Blue": {
+   "kind": "flat",
+   "color": [
+    0.5346,
+    0.5853,
+    0.7079
+   ]
+  },
+  "GH_Awning_Green": {
+   "kind": "flat",
+   "color": [
+    0.5849,
+    0.6958,
+    0.4797
+   ]
+  },
+  "GH_Awning_Red": {
+   "kind": "flat",
+   "color": [
+    0.8392,
+    0.5367,
+    0.4399
+   ]
+  },
+  "GH_Bark": {
+   "kind": "tri",
+   "tex": "T_wood_planks.jpg",
+   "scale": 0.3333,
+   "gamma": 1.375,
+   "tint": [
+    1,
+    1,
+    1
+   ]
+  },
+  "GH_Cloth_Cream": {
+   "kind": "flat",
+   "color": [
+    0.8892,
+    0.823,
+    0.6716
+   ]
+  },
+  "GH_Cobble": {
+   "kind": "tri",
+   "tex": "T_paving.jpg",
+   "scale": 0.1667,
+   "gamma": 1.375,
+   "tint": [
+    0.8,
+    0.86,
+    0.98
+   ]
+  },
+  "GH_Cobblestone": {
+   "kind": "tri",
+   "tex": "T_cobblestone.jpg",
+   "scale": 0.2857,
+   "gamma": 1.375,
+   "tint": [
+    1,
+    1,
+    1
+   ]
+  },
+  "GH_Embers": {
+   "kind": "emit",
+   "color": [
+    1.0,
+    0.32,
+    0.06
+   ],
+   "strength": 4.0
+  },
+  "GH_Field_Crops": {
+   "kind": "flat",
+   "color": [
+    0.3185,
+    0.3821,
+    0.1579
+   ]
+  },
+  "GH_Field_Wheat": {
+   "kind": "flat",
+   "color": [
+    0.7268,
+    0.5734,
+    0.2518
+   ]
+  },
+  "GH_Fruit_Green": {
+   "kind": "flat",
+   "color": [
+    0.4901,
+    0.7233,
+    0.2053
+   ]
+  },
+  "GH_Fruit_Orange": {
+   "kind": "flat",
+   "color": [
+    0.918,
+    0.5709,
+    0.1493
+   ]
+  },
+  "GH_Fruit_Red": {
+   "kind": "flat",
+   "color": [
+    0.8311,
+    0.2256,
+    0.1681
+   ]
+  },
+  "GH_Garden": {
+   "kind": "flat",
+   "color": [
+    0.3968,
+    0.2908,
+    0.1866
+   ]
+  },
+  "GH_Gold": {
+   "kind": "flat",
+   "color": [
+    0.837,
+    0.6391,
+    0.2151
+   ]
+  },
+  "GH_Iron": {
+   "kind": "flat",
+   "color": [
+    0.2422,
+    0.2511,
+    0.2989
+   ]
+  },
+  "GH_LanternGlow": {
+   "kind": "emit",
+   "color": [
+    1.0,
+    0.62,
+    0.25
+   ],
+   "strength": 6.0
+  },
+  "GH_Roof_Red": {
+   "kind": "tri",
+   "tex": "T_roof_red.jpg",
+   "scale": 0.25,
+   "gamma": 1.375,
+   "tint": [
+    1,
+    1,
+    1
+   ]
+  },
+  "GH_Roof_Slate": {
+   "kind": "tri",
+   "tex": "T_roof_blue.jpg",
+   "scale": 0.25,
+   "gamma": 1.375,
+   "tint": [
+    1,
+    1,
+    1
+   ]
+  },
+  "GH_Stone": {
+   "kind": "tri",
+   "tex": "T_stone_wall_grey.jpg",
+   "scale": 0.25,
+   "gamma": 1.375,
+   "tint": [
+    1,
+    1,
+    1
+   ]
+  },
+  "GH_Stone_Dark": {
+   "kind": "tri",
+   "tex": "T_stone_wall_grey.jpg",
+   "scale": 0.3125,
+   "gamma": 1.375,
+   "tint": [
+    0.72,
+    0.74,
+    0.82
+   ]
+  },
+  "GH_Terrain_Mat": {
+   "kind": "terrain",
+   "tex": "terrain.jpg"
+  },
+  "GH_TreeLeaves": {
+   "kind": "flat",
+   "color": [
+    0.1502,
+    0.3436,
+    0.118
+   ]
+  },
+  "GH_Water": {
+   "kind": "water"
+  },
+  "GH_WaterFall": {
+   "kind": "flat",
+   "color": [
+    0.5,
+    0.85,
+    0.95
+   ]
+  },
+  "GH_Wood": {
+   "kind": "tri",
+   "tex": "T_wood_planks.jpg",
+   "scale": 0.3333,
+   "gamma": 1.375,
+   "tint": [
+    1,
+    1,
+    1
+   ]
+  },
+  "Gold_Trim": {
+   "kind": "flat",
+   "color": [
+    0.85,
+    0.65,
+    0.2
+   ]
+  },
+  "Hair": {
+   "kind": "flat",
+   "color": [
+    0.25,
+    0.15,
+    0.08
+   ]
+  },
+  "Hat_Navy": {
+   "kind": "flat",
+   "color": [
+    0.08,
+    0.12,
+    0.3
+   ]
+  },
+  "Leather": {
+   "kind": "flat",
+   "color": [
+    0.3,
+    0.18,
+    0.1
+   ]
+  },
+  "Old_Steel": {
+   "kind": "flat",
+   "color": [
+    0.55,
+    0.55,
+    0.58
+   ]
+  },
+  "Outline": {
+   "kind": "outline",
+   "color": [
+    0.02,
+    0.02,
+    0.04
+   ]
+  },
+  "Pants": {
+   "kind": "flat",
+   "color": [
+    0.22,
+    0.2,
+    0.18
+   ]
+  },
+  "Skin": {
+   "kind": "flat",
+   "color": [
+    0.95,
+    0.76,
+    0.62
+   ]
+  },
+  "Tunic": {
+   "kind": "flat",
+   "color": [
+    0.55,
+    0.45,
+    0.32
+   ]
+  }
+ },
+ "player": [
+  -32.20753479003906,
+  -52.94514846801758,
+  8.93563461303711
+ ],
+ "terrainBounds": [
+  -206.46875,
+  260.7774963378906,
+  -224.90487670898438,
+  242.34136962890625
+ ]
+}

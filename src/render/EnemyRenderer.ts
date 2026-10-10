@@ -8,7 +8,7 @@ import {
   Quaternion,
   Vector3,
 } from 'three';
-import { type Enemy, WOBBLE_SECONDS } from '../entities/Enemy';
+import { type Enemy, enemyModelKey, WOBBLE_SECONDS } from '../entities/Enemy';
 import { buildEnemyModel, type EnemyModel } from '../entities/EnemyFactory';
 
 const WHITE = new Color(0xffffff);
@@ -19,8 +19,11 @@ const WOBBLE_ANGLE = 0.25;
 const FALLEN_ANGLE = 1.35;
 /** Defeated targets sink a little into the ground while lying down. */
 const FALLEN_SINK = 0.15;
+/** Hops per second × π of a moving slime. */
+const HOP_SPEED = 7;
 
 interface Batch {
+  key: string;
   model: EnemyModel;
   meshes: InstancedMesh[];
   enemies: Enemy[];
@@ -28,8 +31,9 @@ interface Batch {
 
 /**
  * Draws the shown monsters: one InstancedMesh per model part, written every frame at the
- * interpolated position, with a red flash and a wobble when hit, and lying down while defeated.
- * Nothing is allocated while playing.
+ * interpolated position, with a red flash and a wobble when hit, lying down while defeated, and
+ * hopping slimes. A pooled night monster has a slot in every model it can take and is drawn in
+ * the one of its current monster. Nothing is allocated while playing.
  */
 export class EnemyRenderer {
   private readonly material = new MeshLambertMaterial({ vertexColors: true });
@@ -42,18 +46,21 @@ export class EnemyRenderer {
   private readonly xAxis = new Vector3(1, 0, 0);
   private readonly yAxis = new Vector3(0, 1, 0);
   private readonly color = new Color();
-  private readonly heights = new Map<Enemy, number>();
+  /** Top of each model (m), by model key. */
+  private readonly heights = new Map<string, number>();
 
   constructor(enemies: readonly Enemy[], root: Group) {
     const byModel = new Map<string, Enemy[]>();
     for (const enemy of enemies) {
-      const key = enemy.def.model ?? `placeholder:${enemy.def.id}`;
-      const list = byModel.get(key) ?? [];
-      list.push(enemy);
-      byModel.set(key, list);
+      for (const key of enemy.possibleModels) {
+        const list = byModel.get(key) ?? [];
+        list.push(enemy);
+        byModel.set(key, list);
+      }
     }
     for (const [key, list] of byModel) {
       const model = buildEnemyModel(key);
+      this.heights.set(key, model.height);
       const meshes = model.parts.map((geometry) => {
         const mesh = new InstancedMesh(geometry, this.material, list.length);
         mesh.instanceMatrix.setUsage(DynamicDrawUsage);
@@ -67,14 +74,13 @@ export class EnemyRenderer {
         root.add(mesh);
         return mesh;
       });
-      for (const enemy of list) this.heights.set(enemy, model.height);
-      this.batches.push({ model, meshes, enemies: list });
+      this.batches.push({ key, model, meshes, enemies: list });
     }
   }
 
   /** Top of the monster (m above its feet), for damage numbers. */
   heightOf(enemy: Enemy): number {
-    return this.heights.get(enemy) ?? 1.5;
+    return this.heights.get(enemyModelKey(enemy.def)) ?? 1.5;
   }
 
   /** Writes the shown monsters into their instanced meshes. Call every rendered frame. */
@@ -84,14 +90,18 @@ export class EnemyRenderer {
       let count = 0;
       for (let i = 0; i < batch.enemies.length; i++) {
         const e = batch.enemies[i] as Enemy;
-        if (!e.shown) continue;
+        if (!e.shown || !e.active || enemyModelKey(e.def) !== batch.key) continue;
         const lean = e.alive
           ? Math.sin(e.wobble * 30) * WOBBLE_ANGLE * (e.wobble / WOBBLE_SECONDS)
           : 0;
         this.rotation.setFromAxisAngle(this.yAxis, e.heading);
         this.tilt.setFromAxisAngle(this.xAxis, e.alive ? lean : -FALLEN_ANGLE);
         this.rotation.multiply(this.tilt);
-        this.position.set(e.drawX(alpha), e.y - (e.alive ? 0 : FALLEN_SINK), e.drawZ(alpha));
+        const hop =
+          batch.model.hop && e.alive && e.moveTime > 0
+            ? Math.abs(Math.sin(e.moveTime * HOP_SPEED)) * batch.model.hop
+            : 0;
+        this.position.set(e.drawX(alpha), e.y + hop - (e.alive ? 0 : FALLEN_SINK), e.drawZ(alpha));
         this.matrix.compose(this.position, this.rotation, this.scale);
         this.color.copy(WHITE).lerp(FLASH, e.flash > 0 ? 1 : 0);
         for (let p = 0; p < batch.meshes.length; p++) {

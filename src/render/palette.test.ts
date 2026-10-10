@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   colorTokens,
   hexToNumber,
+  lightColors,
   palette,
   resolveColorToken,
   terrainColors,
@@ -41,8 +42,19 @@ describe('color tokens', () => {
     expect(() => resolveColorToken('neon')).toThrow();
   });
 
-  it('keeps palette and terrain names unique', () => {
-    expect(colorTokens.size).toBe(Object.keys(palette).length + Object.keys(terrainColors).length);
+  it('keeps palette, terrain and light names unique', () => {
+    expect(colorTokens.size).toBe(
+      Object.keys(palette).length +
+        Object.keys(terrainColors).length +
+        Object.keys(lightColors).length,
+    );
+  });
+
+  it('never contains pure black or pure white light colors (night is never pitch black)', () => {
+    for (const color of Object.values(lightColors)) {
+      expect(color).not.toBe(0x000000);
+      expect(color).not.toBe(0xffffff);
+    }
   });
 
   it('never contains pure black or pure white terrain', () => {

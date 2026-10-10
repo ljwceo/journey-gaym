@@ -104,6 +104,105 @@ class CrossChecker {
     this.checkSkills();
     this.checkCombos();
     this.checkCutscenes();
+    this.checkDayNight();
+    this.checkNightSpawns();
+  }
+
+  /** Day and night: a look per phase, the golden hour look, known colors and text keys. */
+  private checkDayNight(): void {
+    const d = this.data.daynight;
+    const f = 'daynight';
+    this.unique('phase', f, 'phases', d.phases);
+    this.unique('look', f, 'looks', d.looks);
+    d.phases.forEach((phase, i) => {
+      this.text(f, `phases[${i}].label`, phase.label);
+      if (!d.looks.some((look) => look.id === phase.id)) {
+        this.issue(f, `phases[${i}]`, `no look with id "${phase.id}"`);
+      }
+    });
+    if (!d.looks.some((look) => look.id === 'golden_hour')) {
+      this.issue(f, 'looks', 'a look "golden_hour" is needed for zones with "goldenHour" lighting');
+    }
+    d.spawnPhases.forEach((id, i) => this.ref('phase', f, `spawnPhases[${i}]`, id));
+    d.looks.forEach((look, i) => {
+      const p = `looks[${i}]`;
+      for (const key of ['skyTop', 'skyHorizon', 'sun', 'shadow', 'fog'] as const) {
+        this.color(f, `${p}.${key}`, look[key]);
+      }
+    });
+    this.color(f, 'lanternLights.color', d.lanternLights.color);
+  }
+
+  /** Safe zones, night spawn areas and Blender-built zones (scene). */
+  private checkNightSpawns(): void {
+    const f = 'zones';
+    const { world, zones } = this.data.zones;
+    const rules = world.nightSpawning;
+    if (rules.minPlayerDistance >= rules.maxPlayerDistance) {
+      this.issue(
+        f,
+        'world.nightSpawning',
+        'minPlayerDistance must be smaller than maxPlayerDistance',
+      );
+    }
+    zones.forEach((zone, i) => {
+      const p = `zones[${i}]`;
+      this.unique('safeZone', f, `${p}.safeZones`, zone.safeZones ?? []);
+      this.unique('nightSpawn', f, `${p}.nightSpawns`, zone.nightSpawns ?? []);
+      zone.safeZones?.forEach((safe, n) => {
+        this.shape(f, `${p}.safeZones[${n}].shape`, safe.shape);
+        if (!shapeInside(zone.bounds, safe.shape)) {
+          this.issue(f, `${p}.safeZones[${n}]`, 'safe zone reaches outside the zone');
+        }
+      });
+      zone.nightSpawns?.forEach((area, n) => {
+        const ap = `${p}.nightSpawns[${n}]`;
+        this.shape(f, `${ap}.shape`, area.shape);
+        this.range(f, `${ap}.levelRange`, area.levelRange[0], area.levelRange[1]);
+        if (!shapeInside(zone.bounds, area.shape)) {
+          this.issue(f, ap, 'spawn area reaches outside the zone');
+        }
+        area.monsters.forEach((entry, m) =>
+          this.ref('monster', f, `${ap}.monsters[${m}]`, entry.monster),
+        );
+        // An area whose corners and center all lie in one safe zone would never spawn anything.
+        const box = shapeBounds(area.shape, emptyBox());
+        const [cx, cz] = shapeCenter(area.shape);
+        const probes: [number, number][] = [
+          [cx, cz],
+          [box.minX, box.minZ],
+          [box.maxX, box.minZ],
+          [box.minX, box.maxZ],
+          [box.maxX, box.maxZ],
+        ];
+        const covered = zone.safeZones?.some((safe) =>
+          probes.every(([x, z]) => pointInShape(safe.shape, x, z)),
+        );
+        if (covered) {
+          this.issue(f, ap, 'spawn area lies inside a safe zone (nothing would ever appear)');
+        }
+      });
+      const scene = zone.scene;
+      if (!scene) return;
+      this.color(f, `${p}.scene.windowColor`, scene.windowColor);
+      for (const [material, token] of Object.entries(scene.colorOverrides)) {
+        this.color(f, `${p}.scene.colorOverrides.${material}`, token);
+      }
+      if (scene.fogNear >= scene.fogFar) {
+        this.issue(f, `${p}.scene`, 'fogNear must be smaller than fogFar');
+      }
+      scene.exits.forEach((exit, n) => {
+        const ep = `${p}.scene.exits[${n}]`;
+        this.shape(f, `${ep}.shape`, exit.shape);
+        // Arriving inside the zone again would load the scene straight back.
+        if (pointInShape(zone.bounds, exit.to.x, exit.to.z)) {
+          this.issue(f, `${ep}.to`, 'exit leads back into the same zone');
+        }
+        if (!pointInShape(world.bounds, exit.to.x, exit.to.z)) {
+          this.issue(f, `${ep}.to`, 'exit leads outside the world');
+        }
+      });
+    });
   }
 
   // ------------------------------------------------------------ helpers

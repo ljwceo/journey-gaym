@@ -323,6 +323,21 @@
     "saveInvalid": "Dit is geen geldige save-code.",
     "measure": "Fps meten",
     "measureNote": "Loop {seconds} s gewoon rond. De uitslag staat daarna in de debug-overlay (regel \"measure\").",
-    "measureStart": "Meet {seconds} s"
+    "measureStart": "Meet {seconds} s",
+    "dayNight": "Dag en nacht",
+    "dayNightNow": "{phase} · nog {time}",
+    "dayNightClock": "Echte klok",
+    "dayNightSpeed": "Snelheid",
+    "dayNightMonsters": "Nachtmonsters: {count} · testgebied alleen in debugmodus"
+  },
+  "daynight": {
+    "day": "Dag",
+    "dusk": "Schemer",
+    "night": "Nacht",
+    "dawn": "Ochtendschemer"
+  },
+  "world": {
+    "loading": "Laden…",
+    "loadFailed": "Deze plek kon niet geladen worden. Controleer je verbinding en probeer het opnieuw."
   }
 }
