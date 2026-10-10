@@ -65,6 +65,8 @@ export type SwingKind = 'none' | 'fast' | 'heavy';
  */
 export class CombatState {
   level = 1;
+  /** Extra damage of the equipped weapon (items.json `weapon.damageBonus`), on every hit. */
+  weaponBonus = 0;
   hp = 0;
   maxHp = 0;
   mana = 0;
@@ -104,14 +106,19 @@ export function applyLevel(c: CombatState, player: PlayerConfig, level: number):
 }
 
 /** Damage of a fast hit; `comboIndex` is its place in the combo (1, 2, 3, ...). */
-export function fastHitDamage(cfg: SwordConfig, level: number, comboIndex: number): number {
-  const base = cfg.fastDamage + cfg.fastDamagePerLevel * (level - 1);
+export function fastHitDamage(
+  cfg: SwordConfig,
+  level: number,
+  comboIndex: number,
+  weaponBonus = 0,
+): number {
+  const base = cfg.fastDamage + cfg.fastDamagePerLevel * (level - 1) + weaponBonus;
   const isComboHit = comboIndex > 0 && comboIndex % cfg.comboEveryNthHit === 0;
   return Math.round(base * (isComboHit ? 1 + cfg.comboBonus : 1));
 }
 
-export function heavyHitDamage(cfg: SwordConfig, level: number): number {
-  return cfg.heavyDamage + cfg.heavyDamagePerLevel * (level - 1);
+export function heavyHitDamage(cfg: SwordConfig, level: number, weaponBonus = 0): number {
+  return cfg.heavyDamage + cfg.heavyDamagePerLevel * (level - 1) + weaponBonus;
 }
 
 /** Is a circle (tx, tz, radius) inside the swing arc of someone at (px, pz) facing `heading`? */
@@ -212,7 +219,7 @@ export function stepSword(
     c.swingTime = cfg.fastSwingSeconds;
     c.attackCooldown = cfg.heavyRecoverySeconds;
     out.landed = 'heavy';
-    out.damage = heavyHitDamage(cfg, c.level);
+    out.damage = heavyHitDamage(cfg, c.level, c.weaponBonus);
     return out;
   }
   if (c.attackCooldown > 0) return out;
@@ -240,7 +247,7 @@ export function stepSword(
     c.swing = 'fast';
     c.swingTime = cfg.fastSwingSeconds;
     out.landed = 'fast';
-    out.damage = fastHitDamage(cfg, c.level, c.comboCount);
+    out.damage = fastHitDamage(cfg, c.level, c.comboCount, c.weaponBonus);
     out.combo = c.comboCount % cfg.comboEveryNthHit === 0;
   }
   return out;

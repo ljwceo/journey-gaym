@@ -206,9 +206,9 @@
   },
   "npc": {
     "brother_ansel": {
-      "1": "Ah, je bent wakker. Ik vond je bewusteloos langs de weg en bracht je hierheen.",
-      "2": "Dit Monastery is je checkpoint. Val je, dan word je hier weer wakker.",
-      "3": "Rust uit in je bed als je moe bent. Ga nu maar, Greyhaven wacht op je."
+      "1": "Welkom terug. De deuren van het Monastery staan altijd voor je open.",
+      "2": "Onthoud: val je, dan word je hier weer wakker.",
+      "3": "Rust in je bed als je moe bent. Greyhaven wacht op je."
     },
     "marco": {
       "1": "Welkom, welkom! Alles hier is speciaal, alleen voor jou.",
@@ -275,6 +275,12 @@
     },
     "greater_health_potion": {
       "desc": "Herstelt 120 HP."
+    },
+    "honed_old_sword": {
+      "desc": "Je oude zwaard, geslepen door Hilda. Elke slag doet 3 schade meer."
+    },
+    "herb_seeds": {
+      "desc": "Zaadjes van Rose. Later kun je ze planten op je stukje grond."
     }
   },
   "quest": {
@@ -282,10 +288,120 @@
       "desc": "Versla Sultan bij de stadspoort."
     },
     "your_resolve": {
+      "offer": {
+        "1": "Het is tijd om je pad te kiezen."
+      },
+      "progress": {
+        "1": "Kies je pad in de Academy."
+      },
+      "complete": {
+        "1": "Je pad is gekozen."
+      },
       "desc": "Ga naar de Academy en kies je pad."
     },
     "first_harvest": {
+      "offer": {
+        "1": "De lente brengt bloesem. Breng je me er vijf?"
+      },
+      "progress": {
+        "1": "Vijf Blossom, lieverd. Alleen in de lente."
+      },
+      "complete": {
+        "1": "Dank je! Hier, mijn recept."
+      },
       "desc": "Breng Rose 5 Blossom uit de Garden."
+    },
+    "a_quiet_awakening": {
+      "desc": "Brother Ansel vond je langs de weg. Rust in je bed in het Monastery.",
+      "objective": "Rust in je bed in het Monastery",
+      "offer": {
+        "1": "Ah, je bent wakker. Rustig maar. Ik vond je bewusteloos langs de weg, ver van elk dorp, en heb je hierheen gedragen.",
+        "2": "Dit is het Monastery van Greyhaven. Het is nu je checkpoint: val je ooit, dan word je hier weer wakker.",
+        "3": "Je bed staat daar. Ga even liggen en rust uit; dat geneest lichaam en geest. Kom daarna bij me terug."
+      },
+      "progress": {
+        "1": "Ga eerst even rusten in je bed. Loop ernaartoe en druk op E (of tik op Rusten)."
+      },
+      "complete": {
+        "1": "Zo, weer wat kleur op je wangen. Ben je gewond, dan maakt een bed bij een checkpoint je weer heel.",
+        "2": "Neem deze munten mee. Marco op de Market Square verkoopt drankjes. Greyhaven ligt voor je open."
+      }
+    },
+    "just_for_you": {
+      "desc": "Koop 2 Health Potions bij Marco op de Market Square.",
+      "offer": {
+        "1": "Een nieuwe klant! En wat voor een. Vandaag, en alleen voor jou, zijn mijn Health Potions spotgoedkoop.",
+        "2": "Koop er twee, voor de zekerheid. Een wijze reiziger gaat nooit de stad uit zonder. Geloof me!"
+      },
+      "progress": {
+        "1": "Nog aan het twijfelen? Twee Health Potions, speciale prijs, speciaal voor jou."
+      },
+      "complete": {
+        "1": "Fijn zakendoen! Drink er een met Q, of tik op de drankknop, als je gewond bent.",
+        "2": "Hier, een kleinigheidje terug. Niet tegen de andere kooplui zeggen."
+      }
+    },
+    "steel_and_slime": {
+      "desc": "Breng Hilda 3 Slime Gel van de slimes op het erf bij de noordoostelijke stadsmuur. Dan slijpt ze je oude zwaard.",
+      "offer": {
+        "1": "HA! Is dat roestige ding je zwaard? Daar snij je op een zomerdag nog geen boter mee!",
+        "2": "Ik kan het voor je slijpen. Maar dan heb ik Slime Gel nodig om het staal te poetsen. Drie klodders.",
+        "3": "Er zijn een paar slimes het oude erf bij de noordoostelijke stadsmuur in gekropen. Mep ze en breng me hun gel!"
+      },
+      "progress": {
+        "1": "Geen gel, geen glans! De slimes zitten op het oude erf bij de noordoostelijke stadsmuur."
+      },
+      "complete": {
+        "1": "Ooh, lekker plakkerig. Geef dat zwaard maar hier. *KLANG* *KLANG* *sssss*",
+        "2": "Klaar! Je Honed Old Sword. Elke slag bijt nu wat harder. Kom terug als je gold en materialen hebt!"
+      }
+    },
+    "a_patch_of_earth": {
+      "desc": "Rose heeft een stukje grond voor je in de Garden. Ga het bekijken.",
+      "objective": "Ga naar je stukje grond in de Garden",
+      "offer": {
+        "1": "Hallo, lieverd. Elke reiziger heeft een plek nodig waar iets groeit. Zelfs een zwerver zoals jij.",
+        "2": "Aan de zuidkant van de Garden, bij de heg, ligt een klein stukje grond. Het is nu van jou. Ga maar kijken."
+      },
+      "progress": {
+        "1": "Je stukje grond ligt aan de zuidkant van de Garden, bij de heg. Ga erop staan."
+      },
+      "complete": {
+        "1": "Mooie grond, hè? Hier zijn wat zaadjes om mee te beginnen.",
+        "2": "We planten ze een andere keer samen; planten vragen geduld. Je grond blijft groeien, ook als je er niet bent."
+      }
+    },
+    "tales_by_the_fire": {
+      "desc": "Luister naar het verhaal van Old Bertha over de Lords of Morvath.",
+      "offer": {
+        "1": "Kom binnen, kom binnen, ga bij het vuur zitten! Jij bent degene die Brother Ansel langs de weg vond, hè? Ik hoor alles.",
+        "2": "Laat me je een verhaal vertellen. Vijfduizend jaar geleden deden twee tovenaars, de broers Lucael en Baelor, het ondenkbare: ze versloegen een god.",
+        "3": "Ze namen zijn kracht over en werden halfgoden. Ze worden niet oud en niet ziek. Men noemt ze de Lords of Morvath.",
+        "4": "Nu zijn het necromancers. Ze laten slimes, goblins, skeletten en erger opstaan in heel Eryndor, en hun corruptie kruipt vanuit het oosten.",
+        "5": "Hoe verder naar het oosten, hoe duisterder het wordt. Maar jij... jij kijkt nogal koppig. Misschien is dat maar goed ook."
+      },
+      "progress": {
+        "1": "Ga zitten, ga zitten. Laat een oude vrouw haar verhaal vertellen."
+      },
+      "complete": {
+        "1": "Brr. Zelfs ik krijg er de rillingen van. Neem wat soep, van het huis.",
+        "2": "En zit je ooit vast, kom het Old Bertha vragen. Er weet altijd wel iemand iets."
+      }
+    },
+    "ui": {
+      "started": "Nieuwe quest: {name}",
+      "ready": "{name}: ga terug naar {giver}",
+      "completed": "Quest voltooid: {name}",
+      "progress": "{name} · {objective}",
+      "upgraded": "{from} is nu {to}",
+      "objective": {
+        "talk": "Praat met {npc}",
+        "find": "{item} {have}/{need}",
+        "deliver": "Breng {item} naar {npc} {have}/{need}",
+        "kill": "Versla {monster} {have}/{need}",
+        "boss": "Versla {monster}",
+        "buy": "Koop {item} {have}/{need}"
+      }
     }
   },
   "season": {
@@ -339,7 +455,8 @@
     "grant": "Geven",
     "grantXp": "+100 XP",
     "grantGold": "+50 Gold",
-    "grantPotions": "+5 Health Potion"
+    "grantPotions": "+5 Health Potion",
+    "grantSlimeGel": "+3 Slime Gel"
   },
   "bag": {
     "title": "Tas",
@@ -347,11 +464,21 @@
     "equipped": "Gedragen",
     "empty": "Je tas is leeg.",
     "level": "Level {level} · {xp} / {need} XP",
-    "levelMax": "Level {level} (hoogste level)"
+    "levelMax": "Level {level} (hoogste level)",
+    "quests": "Quests",
+    "noQuests": "Je hebt nu geen quests. Praat met de mensen van Greyhaven."
   },
   "death": {
     "title": "Je bent verslagen",
     "goldLost": "Je bent {amount} {gold} kwijt. Je wordt wakker bij je checkpoint.",
     "wakeUp": "Je wordt wakker bij je checkpoint."
+  },
+  "shop": {
+    "title": "Winkel",
+    "buy": "Kopen",
+    "price": "{price} {gold}",
+    "notEnough": "Niet genoeg {gold}.",
+    "bought": "Gekocht: {item}",
+    "owned": "In je tas: {count}"
   }
 }

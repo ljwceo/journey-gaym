@@ -182,15 +182,45 @@ describe('migrate', () => {
     character.inventory.push({ item: 'slime_gel', count: 3 });
     const v2: Record<string, unknown> = { ...current, version: 2 };
     delete v2.progress;
+    delete v2.quests;
+    delete v2.unlocks;
     const storage = new MemoryStorage();
     storage.setItem(SAVE_KEY, JSON.stringify(v2));
     const result = new SaveManager(storage).load();
     expect(result.status).toBe('ok');
     if (result.status !== 'ok') return;
-    expect(result.save.version).toBe(3);
+    expect(result.save.version).toBe(SAVE_VERSION);
     expect(result.save.progress).toEqual({ level: 1, xp: 0, hp: null, mana: null });
     expect(result.save.character?.gold).toBe(42);
     expect(result.save.character?.inventory).toContainEqual({ item: 'slime_gel', count: 3 });
+  });
+
+  it('upgrades a version 3 save: no quests started, nothing unlocked; level stays', () => {
+    const current = sampleSave();
+    current.progress = { level: 3, xp: 12, hp: 80, mana: null };
+    const v3: Record<string, unknown> = { ...current, version: 3 };
+    delete v3.quests;
+    delete v3.unlocks;
+    const storage = new MemoryStorage();
+    storage.setItem(SAVE_KEY, JSON.stringify(v3));
+    const result = new SaveManager(storage).load();
+    expect(result.status).toBe('ok');
+    if (result.status !== 'ok') return;
+    expect(result.save.version).toBe(4);
+    expect(result.save.quests).toEqual({ active: [], completed: [] });
+    expect(result.save.unlocks).toEqual([]);
+    expect(result.save.progress.level).toBe(3);
+  });
+
+  it('keeps quests and unlocks through writing and loading', () => {
+    const save = sampleSave();
+    save.quests = { active: [{ id: 'q1', counts: [1, 0] }], completed: ['q0'] };
+    save.unlocks = ['garden_plot'];
+    const saves = new SaveManager(new MemoryStorage());
+    expect(saves.write(save)).toBe(true);
+    const result = saves.load();
+    expect(result.status === 'ok' && result.save.quests).toEqual(save.quests);
+    expect(result.status === 'ok' && result.save.unlocks).toEqual(['garden_plot']);
   });
 
   it('keeps level, XP, HP and mana through writing and loading', () => {

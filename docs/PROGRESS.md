@@ -7,9 +7,9 @@
 | | |
 |---|---|
 | **Huidige fase** | Fase 2 – Solo-gevecht en de eerste dag (plan goedgekeurd) |
-| **Status** | Stap 2.4 klaar (XP, levels, buit, tas, drankjes, doodgaan en rusten; save versie 3) |
-| **Volgende stap** | Stap 2.5: quests van de eerste dag (Brother Ansel, Marco, Hilda, Rose, Old Bertha) |
-| **Laatste sessie** | 2026-10-10: stap 2.4 XP, levels, buit, doodgaan |
+| **Status** | Stap 2.5 klaar (quests van de eerste dag, winkel van Marco, Hilda's zwaard; save versie 4) |
+| **Volgende stap** | Stap 2.6: Sultan, de beginnersbaas |
+| **Laatste sessie** | 2026-10-10: stap 2.5 quests van de eerste dag |
 
 ---
 
@@ -248,7 +248,7 @@ Doel: het spel begint met een speelbaar, episch (en komisch) gevecht tegen Lucae
 ---
 
 ### Fase 2 – Solo-gevecht en de eerste dag
-**Status:** bezig, stap 2.1 t/m 2.4 klaar.
+**Status:** bezig, stap 2.1 t/m 2.5 klaar.
 **Gebouwd:**
 - 2.1 Gevechtskern:
   - **Zwaard** (`src/systems/Combat.ts`, puur en getest): fast hit met de **linkermuisknop** (10 schade, 10 energie, max 3 per seconde, elke 3e slag op rij +50% en goud gekleurd), heavy hit met de **rechtermuisknop** (25 energie vooraf, 0,9 s uithalen, dan 25 schade, daarna 0,35 s herstel). Zonder genoeg energie: fast hits nog wel, maar half zo snel; geen heavy hit. Per level +2 (fast) en +5 (heavy) schade. Alles op de vaste tijdstap: 60 en 120 Hz geven dezelfde slagen (test).
@@ -289,6 +289,22 @@ Doel: het spel begint met een speelbaar, episch (en komisch) gevecht tegen Lucae
   - **Events voor de quests van stap 2.5:** `monsterDefeated`, `xpGained`, `levelUp`, `itemsGained`, `potionDrunk`, `playerRested`, `playerDied` (vervangt `playerKnockedOut`).
   - **Cheatmenu:** "Geven": +100 XP, +50 Gold, +5 Health Potion. Debugregel `combat` toont nu ook XP, gold en "dying".
   - Getest: 291 tests (o.a. XP-curve en level 8 bij 2350 XP, meerdere levels tegelijk, max level, 10% gold, buitkansen, drankjes, save v2 → v3, validator voor drankjes). Headless Chromium (pc 1100×700 en telefoon 844×390, EN en NL): slime verslaan → +10 XP in de tas; goblinkamp → zwart scherm, 57 → 52 gold, wakker bij het heiligdom, opgeslagen als v3; Q en de drankknop (+50 HP, knop verdwijnt bij 0); "Drinken" in de tas; rusten → 100 HP; 3× +100 XP → level 3 met 120 HP en 60 mana; nieuw spel vanaf de taalkeuze → save v3 op level 1. Geen fouten.
+- 2.5 Quests van de eerste dag:
+  - **Questsysteem** (`src/systems/Quests.ts`, puur en getest; alles uit `quests.json`): praat met de gever → de quest begint meteen ("Nieuwe quest: …"). Soorten doelen: praten, iets hebben, iets brengen, vijanden verslaan, baas verslaan, **kopen**, **rusten** en **ergens heen lopen**. Praat je met de gever terwijl je nog niet klaar bent, dan zie je onder zijn laatste zin wat je nog mist ("✗ Breng Slime Gel naar Hilda Ironhand 2/3"). Ben je klaar, dan zegt hij dat bij het volgende gesprek en krijg je meteen je beloning (XP, gold, item, upgrade) met tekstjes boven je hoofd.
+  - **De vijf quests** (allemaal vanaf level 1, in elke volgorde; teksten in het Engels en Nederlands):
+    - **A Quiet Awakening** (Brother Ansel): hij vertelt hoe hij je vond en legt checkpoint en bed uit → rust in je bed → 40 XP en 20 Gold ("Marco verkoopt drankjes").
+    - **Just For You** (Marco): koop 2 Health Potions in zijn **winkel** → 40 XP en 5 Gold terug. De winkel opent na zijn laatste zin: Health Potion 10 Gold, Greater Health Potion 40 Gold.
+    - **Steel and Slime** (Hilda): breng 3 Slime Gel → 60 XP en je **Old Sword wordt Honed Old Sword** (+3 schade op elke slag). De slimes zitten op een **erf binnen de stadsmuur** (noordoosten, bij x −1580, z −175: 3 Green Slimes die na 30 s terugkomen), zodat het ook werkt als de poort later dicht is.
+    - **A Patch of Earth** (Rose): loop naar je eigen stukje grond aan de zuidkant van de Garden (nieuw bruin vakje bij de heg) → 50 XP, 3 Herb Seeds, en het stukje grond is van jou (`unlocks` in de save; kweken komt later).
+    - **Tales by the Fire** (Old Bertha): ze vertelt over Lucael en Baelor, de god die ze versloegen en de corruptie uit het oosten → 40 XP.
+    - Samen 230 XP; met de slimes voor Hilda ben je dan level 3 (test). De quest "Defeat Sultan" wacht nu op alle vijf quests en level 3 (voor stap 2.6).
+  - **Markeringen:** een gouden ruit boven een NPC met een nieuwe quest, een blauwe als je er een kunt inleveren.
+  - **Tas:** onder je spullen staan je lopende quests met ✓/✗ per doel.
+  - **Meldingen:** voortgang ("Steel and Slime · … 2/3"), "ga terug naar Hilda Ironhand", "Quest voltooid", "Old Sword is nu Honed Old Sword".
+  - **Save versie 4** (`quests` en `unlocks`); een oude save begint zonder quests (level, gold en tas blijven).
+  - **Cheatmenu:** "Geven" heeft nu ook +3 Slime Gel. Debugregel `quests` (lopende quests met tellers, aantal klaar, unlocks, wapenbonus).
+  - Brother Ansel zegt na zijn quest andere zinnen (niet meer "ik vond je langs de weg").
+  - Getest: 308 tests (o.a. tellen pas na aannemen, "2/3" en inleveren, kopen alleen bij de juiste winkel, wie wat zegt, data-wijzigingen in een oude save, alle vijf vanaf level 1, ±level 3, Hilda's upgrade, genoeg slimes binnen de stadsmuur, Bertha meteen klaar, wapenbonus, save v3 → v4, validator). Headless Chromium (pc 1100×700, EN en NL): met een oude v3-save alle vijf quests achter elkaar (praten, rusten, winkel met 2× kopen en "Niet genoeg Gold", Slime Gel via het cheatmenu, naar het stukje grond lopen, het verhaal van Bertha) → level 2 met 130 XP, 5 Gold, Honed Old Sword gedragen (+3), Herb Seeds, `garden_plot`; gouden ruit boven Marco; tas met quests in het Nederlands. Geen fouten.
 
 ## Besluiten
 
@@ -403,6 +419,14 @@ Doel: het spel begint met een speelbaar, episch (en komisch) gevecht tegen Lucae
 | 2026-10-10 | De tas pauzeert het spel (I of B, of het tas-knopje naast pauze) | Simpel en veilig op de telefoon; drinken tijdens een gevecht gaat snel met Q of de drankknop. In raids (fase 5) kan de tas niet pauzeren; dan passen we het aan |
 | 2026-10-10 | Doodgaan: 0,8 s naar zwart, 1,6 s zwart met tekst, 0,8 s terug (`death` in `player.json`) | Voorstel; de "cutscene" bij doodgaan uit het plan is nu dit korte zwarte scherm |
 | 2026-10-10 | Doodgaan en een level omhoog slaan meteen op | Anders kun je de goldstraf ontlopen door te herladen |
+| 2026-10-10 | Een quest begint meteen als de gever hem vertelt (geen ja/nee) | Simpel; het concept noemt geen weigeren bij kleine quests. Bij "Your Resolve" (fase 3) komt wel een keuze |
+| 2026-10-10 | Questnamen (voorstel, Engels): A Quiet Awakening, Just For You, Steel and Slime, A Patch of Earth, Tales by the Fire | Het concept noemt alleen wat je bij elke NPC doet; namen zijn tijdelijk |
+| 2026-10-10 | Beloningen: Ansel 40 XP + 20 Gold, Marco 40 XP + 5 Gold, Hilda 60 XP + zwaard-upgrade, Rose 50 XP + 3 Herb Seeds + stukje grond, Bertha 40 XP | Samen met een paar slimes ±level 3 (concept). Ansels gold is genoeg voor Marco's 2 drankjes |
+| 2026-10-10 | Marco verkoopt Health Potion (10 Gold) en Greater Health Potion (40 Gold); alleen kopen, nog niet verkopen | "Simpele versie: Marco verkoopt een paar drankjes" (plan). Prijzen zijn een voorstel |
+| 2026-10-10 | Hilda's upgrade: Old Sword → Honed Old Sword, +3 schade op elke slag (fast en heavy), voor 3 Slime Gel | Plan: "oude zwaard één keer upgraden voor Slime Gel". Het getal staat in `items.json` (`damageBonus`) |
+| 2026-10-10 | Rose: je stukje grond is een bruin vakje (3 × 3 m) aan de zuidkant van de Garden; Herb Seeds zijn nu alleen een item | Kweken komt later (concept: groeit ook als je niet speelt) |
+| 2026-10-10 | Slimes voor Hilda op een erf binnen de stadsmuur (noordoosten), niet in de Greenwood | Keuze van Bo en Lucas (optie a): de stadspoort gaat pas open na de klassekeuze, dus de eerste dag moet binnen de stad kunnen |
+| 2026-10-10 | Questmarkeringen: gouden ruit = nieuwe quest, blauwe ruit = inleveren | Zo vind je de gevers zonder vaste route; zeg het als jullie ze niet willen |
 
 ## Sessielog
 
@@ -431,3 +455,4 @@ Doel: het spel begint met een speelbaar, episch (en komisch) gevecht tegen Lucae
 ### 2026-10-10
 - Stap 2.3 gebouwd: vijanden in de Greenwood (Green Slime, Big Slime, Goblin, Goblin Archer, Goblin Chief in een goblinkamp, Treewarden) uit één pool, met AI, spawngebieden en terugkomen; pijlen en rode waarschuwingscirkels; knock-out bij 0 HP (voorlopig); debugregel en cheat "Monsters vallen aan". Op verzoek: Pringle zwerft om je heen in plaats van op vaste afstand te volgen. 270 tests, headless Chromium zonder fouten. Tijdelijke namen gebruikt (alleen in data): Treewarden, de elfenstad (`elven_city`), Big Swing, Heavy Slam, Gold, Slime Gel; nieuw: "Goblin tent" en "Campfire" (alleen labels in debug). Volgende stap: 2.4 (XP, levels, buit, doodgaan).
 - Stap 2.4 gebouwd: XP en levels, buit in de tas, tas-venster, drankjes (Q / drankknop), doodgaan met 10% goldverlies en zwart scherm, rusten bij een checkpoint, save versie 3 met migratie, nieuwe events voor de quests, cheats "Geven". 291 tests, headless Chromium (pc en telefoon, EN en NL) zonder fouten. Tijdelijke namen gebruikt (alleen in data): Gold, Health Potion, Greater Health Potion, Slime Gel. Volgende stap: 2.5 (quests van de eerste dag).
+- Stap 2.5 gebouwd: questsysteem uit `quests.json` (praten, hebben, brengen, verslaan, kopen, rusten, ergens heen lopen), de vijf quests van de eerste dag (Brother Ansel, Marco, Hilda, Rose, Old Bertha) in EN en NL, winkel van Marco, Hilda slijpt je zwaard (+3 schade), stukje grond in de Garden, questmarkeringen, quests in de tas, save versie 4. 307 tests, headless Chromium (EN en NL) zonder fouten. Tijdelijke namen gebruikt (alleen in data): Brother Ansel, Marco the Merchant, Hilda Ironhand, Old Bertha, Gold, Slime Gel; nieuw: de vijf questnamen, Honed Old Sword, Herb Seeds, "Your plot". Op verzoek (optie a): een slime-erf binnen de stadsmuur voor Hilda's Slime Gel. Volgende stap: 2.6 (Sultan).

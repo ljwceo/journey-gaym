@@ -13,8 +13,8 @@ export interface CheatPanelHandlers {
   importSave(code: string): boolean;
   /** Forgets the automatic preset, so the benchmark runs again (Settings back to "Auto"). */
   rerunBenchmark(): void;
-  /** Gives XP, gold or potions (testing levels, dying and drinking). */
-  grant(kind: 'xp' | 'gold' | 'potions'): void;
+  /** Gives XP, gold, potions or Slime Gel (testing levels, dying, drinking and quests). */
+  grant(kind: 'xp' | 'gold' | 'potions' | 'slimeGel'): void;
 }
 
 type SaveTool = 'none' | 'export' | 'import';
@@ -202,6 +202,7 @@ export class CheatPanel {
           chip(t('cheats.grantXp'), false, () => this.handlers.grant('xp')),
           chip(t('cheats.grantGold'), false, () => this.handlers.grant('gold')),
           chip(t('cheats.grantPotions'), false, () => this.handlers.grant('potions')),
+          chip(t('cheats.grantSlimeGel'), false, () => this.handlers.grant('slimeGel')),
         ),
       ),
       section(

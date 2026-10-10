@@ -483,6 +483,16 @@
           "collider": "none"
         },
         {
+          "id": "garden_plot",
+          "name": "Your plot",
+          "model": "placeholder:block",
+          "x": -1780,
+          "z": 215,
+          "size": [3, 0.3, 3],
+          "color": "lavasteen",
+          "collider": "none"
+        },
+        {
           "id": "harbor_pier_north",
           "name": "Harbor",
           "model": "placeholder:block",
@@ -785,6 +795,17 @@
           "monster": "training_dummy",
           "x": -1690,
           "z": 64
+        }
+      ],
+      "spawnAreas": [
+        {
+          "id": "greyhaven_slime_yard",
+          "monster": "green_slime",
+          "x": -1580,
+          "z": -175,
+          "radius": 12,
+          "count": 3,
+          "respawnSeconds": 30
         }
       ]
     },

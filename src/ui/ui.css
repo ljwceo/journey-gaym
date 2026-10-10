@@ -740,6 +740,27 @@
   color: var(--gh-zonlicht);
 }
 
+/* What a quest still needs ("✗ Slime Gel 2/3"), under the giver's last line. */
+.ui-dialog-list {
+  margin: 0 0 8px;
+  padding: 6px 10px;
+  list-style: none;
+  border-left: 2px solid var(--gh-koper);
+}
+
+.ui-dialog-list[hidden] {
+  display: none;
+}
+
+.ui-dialog-check {
+  font: 600 15px var(--gh-font-stats);
+  color: var(--gh-tekst);
+}
+
+.ui-dialog-check-done {
+  color: var(--gh-tekst-zacht);
+}
+
 /* Debug only: names above the placeholder buildings. */
 .ui-layer > .ui-structure-labels {
   position: absolute;
@@ -1221,6 +1242,42 @@
 .ui-bag-equipped {
   font: 13px var(--gh-font-tekst);
   color: var(--gh-tekst-zacht);
+}
+
+/* Quests in the bag: name, then each objective with ✓ / ✗. */
+.ui-bag-subheading {
+  margin: 4px 0 0;
+  font: 600 15px var(--gh-font-titel);
+  color: var(--gh-ornamentgoud);
+}
+
+.ui-bag-quest {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 2px;
+}
+
+.ui-bag-objective {
+  font: 14px var(--gh-font-stats);
+  color: var(--gh-tekst);
+}
+
+.ui-bag-objective-done {
+  color: var(--gh-tekst-zacht);
+}
+
+/* Shop (Marco): the same rows as the bag, with a price and a Buy button. */
+.ui-shop-price {
+  font: 600 14px var(--gh-font-stats);
+  color: var(--gh-zonlicht);
+}
+
+.ui-shop-message {
+  min-height: 1.4em;
+  margin: 0;
+  font: 14px var(--gh-font-tekst);
+  color: var(--gh-tekst-zacht);
+  text-align: center;
 }
 
 /* ------------------------------------------------------------ intro fight */

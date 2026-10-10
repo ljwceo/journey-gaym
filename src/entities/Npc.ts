@@ -19,6 +19,8 @@ export type NpcSettings = NpcsFile['settings'];
  * who comes close, `wander` NPCs roam around their spot, `follow` NPCs (Pringle) roam around
  * the player. A new NPC is only data.
  */
+export type QuestMarker = 'none' | 'offer' | 'handIn';
+
 export class Npc {
   readonly state: WalkerState & { y: number };
   readonly color: Color;
@@ -31,6 +33,8 @@ export class Npc {
   shown = false;
   /** Seconds left of the little hop after petting (drawing only). */
   hop = 0;
+  /** Marker above the head: a quest to offer, a quest to hand in, or none. */
+  questMarker: QuestMarker = 'none';
   private prevX = 0;
   private prevY = 0;
   private prevZ = 0;

@@ -61,6 +61,12 @@ describe('sword numbers (concept)', () => {
     expect(heavyHitDamage(cfg, 3)).toBe(35);
   });
 
+  it('a better weapon adds its bonus to every hit (combo bonus included)', () => {
+    expect(fastHitDamage(cfg, 1, 1, 3)).toBe(13);
+    expect(fastHitDamage(cfg, 1, 3, 3)).toBe(20);
+    expect(heavyHitDamage(cfg, 1, 3)).toBe(28);
+  });
+
   it('level sets HP and mana (+10 / +5 per level)', () => {
     const { c } = fresh();
     expect(c.maxHp).toBe(100);

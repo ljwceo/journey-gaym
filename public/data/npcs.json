@@ -98,7 +98,19 @@
       },
       "interaction": "talk",
       "behavior": "static",
-      "dialogue": ["npc.marco.1", "npc.marco.2"]
+      "dialogue": ["npc.marco.1", "npc.marco.2"],
+      "shop": {
+        "items": [
+          {
+            "item": "health_potion",
+            "price": 10
+          },
+          {
+            "item": "greater_health_potion",
+            "price": 40
+          }
+        ]
+      }
     },
     {
       "id": "hilda",
