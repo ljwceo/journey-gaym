@@ -1,5 +1,6 @@
 import type { GameContext } from '../core/GameContext';
 import type { Input } from '../core/Input';
+import { DEBUG_VIEWS } from '../render/DebugOverlay';
 import { CHEAT_SPEEDS, type Cheats } from '../systems/Cheats';
 import { el } from './dom';
 
@@ -26,7 +27,8 @@ const MEASURE_SECONDS = 20;
 
 /**
  * Debug-only cheat menu for quick testing: walk faster, fly through walls, teleport to a zone,
- * show chunk borders, give XP, gold or potions. Opens with F6 or the "Cheats" button (both only in debug mode). It is a
+ * show chunk borders, give XP, gold or potions, pick the debug overlay size. Opens with F6 or the "Cheats" button (both
+ * in debug mode, also when the overlay is hidden). It is a
  * small panel at the side, so the game keeps running behind it. While flying on a touch screen,
  * ▲ / ▼ buttons appear next to the dash button.
  */
@@ -163,6 +165,20 @@ export class CheatPanel {
       },
       el('h2', { className: 'ui-heading', text: t('cheats.title') }),
       el('p', { className: 'ui-note', text: t('cheats.note') }),
+      section(
+        t('cheats.debugView'),
+        el(
+          'div',
+          { className: 'ui-chips' },
+          ...DEBUG_VIEWS.map((view) =>
+            chip(t(`cheats.debugView_${view}`), this.ctx.debug.view === view, () => {
+              this.ctx.debug.setView(view);
+              this.rebuild();
+            }),
+          ),
+        ),
+        el('p', { className: 'ui-note', text: t('cheats.debugViewNote') }),
+      ),
       section(
         t('cheats.speed'),
         el(

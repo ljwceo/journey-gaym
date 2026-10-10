@@ -434,6 +434,13 @@
     "potion": "Drankje drinken"
   },
   "cheats": {
+    "debugView": "Debugvenster",
+    "debugViewNote": "F3 wisselt de grootte. Verborgen houdt debugmodus en dit menu (F6) aan.",
+    "debugView_large": "Groot",
+    "debugView_normal": "Normaal",
+    "debugView_small": "Klein",
+    "debugView_mini": "Alleen fps",
+    "debugView_hidden": "Verborgen",
     "title": "Cheats (debug)",
     "note": "Alleen in debugmodus, wordt nooit opgeslagen.",
     "speed": "Snelheid",

@@ -153,7 +153,7 @@ function applySettings(): void {
 events.on('settingsChanged', () => {
   applySettings();
   const settings = ctx.session?.settings;
-  if (settings && !debugParam) debugOverlay.setVisible(settings.debug);
+  if (settings && !debugParam) debugOverlay.setEnabled(settings.debug);
 });
 events.on('qualityChanged', () => {
   loop.frameCap = frameCapFor(
@@ -208,7 +208,7 @@ function updateDebugLines(): void {
 window.setInterval(updateDebugLines, 1000);
 
 window.addEventListener('keydown', (event) => {
-  if (event.code === 'F4' && debugOverlay.isVisible && ctx.seasons) {
+  if (event.code === 'F4' && debugOverlay.isEnabled && ctx.seasons) {
     event.preventDefault();
     ctx.seasons.cycleOverride();
     updateDebugLines();

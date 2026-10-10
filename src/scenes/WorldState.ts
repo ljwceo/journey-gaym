@@ -385,7 +385,7 @@ export class WorldState implements GameState, InstanceHost {
     );
     // Next to the UI layer (not inside it), so it can sit above the debug overlay.
     (ctx.ui.parentElement ?? ctx.ui).append(this.cheatPanel.root);
-    this.cheatPanel.setDebugVisible(ctx.debug.isVisible);
+    this.cheatPanel.setDebugVisible(ctx.debug.isEnabled);
 
     this.pauseButton = el('button', {
       className: 'ui-pause-button',
@@ -1395,7 +1395,7 @@ export class WorldState implements GameState, InstanceHost {
     this.updateFog(scene, frameSeconds);
     this.updateInteraction(rig.camera, origin.x, origin.z, input.usedTouch || this.coarsePointer);
     this.labels?.update(
-      this.ctx.debug.isVisible,
+      this.ctx.debug.isDetailed,
       rig.camera,
       window.innerWidth,
       window.innerHeight,
@@ -2000,11 +2000,11 @@ export class WorldState implements GameState, InstanceHost {
 
   private readonly updateDebug = (): void => {
     const debug = this.ctx.debug;
-    this.cheatPanel?.setDebugVisible(debug.isVisible);
+    this.cheatPanel?.setDebugVisible(debug.isEnabled);
     this.cheatPanel?.sync();
     const { player, rig, streamer, origin } = this;
     if (this.cheats.chunkLines) this.chunkDebug?.refresh();
-    if (!debug.isVisible || !player || !rig || !streamer || !origin) return;
+    if (!debug.showsLines || !player || !rig || !streamer || !origin) return;
     const s = player.state;
     const o = rig.orbit;
     debug.lines.set(
@@ -2106,7 +2106,7 @@ export class WorldState implements GameState, InstanceHost {
       return;
     }
     // F6: cheat menu (debug mode only). The mouse is released so the menu can be clicked.
-    if (event.code === 'F6' && this.ctx.debug.isVisible && !this.paused) {
+    if (event.code === 'F6' && this.ctx.debug.isEnabled && !this.paused) {
       event.preventDefault();
       this.cheatPanel?.setDebugVisible(true);
       if (!this.cheatPanel?.isOpen) this.input?.releasePointerLock();
