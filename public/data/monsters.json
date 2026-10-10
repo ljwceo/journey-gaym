@@ -291,10 +291,20 @@
         "quest": "defeat_sultan",
         "trigger": "sultan_gate",
         "cutscene": "pringle",
-        "arena": { "x": -1551, "z": 0, "radius": 15 },
-        "start": { "x": -1538, "z": 0 },
-        "playerStart": { "x": -1560, "z": 0 },
-        "pauseSeconds": [0.8, 1.6],
+        "arena": {
+          "x": -1551,
+          "z": 0,
+          "radius": 15
+        },
+        "start": {
+          "x": -1538,
+          "z": 0
+        },
+        "playerStart": {
+          "x": -1560,
+          "z": 0
+        },
+        "pauseSeconds": [1.0, 2.0],
         "retreatGap": 1.5,
         "retreatSeconds": 0.35,
         "vulnerableSeconds": 1,
@@ -332,7 +342,7 @@
           "pattern": "pounce",
           "minGap": 3,
           "maxGap": 8,
-          "aimLockSeconds": 0.25,
+          "aimLockSeconds": 0.3,
           "travelSeconds": 0.35,
           "reach": 0.9,
           "hint": "boss.sultan.hint.pounce"
@@ -357,7 +367,7 @@
           "name": "Flurry",
           "damage": 12,
           "hits": 5,
-          "warningSeconds": 0.8,
+          "warningSeconds": 0.9,
           "recoverySeconds": 2,
           "onlyWhenEnraged": true,
           "everyNth": 3,
@@ -366,7 +376,7 @@
           "maxGap": 1.5,
           "hitIntervalSeconds": 0.22,
           "reach": 1.4,
-          "stepPerHit": 0.5,
+          "stepPerHit": 0.4,
           "openingSeconds": 2,
           "hint": "boss.sultan.hint.flurry"
         }

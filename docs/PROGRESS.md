@@ -7,9 +7,9 @@
 | | |
 |---|---|
 | **Huidige fase** | Fase 2 – Solo-gevecht en de eerste dag (plan goedgekeurd) |
-| **Status** | Stap 2.6 klaar (Sultan, de beginnersbaas: stripcutscene, gevecht, Sultan als NPC; save versie 5) |
-| **Volgende stap** | Stap 2.7: afronden (balans, meten, documentatie) |
-| **Laatste sessie** | 2026-10-10: stap 2.6 Sultan |
+| **Status** | Stap 2.7 klaar: alle stappen van fase 2 gebouwd. Wacht op spelen en meten op de pc door Bo en Lucas |
+| **Volgende stap** | Bo en Lucas: fase 2 spelen, Meet 20 s op de pc (ook bij het goblinkamp en tegen Sultan), en zeggen of Sultan te makkelijk/moeilijk is. Daarna fase 2 afsluiten en fase 3 plannen |
+| **Laatste sessie** | 2026-10-10: stap 2.7 afronden |
 
 ---
 
@@ -248,7 +248,7 @@ Doel: het spel begint met een speelbaar, episch (en komisch) gevecht tegen Lucae
 ---
 
 ### Fase 2 – Solo-gevecht en de eerste dag
-**Status:** bezig, stap 2.1 t/m 2.6 klaar.
+**Status:** alle stappen gebouwd (2.1 t/m 2.7); wacht op spelen en meten op de pc.
 **Gebouwd:**
 - 2.1 Gevechtskern:
   - **Zwaard** (`src/systems/Combat.ts`, puur en getest): fast hit met de **linkermuisknop** (10 schade, 10 energie, max 3 per seconde, elke 3e slag op rij +50% en goud gekleurd), heavy hit met de **rechtermuisknop** (25 energie vooraf, 0,9 s uithalen, dan 25 schade, daarna 0,35 s herstel). Zonder genoeg energie: fast hits nog wel, maar half zo snel; geen heavy hit. Per level +2 (fast) en +5 (heavy) schade. Alles op de vaste tijdstap: 60 en 120 Hz geven dezelfde slagen (test).
@@ -321,6 +321,43 @@ Doel: het spel begint met een speelbaar, episch (en komisch) gevecht tegen Lucae
   - **Save versie 5** (`seenCutscenes`, `seenHints`); een oude save heeft nog niets gezien.
   - **Cheatmenu:** "Baasgevecht → Vecht tegen Sultan" start het gevecht meteen (ook zonder quests). Teleporteren tijdens het gevecht stopt het gevecht.
   - Getest: 325 tests (o.a. alleen raakbaar in de opening van 1 s, elke aanval eerst een waarschuwing, stilstaan = geraakt, ontwijken van Claw Combo, Pounce en Dash Strike lukt, 60 en 120 Hz gelijk, Flurry elke 3e aanval onder 50% en 2 s buiten adem, nooit buiten de ring, stopt als je knock-out bent, Pringle/Sultan wisselen, save v4 → v5, validator). Headless Chromium (pc 1100×700 in EN en NL, telefoon 844×390): poort → nieuwe quest → cutscene (tikken en Overslaan) → gevecht met waarschuwingen, rode streep, tips en HP-balk; winnen (met een tamme Sultan via aangepaste data) → quest klaar, +200 XP, Sultan praat buiten de poort; verliezen → zwart scherm, 50 → 45 gold, wakker in het Monastery met Pringle, opnieuw naar de poort = meteen gevecht met "Back again?". Geen fouten. Gevonden en opgelost: de stripplaatjes waren onzichtbaar en op de telefoon te hoog, de HP-balk van de baas lag op de telefoon over je eigen balken, de ring was gestippeld, en na de cutscene sprong de camera omhoog (de muis wordt nu niet meer vanzelf gevangen; één klik is genoeg).
+- 2.7 Afronden (balans, meten, geheugen, documentatie):
+  - **Balans van Sultan getest met een gesimuleerde speler** (`src/systems/Balance.test.ts`): een nagebootste speler vecht met de échte zwaard-, beweeg- en baascode op de vaste tijdstap (level 3, Honed Old Sword, geen drankjes), 8 gevechten per soort speler:
+
+    | Speler | Gewonnen | Duur | HP over (van 120) |
+    |---|---|---|---|
+    | Ontwijkt op tijd (reageert na 0,3 s) | 8/8 | ±63 s | ±79 |
+    | Beginner (reageert pas na 0,5 s) | 8/8 | ±96 s | ±37 (spannend!) |
+    | Ontwijkt nooit, blijft alleen slaan | 0/8 | binnen een minuut verslagen | 0 |
+
+    De nagebootste speler raakt Sultan in élke opening; een echte speler mist er een paar, dus in het echt duurt het gevecht langer (richting de 2 minuten uit het concept). Precies wat het concept wil: "semi lastig: wie niet op tijd ontwijkt, verliest".
+  - **Bijgesteld na de balanstest** (alleen data, `monsters.json`): pauze tussen twee aanvallen 1,0–2,0 s (was 0,8–1,6), Pounce mikt 0,3 s vóór de sprong (was 0,25), Flurry waarschuwt 0,9 s (was 0,8) en loopt per klauwslag 0,4 m mee (was 0,5). Zonder deze aanpassing won een beginner maar 1 van de 8 keer.
+  - **Fout gevonden en opgelost:** bleef je pal tegen Sultan aan staan terwijl hij een Pounce of Dash Strike wilde doen (die hebben afstand nodig), dan bleef hij eindeloos achteruit lopen zonder aan te vallen. Nu kiest hij na 2 s een aanval die wél past (Claw Combo).
+  - **Rekentijd van de vijanden** (`src/systems/EnemiesPerf.test.ts`): op de drukste plek van de wereld (8 vijanden binnen 60 m) 0,02 ms per stap; stresstest met **alle 45 vijanden tegelijk om je heen** (26 vechtend, pijlen) 0,03 ms per stap. Dat is minder dan 1% van een frame op 120 fps.
+  - **Draw calls en geheugen** in de testbrowser (die tekent zonder videokaart, dus de fps zegt niets):
+
+    | Plek | Low | Mid | High |
+    |---|---|---|---|
+    | Goblinkamp (8 vijanden in beeld, vechtend) | 54 calls | 117 calls | 155 calls |
+    | Sultan-gevecht | 46 calls | 83 calls | 94 calls |
+
+    Vijanden kosten per soort model een vast aantal draw calls (instanced), hoeveel er ook rondlopen. 3× wereld in en uit (met een Sultan-gevecht ertussen) op Low, Mid en High: geometrie/textures elke keer terug naar 0 op het titelscherm, en weer gelijk in de wereld. Geen fouten.
+  - **Nog te doen door Bo en Lucas (pc):** Cheats → **Meet 20 s** op Mid en High, één keer bij het goblinkamp (teleport naar de Greenwood en loop naar het zuidwesten) en één keer tijdens het Sultan-gevecht (Cheats → Vecht tegen Sultan). Stuur de regel `measure` door.
+  - 330 tests. Documentatie bijgewerkt (`ARCHITECTURE.md`: balans- en prestatietests).
+
+**Definition of Done fase 2** (✅ = gebouwd en getest in tests en de testbrowser, 🎮 = nog door Bo/Lucas te spelen of te meten op de pc)
+
+| | Punt | Waar / opmerking |
+|---|---|---|
+| ✅🎮 | Fast en heavy hits met de muis (en knoppen op de telefoon); energie, combo en schade kloppen | Stap 2.1, getest (10/15/25 schade, energie) |
+| ✅🎮 | Slimes en goblins in de Greenwood: rondlopen, aanvallen, terugkomen; Treewarden valt alleen terug aan, niet in de elfenstad | Stap 2.3 |
+| ✅🎮 | XP, levels, balken volgens de HUD-regels, buit, drankjes | Stap 2.4 |
+| ✅🎮 | Doodgaan kost 10% gold, wakker bij je checkpoint; rusten = vol HP en mana | Stap 2.4 |
+| ✅🎮 | De vijf quests van de eerste dag in NL en EN, samen ±level 3 | Stap 2.5 (test: level 3) |
+| ✅🎮 | Speelbaar, onwinbaar en komisch intro-gevecht tegen Lucael en Baelor, overslaanbaar | Stap 2.2 |
+| ✅🎮 | Sultan: cutscene (overslaanbaar), duidelijke waarschuwingen, momenten om te slaan, tips de eerste keer, winnen en verliezen werken | Stap 2.6, balans 2.7. **Graag laten weten of hij te makkelijk of te moeilijk is** |
+| ✅🎮 | 60/120 fps op de pc, ook met veel vijanden; op elke stand hetzelfde gevecht | Rekenwerk gemeten (0,03 ms met alle vijanden), draw calls per stand hierboven; gevecht staat los van de grafische stand (tests). **Fps op de pc nog meten** |
+| ✅ | Tests (gevechtsformules, XP, quests, save-migratie) en de DataValidator slagen | 330 tests |
 
 ## Besluiten
 
@@ -452,6 +489,8 @@ Doel: het spel begint met een speelbaar, episch (en komisch) gevecht tegen Lucae
 | 2026-10-10 | Na het gevecht is Pringle weg en staat Sultan als NPC buiten de poort (zinnen over de vermomming en een herkansing) | Concept: "na het gevecht wordt Sultan een NPC"; Pringle wás Sultan. Wil je Pringle terug als kat, haal dan `absentWhen` bij Pringle weg |
 | 2026-10-10 | De stripcutscene heeft nog geen tekeningen: elk plaatje is een kleurvlak met een onderschrift van wat je ziet | De beeldprompts staan in het concept; plaatjes komen later in de art-pass (fase 6) |
 | 2026-10-10 | Na een cutscene wordt de muis niet vanzelf gevangen; één klik en je kijkt weer rond | Vanzelf vangen liet de camera soms een sprong maken |
+| 2026-10-10 | Sultan iets vriendelijker na de balanstest: pauze 1,0–2,0 s, Pounce mikt 0,3 s vóór de sprong, Flurry waarschuwt 0,9 s en loopt minder mee | Een beginner (0,5 s reactietijd) won anders maar 1 van de 8 keer; nu wint hij net (±37 HP over). Wie niet ontwijkt verliest nog steeds |
+| 2026-10-10 | Balans wordt getest met een nagebootste speler in de tests (`Balance.test.ts`) | Zo zien we bij elke wijziging in `monsters.json` meteen of het gevecht te makkelijk of te moeilijk wordt |
 
 ## Sessielog
 
@@ -482,3 +521,4 @@ Doel: het spel begint met een speelbaar, episch (en komisch) gevecht tegen Lucae
 - Stap 2.4 gebouwd: XP en levels, buit in de tas, tas-venster, drankjes (Q / drankknop), doodgaan met 10% goldverlies en zwart scherm, rusten bij een checkpoint, save versie 3 met migratie, nieuwe events voor de quests, cheats "Geven". 291 tests, headless Chromium (pc en telefoon, EN en NL) zonder fouten. Tijdelijke namen gebruikt (alleen in data): Gold, Health Potion, Greater Health Potion, Slime Gel. Volgende stap: 2.5 (quests van de eerste dag).
 - Stap 2.5 gebouwd: questsysteem uit `quests.json` (praten, hebben, brengen, verslaan, kopen, rusten, ergens heen lopen), de vijf quests van de eerste dag (Brother Ansel, Marco, Hilda, Rose, Old Bertha) in EN en NL, winkel van Marco, Hilda slijpt je zwaard (+3 schade), stukje grond in de Garden, questmarkeringen, quests in de tas, save versie 4. 307 tests, headless Chromium (EN en NL) zonder fouten. Tijdelijke namen gebruikt (alleen in data): Brother Ansel, Marco the Merchant, Hilda Ironhand, Old Bertha, Gold, Slime Gel; nieuw: de vijf questnamen, Honed Old Sword, Herb Seeds, "Your plot". Op verzoek (optie a): een slime-erf binnen de stadsmuur voor Hilda's Slime Gel. Volgende stap: 2.6 (Sultan).
 - Stap 2.6 gebouwd: Sultan, de beginnersbaas: quest begint vanzelf na de eerste dag, stripcutscene "Pringle" (één keer, overslaanbaar), baasgevecht in een ring bij de stadspoort (Claw Combo, Pounce, Dash Strike, Flurry onder 50%, alleen raakbaar na een aanval, tips de eerste keer, HP-balk), winnen = Sultan wordt een NPC buiten de poort en Pringle is weg, verliezen = doodgaan en meteen een herkansing. Save versie 5. Cheat "Vecht tegen Sultan". 325 tests, headless Chromium (pc EN/NL en telefoon) zonder fouten. Tijdelijke namen gebruikt (alleen in data): Gold; nieuw: geen (Sultan, Pringle en de aanvalsnamen komen uit het concept). Volgende stap: 2.7 (afronden).
+- Stap 2.7 gebouwd: balanstest met een nagebootste speler tegen Sultan (en Sultan iets vriendelijker gemaakt), fout opgelost waarbij Sultan niet aanviel als je tegen hem aan bleef staan, rekentijd van alle vijanden gemeten (0,03 ms per stap met alle 45 vijanden om je heen), draw calls per stand bij het goblinkamp en tegen Sultan, geheugen na 3× wereld in/uit gelijk, Definition of Done van fase 2 nagelopen. 330 tests. Open: spelen en Meet 20 s op de pc door Bo en Lucas.
